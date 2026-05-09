@@ -1,0 +1,11 @@
+node_modules/
+.claude/*
+
+# Release-only repo — pipeline runtime files are install-time artifacts,
+# not source. Pack source-of-truth lives at packs/<pack>/pipeline.<pack>.yaml.
+contexts/config/pipeline.*.yaml
+contexts/pipeline.*.yaml
+
+# IIQ pack lives locally only — kept on disk for reference, not shipped publicly.
+# The starter pack at packs/starter/ is the documented didactic example.
+packs/iiq/
