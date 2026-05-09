@@ -1,7 +1,5 @@
 node_modules/
-.claude/*
 
-# Release-only repo — pipeline runtime files are install-time artifacts,
-# not source. Pack source-of-truth lives at packs/<pack>/pipeline.<pack>.yaml.
-contexts/config/pipeline.*.yaml
-contexts/pipeline.*.yaml
+packs/*
+
+!packs/your-project/
