@@ -1,0 +1,85 @@
+builds:
+
+  commands:
+    java_compile:
+      cmd: "mvn -pl backend compile"
+      desc: "Fast Java compile only (no tests, no bundling)"
+
+    ui_dev:
+      cmd: "cd frontend && npm run build:dev"
+      desc: "Frontend dev build — fast iteration"
+
+    ui_full:
+      cmd: "cd frontend && npm run build"
+      desc: "Frontend production build"
+
+    full_stack:
+      cmd: "mvn verify && cd frontend && npm run build"
+      desc: "Backend test+verify + frontend build"
+
+  forbidden:
+    - "git push --force*"
+    - "rm -rf*"
+    - "mvn deploy*"
+    - "npm publish*"
+
+  lint:
+    angular18: "cd frontend && npm run lint"
+    angular19: "cd frontend && npm run lint"
+    react:     "cd frontend && npm run lint"
+    vue:       "cd frontend && npm run lint"
+    java:      "mvn -pl backend checkstyle:check"
+
+  review_gate: "mvn verify && cd frontend && npm run build"
+
+  review_test_suite:
+    java:      "mvn -pl backend test"
+    angular18: "cd frontend && npm test -- --watch=false"
+    angular19: "cd frontend && npm test -- --watch=false"
+    react:     "cd frontend && npm test -- --run"
+    vue:       "cd frontend && npm test -- --run"
+
+component_structure:
+
+  Angular18_component:
+    required_files:
+      - "{name}.component.ts"
+      - "{name}.component.html"
+      - "{name}.component.scss"
+      - "{name}.component.spec.ts"
+    register_in: "frontend/src/app/{feature}/{feature}.module.ts"
+    placement:   "frontend/src/app/{feature}/"
+
+  Angular19_component:
+    required_files:
+      - "{name}.component.ts"
+      - "{name}.component.html"
+      - "{name}.component.scss"
+      - "{name}.component.spec.ts"
+    placement: "frontend/src/app/{feature}/"
+    note: "Standalone — no module registration. Add to consumer's `imports:` array."
+
+  React_component:
+    required_files:
+      - "{Name}.tsx"
+      - "{Name}.test.tsx"
+      - "{Name}.module.css"   # if using CSS Modules; remove for Tailwind
+    placement: "src/components/{Name}/"
+
+  Vue_component:
+    required_files:
+      - "{Name}.vue"
+      - "{Name}.spec.ts"
+    placement: "src/components/"
+
+  Java_resource:
+    required_files:
+      - "{Name}Controller.java"
+      - "{Name}ControllerTest.java"
+    placement: "backend/src/main/java/com/example/{feature}/"
+
+  Java_service:
+    required_files:
+      - "{Name}Service.java"
+      - "{Name}ServiceTest.java"
+    placement: "backend/src/main/java/com/example/{feature}/"

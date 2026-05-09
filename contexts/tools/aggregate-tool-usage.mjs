@@ -308,7 +308,7 @@ if (ledgers.length >= 2) {
     if (!s.runs) continue;
     const avg_reads = s.read_bytes / s.runs;
     if (name.toLowerCase().includes('surgeon') && avg_reads > 50000) {
-      console.log(`  • ${name} avg ${(avg_reads/1000).toFixed(0)}K of file reads/run — consider Pattern D (parallel per-task reads). See agent-pipeline/docs/cost-optimization.md.`);
+      console.log(`  • ${name} avg ${(avg_reads/1000).toFixed(0)}K of file reads/run — consider parallelizing per-task reads.`);
     }
     const avg_bash = s.bash / s.runs;
     if (avg_bash > 30) {
@@ -319,7 +319,7 @@ if (ledgers.length >= 2) {
       console.log(`  • ${name} avg ${avg_git.toFixed(0)} git ops/run — check for sequential git status/diff/log clusters that should be parallel (Pattern C).`);
     }
     if (s.cost / s.runs > 4) {
-      console.log(`  • ${name} avg cost $${(s.cost/s.runs).toFixed(2)}/run — strong Sonnet→Haiku candidate? Review § 3 in cost-optimization.md.`);
+      console.log(`  • ${name} avg cost $${(s.cost/s.runs).toFixed(2)}/run — strong Sonnet→Haiku candidate?`);
     }
   }
 }

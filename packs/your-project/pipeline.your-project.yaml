@@ -1,0 +1,524 @@
+# ═══════════════════════════════════════════════════════════════════════
+# pipeline.your-project.yaml — YOUR-PROJECT PACK SEED (didactic example)
+# ═══════════════════════════════════════════════════════════════════════
+#
+# This pack is a TEMPLATE. Copy it, rename to `packs/<your-project>/`,
+# rename the YAML to `pipeline.<your-project>.yaml`, and edit the
+# placeholders below.
+#
+# Install with:
+#   npm run install-pipeline -- --pack your-project --project-root <your-project>
+#
+# At install time the installer splits this seed into runtime sibling YAMLs
+# under contexts/config/. You only edit this seed file.
+#
+# Token efficiency:
+#   Comments here are FREE — agents never read pipeline.<pack>.yaml directly.
+#   Every comment block exists to teach pack authors. The installer strips
+#   them when it writes the runtime splits.
+# ═══════════════════════════════════════════════════════════════════════
+
+meta:
+  schema_version: 4
+  pack: your-project
+
+# ═══════════════════════════════════════════════════════════════════════
+# SKILLS — the trigger map
+# ═══════════════════════════════════════════════════════════════════════
+# This is the heart of how rules + skills get loaded only when needed.
+#
+# Surgeon Step 0a runs TWO resolution strategies and takes the union:
+#
+#   Strategy A — match task.Files against each entry's path_glob
+#       Example: a task touching `frontend/src/app/users/user.component.ts`
+#                matches Frontend/Angular18's `frontend/src/**/*.ts` glob,
+#                so your-project-angular18-standards.md gets loaded.
+#
+#   Strategy B — normalize task.Layer string and look it up in {key, aliases}
+#       Example: task.Layer = "React" matches Frontend/React's aliases,
+#                so your-project-react-standards.md gets loaded.
+#
+# The skill is ONLY catted into Surgeon's context when a task triggers it.
+# That's how you can ship 7 standards skills without bloating every run.
+# ═══════════════════════════════════════════════════════════════════════
+
+skills:
+
+  # ─── Surgeon Step 0a: Layer → skills mapping ───────────────────────────
+  layer_map:
+
+    "Frontend/Angular18":
+      # your-project-angular18-standards.md — NgModule-based Angular 18 (RxJS, NgRx,
+      # reactive forms). Loaded ONLY when a task touches frontend/src/**/*.ts.
+      skills: [your-project-angular18-standards.md]
+      path_glob: "frontend/src/**/*.{ts,html}"
+      build: ui_dev
+      desc: "Angular 18 — NgModule, RxJS, NgRx, reactive forms"
+      aliases: ["Angular18", "Angular 18", "Frontend Angular18", "ng18"]
+
+    "Frontend/Angular19":
+      # your-project-angular19-standards.md — Modern Angular 19+ (standalone
+      # components, signals, @if/@for, inject(), zoneless).
+      skills: [your-project-angular19-standards.md]
+      path_glob: "frontend/src/**/*.{ts,html}"
+      build: ui_dev
+      desc: "Angular 19+ — standalone, signals, @if/@for, inject()"
+      aliases: ["Angular19", "Angular 19", "Modern Angular", "ng19", "ng-modern"]
+
+    "Frontend/React":
+      # your-project-react-standards.md — Function components, hooks, TanStack Query,
+      # react-hook-form. Modern React 18/19 conventions.
+      skills: [your-project-react-standards.md, your-project-typescript-standards.md]
+      path_glob: "src/**/*.{tsx,jsx}"
+      build: ui_dev
+      desc: "React 18/19 — function components + hooks"
+      aliases: ["React", "ReactJS", "Frontend React", "Next.js Pages"]
+
+    "Frontend/Vue":
+      # your-project-vue3-standards.md — <script setup>, Composition API, Pinia,
+      # composables. Vue 3.4+.
+      skills: [your-project-vue3-standards.md, your-project-typescript-standards.md]
+      path_glob: "src/**/*.vue"
+      build: ui_dev
+      desc: "Vue 3 — <script setup>, Composition API, Pinia"
+      aliases: ["Vue", "Vue3", "Vue 3", "Frontend Vue"]
+
+    "JavaScript":
+      # your-project-javascript-standards.md — Layer-agnostic JS baseline. Useful
+      # for utility scripts, build tooling, shared helpers — anything outside
+      # a framework.
+      skills: [your-project-javascript-standards.md]
+      path_glob: "**/*.js"
+      build: ui_dev
+      desc: "Modern JavaScript ES2020+ baseline"
+      aliases: ["JS", "Vanilla JS", "Plain JavaScript"]
+
+    "TypeScript":
+      # your-project-typescript-standards.md — Standalone TypeScript baseline. Layer
+      # this on top of framework skills (React/Angular/Vue) when you want strict
+      # type-system guidance without committing to a UI framework.
+      skills: [your-project-typescript-standards.md, your-project-javascript-standards.md]
+      path_glob: "**/*.ts"
+      build: ui_dev
+      desc: "TypeScript strict-mode patterns (layer over JS baseline)"
+      aliases: ["TS", "Strict TypeScript"]
+
+    "Backend/Java":
+      # your-project-java-standards.md — Java 17+ LTS, records, sealed types,
+      # pattern matching, Spring Boot 3 with Jakarta EE namespace.
+      skills: [your-project-java-standards.md]
+      path_glob: "backend/src/main/java/**/*.java"
+      build: java_compile
+      desc: "Java 17+ — records, sealed, pattern matching, Spring Boot 3"
+      aliases: ["Java", "Backend Java", "Spring Boot", "Spring", "Backend"]
+
+    "Test":
+      # No standards skill yet — add one when you write your test conventions.
+      # path_glob is intentionally absent: tests live anywhere named *.spec.ts /
+      # *Test.java, so Strategy A (file-path match) doesn't apply. Resolve via
+      # Strategy B (Layer string) only.
+      skills: []
+      build: java_compile
+      desc: "Tests — placeholder, add your-project-test-standards.md later"
+      aliases: ["Tests", "Unit Tests", "Testing"]
+
+  # ─── Surgeon Step 0a: Extra triggers (orthogonal, additive) ───────────
+  # These fire ON TOP OF whatever layer_map already resolved. Use them when
+  # a skill applies cross-layer (a11y, security) or when a task hits a
+  # condition the Layer string alone doesn't capture.
+  extra_triggers:
+    - when: "task touches plain JavaScript (no framework imports)"
+      # Layer the JS baseline onto framework skills when the task is at the
+      # boundary (e.g., a Vite plugin, a Node script in a frontend repo).
+      add: [your-project-javascript-standards.md]
+    - when: "task is in TypeScript and Layer is React or Vue"
+      # Framework skills already include this in their `skills:` list — this
+      # trigger is the safety net for tasks where the Layer is set but the
+      # path_glob misses (e.g., a .ts utility imported by both).
+      add: [your-project-typescript-standards.md]
+
+  # ─── Per-agent skills ──────────────────────────────────────────────────
+  # Loaded ONCE per agent invocation, not per task. These do NOT have triggers
+  # — the named agent always loads them at startup. Leave keys absent or
+  # empty if your pack doesn't ship that capability.
+  orchestrator:
+    # Add custom ticket-schema parsers and LLD generator skills here. The
+    # your-project pack ships none — Orchestrator falls back to kernel defaults
+    # (agent-pipeline/skills/ticket-schema-template.md and friends).
+    # ticket_schema_story: your-project-ticket-schema-story.md
+    # ticket_schema_bug:   your-project-ticket-schema-bug.md
+    # lld_generator:       your-project-lld-generator.md
+
+  explorer:
+    # Bug localization sub-skills (frontend / backend / router). The your-project
+    # pack ships none; Explorer uses kernel defaults.
+    # bug_router:   your-project-bug-localization.md
+    # bug_frontend: your-project-bug-localization-frontend.md
+    # bug_backend:  your-project-bug-localization-backend.md
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# BUILDS — what Surgeon and Review shell out to run
+# ═══════════════════════════════════════════════════════════════════════
+# layer_map[*].build references entries in builds.commands. Edit these to
+# match your project's actual build commands.
+# ═══════════════════════════════════════════════════════════════════════
+
+builds:
+
+  commands:
+    java_compile:
+      cmd: "mvn -pl backend compile"
+      desc: "Fast Java compile only (no tests, no bundling)"
+
+    ui_dev:
+      cmd: "cd frontend && npm run build:dev"
+      desc: "Frontend dev build — fast iteration"
+
+    ui_full:
+      cmd: "cd frontend && npm run build"
+      desc: "Frontend production build"
+
+    full_stack:
+      cmd: "mvn verify && cd frontend && npm run build"
+      desc: "Backend test+verify + frontend build"
+
+  # Patterns Surgeon and Review must NEVER run, even if the user asks.
+  forbidden:
+    - "git push --force*"
+    - "rm -rf*"
+    - "mvn deploy*"
+    - "npm publish*"
+
+  # Lint commands keyed by Layer suffix
+  lint:
+    angular18: "cd frontend && npm run lint"
+    angular19: "cd frontend && npm run lint"
+    react:     "cd frontend && npm run lint"
+    vue:       "cd frontend && npm run lint"
+    java:      "mvn -pl backend checkstyle:check"
+
+  # Final build gate run by Surgeon (final task) AND Review (PART 1)
+  review_gate: "mvn verify && cd frontend && npm run build"
+
+  review_test_suite:
+    java:      "mvn -pl backend test"
+    angular18: "cd frontend && npm test -- --watch=false"
+    angular19: "cd frontend && npm test -- --watch=false"
+    react:     "cd frontend && npm test -- --run"
+    vue:       "cd frontend && npm test -- --run"
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# COMPONENT STRUCTURE — atomicity rules per layer
+# ═══════════════════════════════════════════════════════════════════════
+# When Surgeon creates a new component, ALL files in the structure must
+# be created together. Review verifies all exist.
+# ═══════════════════════════════════════════════════════════════════════
+
+component_structure:
+
+  Angular18_component:
+    required_files:
+      - "{name}.component.ts"
+      - "{name}.component.html"
+      - "{name}.component.scss"
+      - "{name}.component.spec.ts"
+    register_in: "frontend/src/app/{feature}/{feature}.module.ts"
+    placement:   "frontend/src/app/{feature}/"
+
+  Angular19_component:
+    required_files:
+      - "{name}.component.ts"
+      - "{name}.component.html"
+      - "{name}.component.scss"
+      - "{name}.component.spec.ts"
+    placement: "frontend/src/app/{feature}/"
+    note: "Standalone — no module registration. Add to consumer's `imports:` array."
+
+  React_component:
+    required_files:
+      - "{Name}.tsx"
+      - "{Name}.test.tsx"
+      - "{Name}.module.css"   # if using CSS Modules; remove for Tailwind
+    placement: "src/components/{Name}/"
+
+  Vue_component:
+    required_files:
+      - "{Name}.vue"
+      - "{Name}.spec.ts"
+    placement: "src/components/"
+
+  Java_resource:
+    required_files:
+      - "{Name}Controller.java"
+      - "{Name}ControllerTest.java"
+    placement: "backend/src/main/java/com/example/{feature}/"
+
+  Java_service:
+    required_files:
+      - "{Name}Service.java"
+      - "{Name}ServiceTest.java"
+    placement: "backend/src/main/java/com/example/{feature}/"
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# EXPLORER PATHS — what `git log` walks for codebase-map sync
+# ═══════════════════════════════════════════════════════════════════════
+explorer_paths:
+  - "frontend/src/"
+  - "backend/src/main/java/"
+  - "backend/src/test/java/"
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# SCAN EXCLUSIONS — directories every recursive scan skips
+# ═══════════════════════════════════════════════════════════════════════
+# Loaded in project-analyzer Phase 0 and reused by every find / grep across
+# the pipeline. Add project-specific exclusions to `custom:`.
+# ═══════════════════════════════════════════════════════════════════════
+scan_exclusions:
+  dependencies:
+    - node_modules
+    - vendor
+    - .venv
+    - venv
+    - __pypackages__
+    - jspm_packages
+
+  build_output:
+    - target
+    - build
+    - out
+    - dist
+    - bin
+    - .gradle
+    - .next
+    - .nuxt
+    - .svelte-kit
+    - .turbo
+    - .cache
+
+  caches:
+    - __pycache__
+    - .pytest_cache
+    - .mypy_cache
+    - .nyc_output
+    - coverage
+
+  vcs_and_ide:
+    - .git
+    - .idea
+    - .vscode
+
+  infra_state:
+    - .terraform
+
+  test_fixtures:
+    - test/fixtures
+    - test/resources
+
+  custom: []
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# SHARED PATHS, COMPONENT NAMING — AUTO-GENERATED by project-analyzer
+# ═══════════════════════════════════════════════════════════════════════
+# Do NOT hand-edit these blocks. project-analyzer (Phase 8) writes them
+# after scanning the repo for shared UI components, services, REST endpoints,
+# and templates.
+#
+# To populate: run `Analyze project` against your repo after install.
+# To refresh:  run `Rescan components` after a major refactor.
+# ═══════════════════════════════════════════════════════════════════════
+
+shared_paths:
+  frontend:
+    ui_elements: []
+    services:    []
+    templates:   []
+  backend:
+    services:        []
+    utilities:       []
+    rest_endpoints:  []
+    persistence:    []
+  tests:
+    frontend: []
+    backend:  []
+
+component_naming:
+  prefix: "app-"   # default convention; analyzer overrides if it detects another
+  custom_suffix_map: {}
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# RUNTIME — pipeline behavior knobs
+# ═══════════════════════════════════════════════════════════════════════
+
+runtime:
+
+  branching:
+    base_branch: main
+    stacking:    auto-detect       # auto-detect | always-ask | never
+    prefix_story: "feature/"
+    prefix_bug:   "fix/"
+
+  contexts_layout:
+    nested_by_epic: true
+    epic_folder_case: lower
+    standalone_folder: standalone
+    codebase_map_filename: codebase-map.md
+    lld_filename:       "{TICKET}-lld.md"
+    testplan_filename:  "{TICKET}-testplan.md"
+    design_folder_name: "{TICKET}-design"
+
+  trigger:
+    inline_context_keyword: required   # required | optional
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# JIRA — issue tracker integration
+# ═══════════════════════════════════════════════════════════════════════
+# Edit `label`, `status_map`, and `status_groups` to match your project's
+# JIRA workflow.
+# ═══════════════════════════════════════════════════════════════════════
+
+jira:
+  label: your-project-agentic-team
+  add_at: phase-c-go              # phase-c-go | ship | both
+  on_failure: warn-and-continue   # warn-and-continue | block
+  post_comment: true
+
+  reference_link_types:
+    - "is similar to"
+
+  status_map:
+    in_development: "In Progress"
+    review_done:    "In Review"
+    ship_done:      "Ready for QA"
+
+  status_groups:
+    active_hydrate:
+      - "In Review"
+      - "Ready for QA"
+    active_flag_only:
+      - "In Progress"
+    completed:
+      - "Done"
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# MCP SERVERS + ROLES
+# ═══════════════════════════════════════════════════════════════════════
+# Onboarding registry. The installer reads this and generates
+# contexts/config/mcp.sample.json. Each developer copies entries from the
+# sample into their personal Cursor / Claude MCP config.
+#
+# This your-project set is intentionally minimal — Atlassian (JIRA/Confluence)
+# and GitHub. Add Figma, Notion, Linear, etc. as your team adopts them.
+# ═══════════════════════════════════════════════════════════════════════
+
+mcp_servers:
+
+  atlassian:
+    auth: oauth
+    config:
+      url: "https://mcp.atlassian.com/v1/mcp"
+    setup_hint: |
+      On first agent run, your browser opens for Atlassian login.
+      Token auto-refreshes; re-login ~daily.
+
+  github:
+    auth: token
+    config:
+      command: "npx"
+      args: ["-y", "@modelcontextprotocol/server-github"]
+      env:
+        GITHUB_TOKEN: "${GITHUB_TOKEN}"
+    setup_hint: |
+      Create a GitHub PAT with 'repo' scope at:
+        https://github.com/settings/tokens
+      Set env.GITHUB_TOKEN in your personal MCP config.
+
+# mcp_roles — REQUIRED by validator. Maps each role to one or more
+# mcp_servers keys (string | list). null/[] = config-time skip.
+mcp_roles:
+  story_source: atlassian       # ticket body + ACs (JIRA)
+  design_source: null           # no design source — set to figma/notion/etc. when adopted
+  vcs:           [github]       # branch / commit / PR; list = primary + fallbacks
+  docs_source:   atlassian      # HLDs / wiki (Confluence)
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# SUBAGENTS — extension points
+# ═══════════════════════════════════════════════════════════════════════
+# Pack-supplied delegated workers fired at kernel extension points.
+# The your-project pack ships no subagents — the kernel's Amender (wired to
+# orchestrator_amend_request) and Image Analyzer (wired to
+# orchestrator_image_analysis) are inherited automatically.
+# ═══════════════════════════════════════════════════════════════════════
+subagents:
+  orchestrator_amend_request: []   # kernel default applies
+  orchestrator_image_analysis: []  # kernel default applies
+  surgeon_pre_task:             []
+  surgeon_post_task:            []
+  review_post_check:            []
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# RESCAN HINTS — project-analyzer Phase 8.5 thresholds
+# ═══════════════════════════════════════════════════════════════════════
+rescan_hints:
+  enabled: true
+
+  drift_thresholds:
+    high_file_count: 25
+    medium_file_count: 10
+    low_file_count: 3
+    stale_days: 60
+
+  detection_thresholds:
+    framework_min_files: 3
+    shared_dir_min_files: 3
+    build_tool_min_files: 1
+    growth_multiplier: 2
+
+  freshness_check:
+    enabled: true
+    min_files_to_check: 3
+    global_recent_rescan_days: 7
+    stale_threshold_days: 30
+    stale_threshold_file_count: 10
+    top_n_candidates: 3
+    default_action: "rescan"
+
+  unmapped_detection:
+    enabled: true
+    min_file_count: 3
+    shared_dir_patterns:
+      - shared
+      - common
+      - util
+      - utilities
+      - base
+      - widgets
+      - components
+
+  # Step 8.6h — recommend authoring standards skills for layers that have
+  # file evidence in the repo but no skill body (empty skills:[] or missing
+  # skill file in packs/<pack>/skills/). Recommendation only — never
+  # auto-creates files.
+  skill_recommendations:
+    enabled: true
+    min_files: 3              # don't recommend a skill for a 2-file layer
+    stub_file_threshold: 500  # bytes — skill files under this count as stubs
+    repropose_growth: 2       # 2x evidence growth re-proposes ignored items
+
+# Frameworks / tools the user told the analyzer to stop proposing.
+# Auto-maintained by project-analyzer; manual edits OK.
+analyzer_ignore: []
+
+# Layers the user told the analyzer to stop recommending skills for.
+# Format: { layer, reason, ignored_on, evidence_at_ignore_time, repropose_at }.
+# Auto-maintained by project-analyzer; manual edits OK.
+skill_recommendations_ignore: []

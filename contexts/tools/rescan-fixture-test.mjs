@@ -39,7 +39,7 @@ const FIXTURE_ROOT = '/tmp/rescan-fixture';
 const VERBOSE = process.argv.includes('--verbose');
 
 // ─── Fixture construction ────────────────────────────────────────────────
-// Emulates an IIQ-like project: AngularJS + Angular 18 + Java backend.
+// Emulates a hybrid project: AngularJS + Angular 18 + Java backend.
 // Known file counts per scope let us verify scope resolution is correct.
 
 const FIXTURE_STRUCTURE = {
@@ -48,9 +48,9 @@ const FIXTURE_STRUCTURE = {
   'web/ui/js/identity': 4,              // feature-local AngularJS
   'web/ui/ts/shared': 2,                // Angular 18 components
   'web/ui/ts/applicationDefinition': 3, // Angular 18 feature
-  'src/sailpoint/web/rest': 5,          // Java REST
-  'src/sailpoint/service': 4,           // Java services
-  'src/sailpoint/tools': 2,             // Java utilities
+  'src/com/acme/web/rest': 5,           // Java REST
+  'src/com/acme/service': 4,            // Java services
+  'src/com/acme/tools': 2,              // Java utilities
 };
 
 function buildFixture() {
@@ -66,9 +66,9 @@ function buildFixture() {
       let ext = 'js';
       let content = '';
       if (dir.includes('ts/'))            { ext = 'ts';   content = '@Component({ selector: "foo" })\nexport class FooComponent {}\n'; }
-      else if (dir.includes('web/rest'))  { ext = 'java'; content = 'package sailpoint.web.rest;\n@Path("/foo")\npublic class FooResource {}\n'; }
-      else if (dir.includes('service'))   { ext = 'java'; content = 'package sailpoint.service;\npublic class FooService {}\n'; }
-      else if (dir.includes('tools'))     { ext = 'java'; content = 'package sailpoint.tools;\npublic class FooUtil {}\n'; }
+      else if (dir.includes('web/rest'))  { ext = 'java'; content = 'package com.acme.web.rest;\n@Path("/foo")\npublic class FooResource {}\n'; }
+      else if (dir.includes('service'))   { ext = 'java'; content = 'package com.acme.service;\npublic class FooService {}\n'; }
+      else if (dir.includes('tools'))     { ext = 'java'; content = 'package com.acme.tools;\npublic class FooUtil {}\n'; }
       else if (dir.includes('js/'))       { ext = 'js';   content = 'angular.module("foo").directive("spFoo", function(){});\n'; }
 
       writeFileSync(join(fullDir, `file${i}.${ext}`), content);
@@ -171,7 +171,7 @@ log('');
 
 log('Installing pipeline into fixture...');
 try {
-  execSync(`node ${join(SCRIPT_DIR, 'contexts/tools/install.mjs')} --pack iiq --project-root ${FIXTURE_ROOT} --target cursor`,
+  execSync(`node ${join(SCRIPT_DIR, 'contexts/tools/install.mjs')} --pack your-project --project-root ${FIXTURE_ROOT} --target cursor`,
            { stdio: VERBOSE ? 'inherit' : 'pipe' });
   log('  ✓ Install succeeded');
 } catch (e) {

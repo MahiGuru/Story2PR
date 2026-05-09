@@ -1,0 +1,81 @@
+meta:
+  schema_version: 4
+  pack: your-project
+
+subagents:
+  orchestrator_amend_request: []   # kernel default applies
+  orchestrator_image_analysis: []  # kernel default applies
+  surgeon_pre_task:             []
+  surgeon_post_task:            []
+  review_post_check:            []
+
+runtime:
+
+  branching:
+    base_branch: main
+    stacking:    auto-detect       # auto-detect | always-ask | never
+    prefix_story: "feature/"
+    prefix_bug:   "fix/"
+
+  contexts_layout:
+    nested_by_epic: true
+    epic_folder_case: lower
+    standalone_folder: standalone
+    codebase_map_filename: codebase-map.md
+    lld_filename:       "{TICKET}-lld.md"
+    testplan_filename:  "{TICKET}-testplan.md"
+    design_folder_name: "{TICKET}-design"
+
+  trigger:
+    inline_context_keyword: required   # required | optional
+
+jira:
+  label: your-project-agentic-team
+  add_at: phase-c-go              # phase-c-go | ship | both
+  on_failure: warn-and-continue   # warn-and-continue | block
+  post_comment: true
+
+  reference_link_types:
+    - "is similar to"
+
+  status_map:
+    in_development: "In Progress"
+    review_done:    "In Review"
+    ship_done:      "Ready for QA"
+
+  status_groups:
+    active_hydrate:
+      - "In Review"
+      - "Ready for QA"
+    active_flag_only:
+      - "In Progress"
+    completed:
+      - "Done"
+
+mcp_servers:
+
+  atlassian:
+    auth: oauth
+    config:
+      url: "https://mcp.atlassian.com/v1/mcp"
+    setup_hint: |
+      On first agent run, your browser opens for Atlassian login.
+      Token auto-refreshes; re-login ~daily.
+
+  github:
+    auth: token
+    config:
+      command: "npx"
+      args: ["-y", "@modelcontextprotocol/server-github"]
+      env:
+        GITHUB_TOKEN: "${GITHUB_TOKEN}"
+    setup_hint: |
+      Create a GitHub PAT with 'repo' scope at:
+        https://github.com/settings/tokens
+      Set env.GITHUB_TOKEN in your personal MCP config.
+
+mcp_roles:
+  story_source: atlassian       # ticket body + ACs (JIRA)
+  design_source: null           # no design source — set to figma/notion/etc. when adopted
+  vcs:           [github]       # branch / commit / PR; list = primary + fallbacks
+  docs_source:   atlassian      # HLDs / wiki (Confluence)

@@ -77,14 +77,12 @@ Per-agent cost is dominated by cache reads (every tool call re-reads the cached 
 
 Bundle wins are **wall-clock (~30–40% faster), code dedup at design time, 1 PR vs N** — token saving over warm sequential is only 10–20%, but vs cold sequential it's ~50%. Use bundle when stories share code; use single-story for unrelated work.
 
-**To reduce cost:** finish each agent within ~5 min of starting it (5-min cache TTL — going idle costs 10× on the next tool call). Run agents back-to-back to keep cache warm. See [`agent-pipeline/docs/cost-optimization.md`](./agent-pipeline/docs/cost-optimization.md) for per-agent optimization opportunities.
+**To reduce cost:** finish each agent within ~5 min of starting it (5-min cache TTL — going idle costs 10× on the next tool call). Run agents back-to-back to keep cache warm.
 
 **Mid-bundle failure handling:** if Review verdict is `PARTIAL` (some tickets pass ACs, some don't), Ship's gate prompts (per `runtime.bundle.partial_ship_policy: ask`):
 - `Halt and fix` — stop and resume Surgeon at the failing tasks
 - `Ship passing tickets only` — JIRA transitions fire only for YES tickets; failing tickets stay in pre-bundle state
 - `Ship anyway with gaps` — closes all tickets in the PR; transitions only YES; PR body labels gaps as fix-forward
-
-Full agent reference → [`agent-pipeline/docs/agents/09-bundle-orchestrator.md`](./agent-pipeline/docs/agents/09-bundle-orchestrator.md).
 
 ### Offline / selective MCP (save tokens, work without network, privacy)
 
@@ -125,7 +123,7 @@ Release / config management. Most team members rarely run these.
 
 | I want to… | Command |
 |------------|---------|
-| Install pipeline into a project (default pack: `starter`) | `npm run install-pipeline -- --project-root /path` |
+| Install pipeline into a project (default pack: `your-project`) | `npm run install-pipeline -- --project-root /path` |
 | Install with a specific pack | `npm run install-pipeline -- --project-root /path --pack <name>` |
 | List available packs | `npm run install-pipeline -- --list-packs` |
 | Validate pipeline config | `node contexts/tools/validate.mjs` |
@@ -181,8 +179,6 @@ Ship → commit + PR + JIRA transitions
 | AC-E2E-Check (optional) | AC Registry, LLD PART 2 | Browser screenshots + new tasks if gaps | Verify ACs in real browser |
 | Review | Manifest, LLD, git diff | `<TICKET>-review.md` + epic-context update | Full build, tests, AC compliance, blast radius |
 | Ship | Review, manifest, LLD | Git commit + PR + JIRA update + codebase-map metadata | Commit, push, open PR, transition ticket |
-
-Each agent has its own walkthrough at `agent-pipeline/docs/agents/` — start with `README.md`.
 
 ---
 
@@ -290,13 +286,12 @@ contexts/
 
 ## Choosing a pack
 
-The kernel is **pack-agnostic** — it ships with two packs, and you can author more.
+The kernel is **pack-agnostic** — it ships with a your-project pack, and you can author more.
 
 | Pack | Status | When to use |
 |------|--------|-------------|
-| **`starter`** | Default. Public, didactic | Starting a new project. Covers Angular 18/19, React, Vue 3, JavaScript, TypeScript, Java standards as worked examples. Copy + rename to seed your own pack. |
-| **`iiq`** | Production reference. Kept locally only (gitignored — was the original real-world pack) | Working on a SailPoint IdentityIQ codebase, OR studying a complete production-scale pack |
-| **`<your-pack>`** | You create | After you've copied `packs/starter/` → `packs/<your-pack>/`, edited the seed, and added your project-specific skills + rules |
+| **`your-project`** | Default. Public, didactic | Starting a new project. Covers Angular 18/19, React, Vue 3, JavaScript, TypeScript, Java standards as worked examples. Copy + rename to seed your own pack. |
+| **`<your-pack>`** | You create | After you've copied `packs/your-project/` → `packs/<your-pack>/`, edited the seed, and added your project-specific skills + rules |
 
 ### How packs work — at a glance
 
@@ -306,26 +301,26 @@ Every install combines **kernel** (pack-agnostic agents/rules/skills) + **chosen
 .cursor/
 ├── agents/    ← kernel only (15 agents — same for every pack)
 ├── rules/     ← kernel rules (agent-flow, engineering-principles)
-│              + pack rules (e.g. starter-project-scope.mdc)
-└── skills/    ← kernel skills (8 generic) + pack skills (e.g. starter-react-standards.md)
+│              + pack rules (e.g. your-project-project-scope.mdc)
+└── skills/    ← kernel skills (8 generic) + pack skills (e.g. your-project-react-standards.md)
 
 contexts/config/pipeline.<PACK>.yaml         ← THE TRIGGER MAP
                                                 (which skill loads when, what builds run, etc.)
 ```
 
-The kernel agents are pack-agnostic — they reference `pipeline.{PACK}.<role>.yaml` and resolve `{PACK}` from `meta.pack` at pre-flight. So the same kernel agent prompts work whether you install `--pack starter`, `--pack iiq`, or `--pack <your-pack>`.
+The kernel agents are pack-agnostic — they reference `pipeline.{PACK}.<role>.yaml` and resolve `{PACK}` from `meta.pack` at pre-flight. So the same kernel agent prompts work whether you install `--pack your-project` or `--pack <your-pack>`.
 
 ### Authoring your own pack
 
 ```bash
-cp -r packs/starter packs/<your-pack>
-# Rename pipeline.starter.yaml → pipeline.<your-pack>.yaml
+cp -r packs/your-project packs/<your-pack>
+# Rename pipeline.your-project.yaml → pipeline.<your-pack>.yaml
 # Set meta.pack: <your-pack> in the seed
 # Edit rules/, skills/, and pipeline.<your-pack>.yaml for your project
 npm run install-pipeline -- --pack <your-pack> --project-root /path/to/project
 ```
 
-`packs/starter/README.md` is the full guide — naming conventions, how to add a skill, how to add a rule, what `project-analyzer` writes vs what you author.
+`packs/your-project/README.md` is the full guide — naming conventions, how to add a skill, how to add a rule, what `project-analyzer` writes vs what you author.
 
 ---
 
@@ -336,12 +331,11 @@ npm run install-pipeline -- --pack <your-pack> --project-root /path/to/project
 ```bash
 # From the unzipped release folder
 
-# Option 1: starter pack (default, didactic — recommended for new projects)
+# Option 1: your-project pack (default, didactic — recommended for new projects)
 npm run install-pipeline -- --project-root /path/to/your/project
 
 # Option 2: explicit pack name
-npm run install-pipeline -- --pack starter --project-root /path/to/your/project
-npm run install-pipeline -- --pack iiq --project-root /path/to/your/project   # IIQ — kept locally
+npm run install-pipeline -- --pack your-project --project-root /path/to/your/project
 npm run install-pipeline -- --pack <your-pack> --project-root /path/to/your/project
 ```
 
@@ -457,7 +451,7 @@ Takes 5–15 minutes. Produces `contexts/project-map.md` and populates yaml auto
 
 1. **`contexts/project-map.md`** — your project's DNA: tech stack, folder structure, shared components, REST endpoints, templates, build system, consumer graph.
 2. **🆕 Unmapped Content** — file extensions present in the repo but missing from `skills.layer_map`. Suggests a YAML stub to paste.
-3. **💡 Skill Authoring Recommendations** *(Step 8.6h, new)* — for layers configured in `layer_map` but with empty `skills:` list OR missing skill files, the analyzer suggests what to write. Each recommendation includes a concrete topic outline (e.g., "Spring Boot: constructor injection only, @Transactional on services, jakarta.* imports …") and points at the matching reference skill in `packs/starter/skills/` if one exists. Recommendations persist as a one-liner snapshot in `project-map.md` so authoring debt is visible to the team without re-running the analyzer.
+3. **💡 Skill Authoring Recommendations** *(Step 8.6h, new)* — for layers configured in `layer_map` but with empty `skills:` list OR missing skill files, the analyzer suggests what to write. Each recommendation includes a concrete topic outline (e.g., "Spring Boot: constructor injection only, @Transactional on services, jakarta.* imports …") and points at the matching reference skill in `packs/your-project/skills/` if one exists. Recommendations persist as a one-liner snapshot in `project-map.md` so authoring debt is visible to the team without re-running the analyzer.
 
 The analyzer **does NOT auto-create skill files** — recommendations are read-only. You author the skill, add the YAML reference, re-install with `--merge-config`. See "Adding new skills and rules" below.
 
@@ -473,7 +467,6 @@ Walk through all gates once yourself before telling the team.
 
 Share:
 - Command cheat sheet (top of this doc)
-- Link to `agent-pipeline/docs/agents/README.md` (per-agent details)
 - Your customizations (if any) to `pipeline.yaml`
 
 ---
@@ -615,7 +608,7 @@ Technically you can drop a skill straight into `.cursor/skills/<name>.md` and re
 
 Healthy pattern: **iterate fast in the runtime location, promote to the pack when stable.** Once you like the skill, copy into `packs/<pack>/skills/`, mirror the YAML edit into the seed, run `--merge-config`, commit.
 
-Full reference: **`packs/starter/README.md`** — worked examples, conventions, and the analyzer/author boundary table.
+Full reference: **`packs/your-project/README.md`** — worked examples, conventions, and the analyzer/author boundary table.
 
 ---
 
@@ -859,7 +852,7 @@ Pick one:
 GitHub is rarely on the critical path. When its MCP fails:
 
 ```
-⚠ GitHub MCP failed — continuing without PR diff enrichment for reference ticket IIQPROJ-1001.
+⚠ GitHub MCP failed — continuing without PR diff enrichment for reference ticket PROJ-1001.
 Pattern comparison will use ref LLD (local file) only, not the merged diff.
 No action needed unless you specifically want PR-level pattern match; re-run when MCP is back.
 ```
@@ -1065,9 +1058,9 @@ See comments inside each split file for every key + why it exists. The pack seed
 
 ## Deeper Reading
 
-- **Per-agent walkthroughs:** `agent-pipeline/docs/agents/README.md` — start here for details
+- **Agent prompts:** `agent-pipeline/agents/` — one file per agent, source of truth for behavior
 - **Pipeline flow rules:** `agent-pipeline/rules/agent-flow.mdc` — path resolution, companion files, invocation modes, **Pack Resolution** (top of file)
-- **Starter pack — didactic guide:** **`packs/starter/README.md`** — naming conventions, how to add skills/rules, the analyzer/author boundary table, full template
+- **Your-project pack — didactic guide:** **`packs/your-project/README.md`** — naming conventions, how to add skills/rules, the analyzer/author boundary table, full template
 - **Kernel skill index:** `agent-pipeline/skills/SKILL.md`
 - **Pack skills:** `packs/<pack>/skills/` — project-specific coding standards
 - **Full config reference:** the pack seed at `packs/<pack>/pipeline.<pack>.yaml` has every key documented inline. Split files in `contexts/config/` carry per-file headers + relevant comments.

@@ -1,0 +1,68 @@
+skills:
+
+  layer_map:
+
+    "Frontend/Angular18":
+      skills: [your-project-angular18-standards.md]
+      path_glob: "frontend/src/**/*.{ts,html}"
+      build: ui_dev
+      desc: "Angular 18 — NgModule, RxJS, NgRx, reactive forms"
+      aliases: ["Angular18", "Angular 18", "Frontend Angular18", "ng18"]
+
+    "Frontend/Angular19":
+      skills: [your-project-angular19-standards.md]
+      path_glob: "frontend/src/**/*.{ts,html}"
+      build: ui_dev
+      desc: "Angular 19+ — standalone, signals, @if/@for, inject()"
+      aliases: ["Angular19", "Angular 19", "Modern Angular", "ng19", "ng-modern"]
+
+    "Frontend/React":
+      skills: [your-project-react-standards.md, your-project-typescript-standards.md]
+      path_glob: "src/**/*.{tsx,jsx}"
+      build: ui_dev
+      desc: "React 18/19 — function components + hooks"
+      aliases: ["React", "ReactJS", "Frontend React", "Next.js Pages"]
+
+    "Frontend/Vue":
+      skills: [your-project-vue3-standards.md, your-project-typescript-standards.md]
+      path_glob: "src/**/*.vue"
+      build: ui_dev
+      desc: "Vue 3 — <script setup>, Composition API, Pinia"
+      aliases: ["Vue", "Vue3", "Vue 3", "Frontend Vue"]
+
+    "JavaScript":
+      skills: [your-project-javascript-standards.md]
+      path_glob: "**/*.js"
+      build: ui_dev
+      desc: "Modern JavaScript ES2020+ baseline"
+      aliases: ["JS", "Vanilla JS", "Plain JavaScript"]
+
+    "TypeScript":
+      skills: [your-project-typescript-standards.md, your-project-javascript-standards.md]
+      path_glob: "**/*.ts"
+      build: ui_dev
+      desc: "TypeScript strict-mode patterns (layer over JS baseline)"
+      aliases: ["TS", "Strict TypeScript"]
+
+    "Backend/Java":
+      skills: [your-project-java-standards.md]
+      path_glob: "backend/src/main/java/**/*.java"
+      build: java_compile
+      desc: "Java 17+ — records, sealed, pattern matching, Spring Boot 3"
+      aliases: ["Java", "Backend Java", "Spring Boot", "Spring", "Backend"]
+
+    "Test":
+      skills: []
+      build: java_compile
+      desc: "Tests — placeholder, add your-project-test-standards.md later"
+      aliases: ["Tests", "Unit Tests", "Testing"]
+
+  extra_triggers:
+    - when: "task touches plain JavaScript (no framework imports)"
+      add: [your-project-javascript-standards.md]
+    - when: "task is in TypeScript and Layer is React or Vue"
+      add: [your-project-typescript-standards.md]
+
+  orchestrator:
+
+  explorer:

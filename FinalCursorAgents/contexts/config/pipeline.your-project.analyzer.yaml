@@ -1,0 +1,109 @@
+shared_paths:
+  frontend:
+    ui_elements: []
+    services:    []
+    templates:   []
+  backend:
+    services:        []
+    utilities:       []
+    rest_endpoints:  []
+    persistence:    []
+  tests:
+    frontend: []
+    backend:  []
+
+explorer_paths:
+  - "frontend/src/"
+  - "backend/src/main/java/"
+  - "backend/src/test/java/"
+
+scan_exclusions:
+  dependencies:
+    - node_modules
+    - vendor
+    - .venv
+    - venv
+    - __pypackages__
+    - jspm_packages
+
+  build_output:
+    - target
+    - build
+    - out
+    - dist
+    - bin
+    - .gradle
+    - .next
+    - .nuxt
+    - .svelte-kit
+    - .turbo
+    - .cache
+
+  caches:
+    - __pycache__
+    - .pytest_cache
+    - .mypy_cache
+    - .nyc_output
+    - coverage
+
+  vcs_and_ide:
+    - .git
+    - .idea
+    - .vscode
+
+  infra_state:
+    - .terraform
+
+  test_fixtures:
+    - test/fixtures
+    - test/resources
+
+  custom: []
+
+component_naming:
+  prefix: "app-"   # default convention; analyzer overrides if it detects another
+  custom_suffix_map: {}
+
+rescan_hints:
+  enabled: true
+
+  drift_thresholds:
+    high_file_count: 25
+    medium_file_count: 10
+    low_file_count: 3
+    stale_days: 60
+
+  detection_thresholds:
+    framework_min_files: 3
+    shared_dir_min_files: 3
+    build_tool_min_files: 1
+    growth_multiplier: 2
+
+  freshness_check:
+    enabled: true
+    min_files_to_check: 3
+    global_recent_rescan_days: 7
+    stale_threshold_days: 30
+    stale_threshold_file_count: 10
+    top_n_candidates: 3
+    default_action: "rescan"
+
+  unmapped_detection:
+    enabled: true
+    min_file_count: 3
+    shared_dir_patterns:
+      - shared
+      - common
+      - util
+      - utilities
+      - base
+      - widgets
+      - components
+
+  skill_recommendations:
+    enabled: true
+    min_files: 3              # don't recommend a skill for a 2-file layer
+    stub_file_threshold: 500  # bytes — skill files under this count as stubs
+    repropose_growth: 2       # 2x evidence growth re-proposes ignored items
+
+analyzer_ignore: []

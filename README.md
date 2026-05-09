@@ -28,7 +28,7 @@ Full command cheat sheet → [`HOW-TO-USE.md`](./HOW-TO-USE.md).
 | I want to… | Go to |
 |------------|-------|
 | Know what to type | [`HOW-TO-USE.md`](./HOW-TO-USE.md) — command cheat sheet + per-role setup |
-| Understand one agent | [`agent-pipeline/docs/agents/`](./agent-pipeline/docs/agents/) — one doc per agent, Quick Reference at top |
+| Understand one agent | Read its prompt at `agent-pipeline/agents/<agent>.md` |
 | Set up the pipeline for a team | `HOW-TO-USE.md` § Tech Lead — install, validate, customize, announce |
 | Configure the pipeline | `contexts/config/pipeline.yourproj.yaml` — every key is commented |
 | Understand the architecture | Section "Architecture" below |
@@ -142,8 +142,6 @@ Downstream agents read only the file they need. Full details in `agent-pipeline/
 | 06 | Review | 4/5 | Full build + tests + code review + blast radius + AC compliance |
 | 07 | Ship | 5/5 | Commit + push + PR + JIRA transitions |
 | 08 | Subagent-Amender | Subagent | Targeted LLD amendments at Orchestrator's Phase C gate |
-
-**Per-agent docs** → [`agent-pipeline/docs/agents/README.md`](./agent-pipeline/docs/agents/README.md). Each doc opens with a **Quick Reference** (invocation modes, commands, config reads, outputs, examples).
 
 ---
 
@@ -399,7 +397,7 @@ Nothing is thrown away between stories; epic context grows as the epic evolves. 
 ## Deeper Reading
 
 - [`HOW-TO-USE.md`](./HOW-TO-USE.md) — command cheat sheet, setup walkthrough, developer flow, troubleshooting
-- [`agent-pipeline/docs/agents/README.md`](./agent-pipeline/docs/agents/README.md) — per-agent reference (Quick Reference per agent + full mechanics)
+- [`agent-pipeline/agents/`](./agent-pipeline/agents/) — agent prompts (one file per agent, source of truth)
 - [`agent-pipeline/rules/agent-flow.mdc`](./agent-pipeline/rules/agent-flow.mdc) — path resolution, companion file contracts, invocation mode detection
 - [`agent-pipeline/skills/SKILL.md`](./agent-pipeline/skills/SKILL.md) — kernel skill index
 - `packs/<pack>/` — pack-specific skills + rules; open one to see what a pack looks like
@@ -410,4 +408,4 @@ Nothing is thrown away between stories; epic context grows as the epic evolves. 
 
 ## Updating
 
-When agent prompts change materially, update the Quick Reference block in the corresponding `agent-pipeline/docs/agents/<N>-<agent>.md` first. Then refresh `HOW-TO-USE.md` and this README if user-facing commands change.
+When agent prompts change materially, refresh `HOW-TO-USE.md` and this README if user-facing commands change.
