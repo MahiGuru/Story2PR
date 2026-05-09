@@ -1,0 +1,69 @@
+---
+description: IIQ legacy frontend imports and registration — AngularJS module registration, JSPM ES6 imports, ExtJS component definition, XHTML namespace declarations.
+alwaysApply: false
+globs:
+  - "web/ui/js/**/*.js"
+  - "test/js/**/*.js"
+  - "web/ui/page/**/*.xhtml"
+  - "web/ui/include/**/*.xhtml"
+layer: Frontend/AngularJS
+---
+
+# IIQ AngularJS + Legacy Import & Registration Patterns
+
+## AngularJS Module Registration
+
+**Register directives, services, filters in the module file:**
+
+```javascript
+// web/ui/js/common/module.js (shared) or web/ui/js/{feature}/module.js (feature)
+angular.module('sailpoint.{module}', [])
+    .directive('spDatePicker', spDatePicker)
+    .service('DateValidationService', DateValidationService)
+    .filter('dateFormat', dateFormat);
+```
+
+**Order:** directives → services → factories → filters → controllers → constants
+
+**Never register in the component file itself** — always in the module file.
+
+## JSPM Imports (ES6 style in IIQ)
+
+```javascript
+// Relative imports for same-feature files
+import DateValidationService from './service/DateValidationService';
+
+// Cross-feature imports use full path from web/ui/js/
+import 'common/directive/spDatePicker';
+import 'common/service/DateValidationService';
+
+// Third-party (from JSPM packages)
+import angular from 'angular';
+import 'angular-ui-router';
+```
+
+**Import order:** third-party → `common/` → feature/ → relative
+
+## ExtJS Component Registration
+
+```javascript
+Ext.define('SailPoint.grid.MetadataGrid', {
+    extend: 'SailPoint.grid.AbstractGrid',
+    requires: [
+        'SailPoint.store.MetadataStore',
+        'SailPoint.model.MetadataModel'
+    ],
+    // ...
+});
+```
+
+## XHTML Namespace Declarations
+
+```xml
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+    xmlns:ui="http://java.sun.com/jsf/facelets"
+    xmlns:h="http://java.sun.com/jsf/html"
+    xmlns:f="http://java.sun.com/jsf/core">
+```
+
+Only declare namespaces you actually use in the file.

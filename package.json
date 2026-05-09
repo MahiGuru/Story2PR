@@ -1,0 +1,17 @@
+{
+  "name": "agent-pipeline",
+  "version": "11.0.0",
+  "description": "5-agent SDLC pipeline with kernel + pack architecture. Dual-host: Cursor + Claude Code.",
+  "type": "module",
+  "scripts": {
+    "help": "node contexts/tools/help.mjs",
+    "install-pipeline": "node contexts/tools/install.mjs",
+    "install-pipeline:cursor": "node contexts/tools/install.mjs --target cursor",
+    "install-pipeline:claude": "node contexts/tools/install.mjs --target claude",
+    "pipeline:split": "node contexts/tools/split-pipeline.mjs split",
+    "pipeline:merge": "node contexts/tools/split-pipeline.mjs merge"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  }
+}

@@ -1,0 +1,44 @@
+---
+description: IIQ Angular 18 naming conventions — kebab-case file names, PascalCase classes, sp- prefix for selectors and bindings, NgRx conventions. Enforced by ESLint in web/ui/ts/.
+alwaysApply: false
+globs:
+  - "web/ui/ts/**/*.ts"
+  - "web/ui/ts/**/*.html"
+layer: Frontend/Angular18
+---
+
+# IIQ Angular 18 Naming Conventions
+
+**Critical: kebab-case is enforced by ESLint for all `web/ui/ts/` files.** Don't use camelCase or PascalCase for filenames in the Angular 18 codebase.
+
+## Files
+
+| Type | Convention | Example |
+|------|-----------|---------|
+| TS component | kebab-case + `.component.ts` | `dropdown.component.ts`, `reconfigure-modal.component.ts` |
+| TS service | kebab-case + `.service.ts` | `application-definition.service.ts` |
+| TS interface | kebab-case + `.interface.ts` | `application-data.interface.ts` |
+| TS pipe | kebab-case + `.pipe.ts` | `date-format.pipe.ts` |
+| TS directive | kebab-case + `.directive.ts` | `auto-focus.directive.ts` |
+| TS module | kebab-case + `.module.ts` | `application-definition.module.ts` |
+| Component template | kebab-case + `.component.html` (in `template/` subfolder) | `template/dropdown.component.html` |
+| NgRx actions | kebab-case + `.actions.ts` | `application-definition.actions.ts` |
+| NgRx reducer | kebab-case + `.reducer.ts` | `application-definition.reducer.ts` |
+| NgRx effects | kebab-case + `.effects.ts` | `application-definition.effects.ts` |
+| NgRx selectors | kebab-case + `.selectors.ts` | `application-definition.selectors.ts` |
+| Test file | kebab-case + `.spec.ts` | `dropdown.component.spec.ts` |
+
+## Angular 18 elements
+
+| Element | Convention | Example |
+|---------|-----------|---------|
+| Component selector | kebab-case, `sp-` prefix | `<sp-dropdown>`, `<sp-datatable>` |
+| Component class | PascalCase + `Component` suffix | `DropdownComponent`, `ReconfigureModalComponent` |
+| Service class | PascalCase + `Service` suffix | `ApplicationDefinitionService` |
+| Interface | PascalCase, no `I` prefix | `ApplicationData`, `DropdownOption` |
+| Module class | PascalCase + `Module` suffix | `ApplicationDefinitionModule` |
+| Input binding name | camelCase, `sp` prefix | `@Input('spOptions')`, `@Input('spDisabled')` |
+| Output binding name | camelCase, `sp` prefix | `@Output('spOnSelect')`, `@Output('spOnChange')` |
+| NgRx action | `[Feature] Verb Description` | `[Application Definition] Load Applications` |
+| NgRx selector | camelCase, `select` prefix | `selectAllApplications`, `selectIsLoading` |
+| Constants | UPPER_SNAKE_CASE | `MAX_PAGE_SIZE`, `DEFAULT_TIMEOUT` |

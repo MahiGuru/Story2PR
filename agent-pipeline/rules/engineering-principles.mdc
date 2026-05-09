@@ -1,0 +1,135 @@
+---
+description: Universal engineering principles — tech-agnostic. SOLID, KISS, DRY, YAGNI, POLA, plus cross-cutting concerns (testability, observability, security, performance). Two modes: Greenfield applies principles fully; Legacy matches the neighborhood. Loaded on every Surgeon task to gate code quality alongside pack-specific rules.
+alwaysApply: true
+---
+
+# Engineering Principles (Tier 1 — Universal · Tech-Agnostic)
+
+This rule loads on every agent run and applies to every task that writes or modifies code. Surgeon is the primary consumer; Orchestrator and Review use it as a shared vocabulary when reviewing or decomposing work. Pack-specific rules (naming, placement, postverify) sit on top and **win on conflicts of specificity**.
+
+## Two modes — Surgeon picks at task start
+
+The mode is read directly from the task's status field in the LLD's PART 2 task table. There is no separate detection logic.
+
+| Task status | Mode | Behavior |
+|---|---|---|
+| 🆕 NEW / IMPLEMENT (creates a file or new public surface) | **Greenfield** | All principles below apply fully. Design for them from scratch. |
+| 🟡 EXTEND / 🔧 MODIFY (changes an existing file or class) | **Legacy** | Apply principles **only to the lines you add or change**. Match surrounding style. Do **not** refactor untouched code. |
+| ✅ ALREADY DONE / SKIP | n/a | Self-check is a no-op. |
+
+In **Legacy mode**, Principle #0 ("Match the neighborhood") **overrides every other principle** when they conflict. Discomfort with surrounding code is recorded as a manifest observation, never acted upon.
+
+## Principles
+
+### Tier A — Universal foundations
+
+**0. Match the neighborhood [Legacy-mode override · #1 priority]** — When modifying existing code, match the surrounding style: naming, error handling, abstraction level, idioms. Modern principles apply to *new* code, not retroactively. Surgeon's job is to deliver the task, never to "fix" code outside its scope.
+
+**1. Single Responsibility (SRP)** — A class, function, or module has one reason to change. If you can describe its job with "and", split it.
+
+**2. Open/Closed (OCP)** — Open for extension, closed to modification. Add new behavior via composition, configuration, or polymorphism — not by editing every call site.
+
+**3. Liskov Substitution (LSP)** — Subtypes must be drop-in replacements for their base type without surprises. If `Square extends Rectangle` breaks callers' assumptions, the hierarchy is wrong.
+
+**4. Interface Segregation (ISP)** — Many small, role-specific interfaces beat one fat interface. Clients should not depend on methods they don't use.
+
+**5. Dependency Inversion (DIP)** — Depend on abstractions, not concretions. High-level modules don't import low-level details directly.
+
+**6. KISS — Keep It Simple, Stupid** — Choose the simplest design that solves the problem in front of you, not a hypothetical superset.
+
+**7. DRY — Don't Repeat Yourself (with rule of three)** — Repetition is a smell, but premature abstraction is a worse one. Wait for **three** uses before extracting; two might be coincidence. Three lines of similar code is better than the wrong abstraction.
+
+**8. YAGNI — You Aren't Gonna Need It** — Don't build for hypothetical future needs. Don't add config knobs, extension points, or abstractions until a real second use case exists.
+
+**9. POLA — Principle of Least Astonishment** — Code does what its name suggests. Names don't lie, functions don't have hidden side effects, and `getX()` doesn't mutate state.
+
+**10. Separation of Concerns** — High cohesion within a unit, loose coupling between units. Mixing presentation with persistence, or business logic with transport, is a smell.
+
+**11. Composition over inheritance** — Compose small pieces; inherit only when the "is-a" relationship is exact, stable, and behaviorally substitutable. Inheritance for code reuse alone is almost always wrong.
+
+### Tier B — Code quality essentials
+
+**12. Intention-revealing names** — Variable, function, and class names tell *what* the thing represents or does, not *how* it's implemented. If you need a comment to explain a name, rename it.
+
+**13. Single source of truth** — Each piece of state, configuration, or knowledge lives in exactly one canonical place. Duplicates drift.
+
+**14. Fail fast, fail loud** — Detect errors as close to their cause as possible and surface them clearly. Silent fallbacks hide bugs; explicit failures are debuggable.
+
+**15. Boundary validation, internal trust** — Validate aggressively at trust boundaries (user input, external APIs, config files). Trust internal contracts: don't re-check arguments that the type system or caller already guarantees. Defensive code in internal paths adds noise without value.
+
+**16. Pure functions where possible** — Functions that compute outputs from inputs without side effects are easier to test, parallelize, and reason about. Push side effects to the edges.
+
+**17. Small, focused functions** — Low cyclomatic complexity, early returns, one clear responsibility per function. If you can't name it precisely, it's doing too much.
+
+**18. Explicit over implicit** — Dependencies, side effects, and error paths are visible at the call site. Magic, monkey-patching, and global state are not.
+
+### Tier C — Design principles
+
+**19. Law of Demeter** — Talk only to immediate collaborators. `a.b().c().d()` is a smell — `a` is reaching across two boundaries it shouldn't know about.
+
+**20. Dependency Injection** — Invert control. Pass dependencies as parameters or via a container; don't `new` them inside business logic. Hardcoded singletons are an anti-pattern in testable code.
+
+**21. Idempotency where applicable** — API endpoints, write operations, and message handlers should be safely retriable when feasible. Same input, same effect, regardless of how many times it runs.
+
+### Tier D — Cross-cutting
+
+**22. Testability is a design property** — Code that's hard to test is poorly designed code. If you need to mock half the system to test a function, refactor for testability before writing the mocks.
+
+**23. Observability where it matters** — Log/metric at decision branches and external IO boundaries. Don't log secrets or PII. Don't log spam.
+
+**24. Defense in depth (security)** — Never trust client input. Never log secrets. Apply least privilege. Validate at every trust boundary.
+
+**25. Performance awareness** — Watch for N+1 queries, accidental quadratic loops, large allocations in hot paths, and unbounded growth. Measure before optimizing — but recognize the obvious traps without measuring.
+
+## Anti-principles (explicit rejections)
+
+These exist because they are the most common ways agents and engineers self-justify scope creep.
+
+- **Boy Scout Rule — REJECTED.** "Leave it cleaner than you found it" actively conflicts with scope discipline. Surgeon does not improve code outside the task. Cleanup is a deliberate decision with its own ticket, never a side effect of unrelated work.
+
+- **No opportunistic refactor.** Refactoring is a separate ticket with its own LLD. Even when "it would only take 10 lines." Even when "the structure is obviously wrong." Even when "I'm already in the file." Discomfort goes in the manifest's *Legacy observations* section, not in the diff.
+
+## Self-check — Surgeon runs at task end (post_verification step 3)
+
+Before marking a task complete, Surgeon answers each item. Failures block task completion until addressed (or recorded as a deliberate exception with rationale).
+
+```
+□ All changes scoped to this task — no surrounding refactor
+□ New code matches surrounding file style (legacy mode) OR follows principles fully (greenfield mode)
+□ Function/class has a single responsibility
+□ No premature abstraction (rule of three respected)
+□ No hardcoded constants that should be config
+□ No silent error swallowing
+□ Validation at trust boundaries, not at every internal call
+□ Names tell intent without comments
+□ No new dependencies that the task didn't require
+□ Legacy observations recorded if any
+```
+
+**Required manifest line per task** (always emit, even when there are no exceptions):
+
+```
+T{N}: principles · Mode: {greenfield|legacy} · principle exceptions: {N} {[ids if any]}
+```
+
+## Legacy observations channel
+
+When working in legacy mode, Surgeon will encounter code that violates these principles. The correct response is **observe, do not act**. Record the observation in the Change Manifest's *Legacy observations* section (template owned by `surgeon.md`). Examples:
+
+- "`UserService.java` (47 methods) — extraction candidate; deferred."
+- "`certificationCtrl.js` callback chains in `submitDecision()` — promise migration candidate."
+- "`web/ui/js/app.js` global state — DI candidate when major version planned."
+
+Observations are **manifest-only** (not surfaced in PR body, not surfaced in epic-context). They exist so the team can mine them for tech-debt tickets when they choose to — never as a forcing function.
+
+## Conflict resolution policy
+
+When this rule conflicts with another input, resolve in this order (most-specific wins):
+
+1. **The task's LLD** (PART 1 + PART 2) — the contract; always wins
+2. **Local file conventions** (in legacy mode) — match the file you're modifying
+3. **Pack-specific rules** (`{pack}-naming-*`, `{pack}-placement-*`, `{pack}-postverify-*`) — domain-specific
+4. **This rule** (engineering-principles.mdc) — universal foundation
+5. Surgeon's own preferences — last
+
+If a principle below must be violated, record it in the manifest as `Principle exception: {id} — {brief why}`.

@@ -1,0 +1,28 @@
+---
+description: IIQ Java import ordering and rules — standard library, SailPoint API, project packages, no wildcard imports.
+alwaysApply: false
+globs:
+  - "src/sailpoint/**/*.java"
+  - "test/sailpoint/**/*.java"
+layer: Backend/Java
+---
+
+# IIQ Java Import Patterns
+
+```java
+// Standard library
+import java.util.List;
+import java.util.Map;
+
+// SailPoint API
+import sailpoint.api.SailPointContext;
+import sailpoint.object.Identity;
+
+// Project packages
+import sailpoint.service.MetadataValidationService;
+import sailpoint.web.rest.dto.ValidationResultDTO;
+```
+
+**Import order:** `java.*` → `javax.*` → `sailpoint.api`/`object` → `sailpoint.service`/`web` → static imports last
+
+**Never wildcard imports** — always explicit (`import java.util.List` not `import java.util.*`)

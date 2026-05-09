@@ -1,0 +1,1570 @@
+---
+description: Agent pipeline flow (project-analyzer + orchestrator → explorer → surgeon → ac-e2e-check → review → ship for single story; bundle-orchestrator → bundle-explorer → bundle-surgeon → bundle-review → bundle-ship for multi-story bundles). Triggers on "Analyze project", "Scan project", "Rescan project", "Rescan <stack|layer|section|path>", "Reconsider ignored", "Show low-confidence detections", "Work on story", "run orchestrator/explorer/surgeon/review/ship", "ship it", "raise PR", "AC e2e check", "Demo" / "Verify" (legacy aliases), "Verify last agent run", JIRA ticket IDs with implementation intent. Bundle triggers: "Work on epic stories <IDs>" / "Work on epic <ID> with status=...", then "Run the bundle explorer/surgeon/review", "Ship the bundle".
+alwaysApply: true
+---
+
+# Agent Pipeline Flow
+
+## Pack Resolution — `{PACK}` placeholder
+
+This kernel is pack-agnostic. Throughout these prompts, paths of the form
+`contexts/config/pipeline.{PACK}.<role>.yaml` use `{PACK}` as a placeholder
+for the active pack's name (e.g. `iiq`, `starter`, `<your-pack>`).
+
+**Resolve `{PACK}` ONCE at pre-flight, then reuse the resolved value.**
+
+```bash
+# Find the CORE pack YAML — the file in contexts/config/ matching pipeline.*.yaml
+# whose stem (between `pipeline.` and `.yaml`) contains NO further dots.
+# Examples (literal pack names — substitute the real one in your install):
+#     pipeline.<pack>.yaml             → core (stem = "<pack>")             OK
+#     pipeline.<pack>.skills.yaml      → sibling (stem = "<pack>.skills")   no
+#     pipeline.<pack>.builds.yaml      → sibling                            no
+#     pipeline.<pack>.analyzer.yaml    → sibling                            no
+
+# Glob core files only (single dot in stem)
+CORE_YAMLS=$(ls contexts/config/pipeline.*.yaml 2>/dev/null \
+             | grep -E 'pipeline\.[^.]+\.yaml$')
+
+# Exactly ONE match expected. Read meta.pack from it.
+CORE_YAML=$(echo "$CORE_YAMLS" | head -1)
+PACK=$(grep -E '^\s*pack:' "$CORE_YAML" | head -1 | awk '{print $2}')
+```
+
+**Edge cases:**
+- **Zero core YAMLs** → halt with: "Pack not installed. Run `npm run install-pipeline -- --pack <name> --project-root <path>`."
+- **Multiple core YAMLs** → halt with: "Ambiguous install — multiple pack core YAMLs in contexts/config/. Remove the stale one before continuing."
+- **`meta.pack` missing or doesn't match the filename stem** → halt with: "Core YAML's meta.pack ({value}) does not match its filename stem ({stem}). Re-install the pack."
+
+After resolution, every `pipeline.{PACK}.<role>.yaml` reference in these agent
+prompts expands to the actual filename at runtime — `{PACK}` substitutes with
+the literal pack name read from `meta.pack` (e.g. `iiq`, `starter`, or your
+custom pack name).
+
+**Pack-author note:** runtime sibling files keep the pack name in their filename
+(installer behavior — see `contexts/tools/split-pipeline.mjs`). Don't hardcode
+specific pack names like `pipeline.iiq.*` or `pipeline.starter.*` in agent
+prompts — always use `pipeline.{PACK}.*` and let the pre-flight resolution above
+expand it at runtime.
+
+---
+
+## CRITICAL — how to invoke agents (v22.2)
+
+The pipeline's agent prompts live at `.cursor/agents/*.md`. When a user issues a trigger below, you **MUST**:
+
+1. **Load the matching agent prompt file FULLY** (read the entire file, not a summary)
+2. **EXECUTE it** by following its phase instructions step-by-step using real tool calls (file reads, file writes, grep, etc.)
+3. **NOT respond conversationally** with a prose summary of what the agent would do — that is a failure mode
+
+If the user types a plain trigger like `Analyze project`, treat it as equivalent to `@project-analyzer.md analyze the codebase and produce the agent's declared outputs`.
+
+**Recommended user invocation pattern** for maximum reliability:
+
+```
+@<agent-file>.md <specific instruction>
+```
+
+Examples:
+- `@project-analyzer.md Analyze project`
+- `@project-analyzer.md Rescan NextJS/Components`
+- `@orchestrator.md Work on {TICKET_ID}`
+- `@orchestrator.md Work on https://<host>/browse/{TICKET_ID}` (URL also supported)
+- `@explorer.md Run the explorer`
+- `@surgeon.md Run the surgeon`
+- `@review.md Run the review`
+- `@ship.md Ship it`
+
+Bundle-mode (multi-story) — separate dedicated agents. **Per-story execution is the default** (per-ticket gates between tickets, ONE consolidated PR). Pass `--linear` to opt out:
+- `@bundle-orchestrator.md Work on epic stories {ID}, {ID}, {ID}, ...`
+- `@bundle-orchestrator.md Work on epic stories {ID}, {ID}, {ID}, ... --linear` (consolidated execution — every-N checkpoints, one_per_task commits)
+- `@bundle-explorer.md Run the bundle explorer`
+- `@bundle-surgeon.md Run the bundle surgeon`
+- `@bundle-review.md Run the bundle review`
+- `@bundle-ship.md Ship the bundle`
+
+Plain triggers (`Analyze project`, `Work on ...`) work via this rule, but `@<file>` is more explicit and avoids ambiguity.
+
+## Auto-start
+On `Work on {TICKET}`, `Work on story {TICKET}`, `Work on https://.../browse/{TICKET}`, or similar, start with orchestrator (Step 1). Orchestrator's load_context step 2b extracts `{TICKET_ID}` from any of these forms — see `orchestrator.md § Phase: load_context (A0) § step 2b` for the full grammar.
+
+## Auto-start (BUNDLE MODE — multi-story consolidation)
+
+> 🛑 **CRITICAL — DO NOT SPLIT THE BUNDLE.** When the user issues a bundle trigger (explicit list `Work on epic stories A, B, C, D, E` or status-filter form), the **only** valid response is to dispatch ALL listed tickets, **as a single bundle**, to `bundle-orchestrator.md`. Do **NOT**:
+> - Suggest dividing the list into `bundle1 / bundle2 / bundleN` choices
+> - Auto-partition by layer (frontend bundle, backend bundle, ...)
+> - Auto-partition by parent epic when `cross_epic_policy: warn_continue` is set
+> - Drop tickets you judge "too large" or "out of scope" — that's the user's call at the C.3 gate
+> - Group consecutive tickets and ask "process group A first?"
+>
+> If the list size exceeds `runtime.bundle.max_tickets`, the **agent itself** halts during A.1 with a clear "split or override --max=" message. The OUTER LLM (this routing layer) never proposes splits — it dispatches verbatim. The user can shrink the bundle by replying `Drop <ticket>` at the orchestrator's C.3 gate. That is the ONLY split mechanism. A pre-emptive chooser destroys the consolidated requirement summary the orchestrator builds — once the user picks one of the offered sub-bundles, the synthesis context for the unchosen tickets is lost.
+>
+> **Single bundle in → single bundle out.** Always.
+
+When the user issues either of these patterns, route to **bundle-orchestrator** (NOT the regular orchestrator):
+
+| Trigger pattern | Dispatch | Notes |
+|---|---|---|
+| `Work on epic stories <ID>, <ID>, <ID>[, ...]` | `bundle-orchestrator.md` | Explicit ticket list. If `parent` field disagrees across the IDs, behavior controlled by `runtime.bundle.cross_epic_policy` (default: warn + continue). |
+| `Work on epic <EPIC_ID> with status="<S1>","<S2>"[,...]` | `bundle-orchestrator.md` | Status-filtered child discovery. Each status must appear in `jira.status_groups` or `jira.status_map`. |
+| `Work on epic <EPIC_ID> status="<S>"` | `bundle-orchestrator.md` | Terser form, same as above. |
+| `Work on epic <EPIC_ID> group=<key>` | `bundle-orchestrator.md` | Status-group shorthand (`group=active_hydrate` etc., from `jira.status_groups`). Off when `runtime.bundle.status_filter.allow_groups: false`. |
+
+**Disambiguation from single-story trigger:** the bundle router checks for the keyword `epic` AND either (a) two-or-more comma-separated ticket IDs after `epic stories`, or (b) the substring `with status=` / `status=` / `group=` after a single epic ID. Anything else routes to the regular orchestrator. The single-story trigger `Work on PROJ-1234` is unaffected.
+
+**Pre-flight gates fired by `bundle-orchestrator` (in this order, before C.3):**
+
+| Gate | When it fires | What user picks | Effect |
+|---|---|---|---|
+| BR.0 — bundle resume | `_bundle-state.yaml` already exists for the same computed `BUNDLE_ID` | `Resume` / `Resume from T<N>` / `Resume --fresh` / `Inspect state` / `Abandon bundle` | Resume / re-synth / halt |
+| BR.0c — pre-existing context | ANY per-ticket file (`mode: story`/`bundle-card`) for any candidate ticket OR overlapping bundle state | `Resume <BUNDLE_ID>` / `Re-run --fresh` / `Skip implemented` / `Show <id>` / `Cancel` | Branch back to BR.0 OR set fresh flags OR proceed |
+| A.1.5 — implementation evidence | After A.1 fetches tickets, BEFORE A.2 path computation | `Go` (accept SKIP/REVIEW_ONLY recommendations) / `Include all` / `Skip <ids>` / `Force <ids>` / `Show evidence <id>` / `Cancel` | Trim `{tickets}`; populate `{review_only_roster}` |
+| C.3 — final gate | After Phase B writes all artifacts | `Go` / `Amend: <text>` / `Drop <ticket>` / `Show details` / `Cancel` | Branch creation (C.4) only on `Go` |
+
+All four are `⛔ MANDATORY HALT` gates. The orchestrator must render the gate and wait for the user's reply before any subsequent step. Auto-progressing past any of these gates is a bug.
+
+**Default execution mode: per-story.** Bundle mode runs in **per-story** execution by default (per-ticket gates, `one_per_ticket` commits, ONE PR). Set `runtime.bundle.execution_mode: consolidated` in `pipeline.yaml` to flip the project-wide default; trigger flags below override per-run.
+
+**JIRA labels for bundle correlation (auto-applied):** Every ticket in a bundle is automatically labeled in JIRA so any single ticket clearly shows it was processed in bulk mode and which siblings it traveled with. Configurable via `runtime.bundle.jira_labels` in `pipeline.yaml`:
+
+```yaml
+runtime:
+  bundle:
+    jira_labels:
+      enabled: true                                 # set false to disable
+      prefix: "agentic_team_bulk"               # all labels start with this string
+      mode: "all_tickets"                           # all_tickets | siblings | bundle_id | both
+        # all_tickets (DEFAULT — matches user request format):
+        #   Every ticket gets len(bundle) labels — one per bundled ticket (including itself).
+        #   Example for bundle [PROJ-1234, PROJ-2345, PROJ-3432]:
+        #     PROJ-1234 gets: agentic_team_bulkPROJ-1234,
+        #                     agentic_team_bulkPROJ-2345,
+        #                     agentic_team_bulkPROJ-3432
+        #     PROJ-2345 gets the same 3 labels
+        #     PROJ-3432 gets the same 3 labels
+        #   JIRA query "labels = agentic_team_bulkPROJ-1234" returns ALL 3 tickets.
+        # siblings:
+        #   Every ticket gets len(bundle)-1 labels — one per OTHER ticket. Smaller label
+        #   footprint; opening a ticket shows its siblings but not itself.
+        # bundle_id:
+        #   Every ticket gets ONE label of form: {prefix}{BUNDLE_ID}
+        #   (e.g. agentic_team_bulkIIQMAG-100-BUNDLE-A3F2). Cleanest single-correlation;
+        #   loses per-sibling visibility.
+        # both:
+        #   Combination of bundle_id + all_tickets. Most labels but maximum queryability.
+
+      apply_at: "both"                              # orchestrator_c4 | ship_phase6 | both (default)
+        # orchestrator_c4: applied right after branch creation (early visibility)
+        # ship_phase6:     applied alongside JIRA transitions at end-of-bundle
+        # both:            applied at C.4 AND re-applied at ship Phase 6 (idempotent;
+        #                  catches cases where C.4 failed, was skipped, or labels were
+        #                  manually removed mid-bundle)
+
+      include_review_only: true                     # apply labels to {review_only_roster} tickets too
+      include_skipped_by_evidence: false            # by default, do NOT label tickets that A.1.5
+                                                    # marked SKIP (already-shipped tickets stay clean)
+
+      # Idempotency: applying a label that's already present is a no-op (JIRA API). Safe to
+      # re-run. Existing labels on the ticket (added by humans, other automation) are
+      # preserved — labels are unioned, never overwritten.
+```
+
+**JIRA-side semantics:**
+- Apply via `story_source` MCP (or `gh` / `glab` CLI fallback if vcs MCP) using the host's label-update endpoint. JIRA: `PUT /rest/api/3/issue/{key}` with `{"update":{"labels":[{"add":"<name>"}, ...]}}`.
+- Labels are case-insensitive in JIRA; normalize to lowercase prefix + verbatim ticket ID.
+- Failure to apply a label → record in `_bundle-state.yaml` `stages.<stage>.label_apply_failures[]` and proceed; ship Phase 6 retries non-blocking.
+- Auto-applied labels are NOT removed if the bundle is cancelled or `Drop <ticket>` is used — they remain as audit trail. To remove manually: `Amend: remove jira labels` at C.3 (orchestrator-side cleanup) or via JIRA UI.
+
+**Surfacing at gates:**
+- Bundle-orchestrator C.3 gate: shows the intended label set so user sees what will be applied on `Go`.
+- Bundle-ship Phase 6: shows labels alongside transitions in the per-ticket section.
+- `_bundle-state.yaml` records final applied label set per ticket under `stages.ship.labels_applied[ticket][]`.
+
+**Why this matters:** without these labels, a bundle is invisible from JIRA. Users browsing JIRA see "PROJ-1234 in In Progress" with no signal that it's part of a 5-ticket bundle being implemented together. Querying "what was bundled with PROJ-1234?" requires reading commit messages or pipeline state files. With auto-labels, a single JIRA query (`labels = agentic_team_bulkPROJ-1234`) returns the whole bundle.
+
+**Optional flags on the bundle trigger:**
+
+| Flag | Alias | Effect |
+|---|---|---|
+| `--deep` | — | Phase A runs grep-based file-overlap analysis across the working tree per story (~10–20K extra tokens, amortized). Default off (set by `runtime.bundle.deep_overlap_default`). |
+| `--max=<N>` | — | Override `runtime.bundle.max_tickets` for this run. Cannot exceed pipeline-config max. |
+| `--fresh` | — | Same semantic as single-story `--fresh`: ignore prior `_bundle-state.yaml` and re-synthesize from JIRA. The branch is NOT deleted. |
+| **`--linear`** | **`--no-each`, `--consolidated`** | **Opt out of per-story execution** (per-story is the default — see above). Reverts to legacy consolidated execution: `task_ordering: layer_dep`, every-N-tasks checkpoints in surgeon/review, `one_per_task` commit grouping in ship. Use for small bundles (≤3 tickets), dense shared code, or autonomous one-shot runs where per-ticket gates feel ceremonial. Sticky across resumes — once `flags.each: false` is in state, downstream agents respect it. |
+| `--each` | `--per-story` | **No-op (default behavior).** Per-story execution is the default. Kept as a backward-compat alias; emits a non-blocking "redundant flag" notice. Mutually exclusive with `--linear` (passing both halts). |
+| `--offline` / `--skip <names>` / `--only <names>` | — | Same flag family as single-story; pass through to MCP role resolution. |
+
+**Trigger directives (`context:`, `reference:`, `out_of_scope:`, `constraints:`):**
+
+Free-form natural-language directives that carry priority guidance into orchestrator synthesis. They work on **both** single-story and bundle triggers (orchestrator.md and bundle-orchestrator.md parse them identically).
+
+| Directive | Purpose |
+|---|---|
+| `context: <free text>` | Catch-all priority guidance — pattern hints, file paths to mirror, layers to include, design direction. **Additive** to the JIRA ticket scope/ACs; not a replacement. |
+| `reference: <TICKET-ID>` | Pull another ticket's LLD/PR as a pattern source (existing mechanism — diff-based reuse mining at A0.6). |
+| `out_of_scope: <free text>` | Anti-scope addition. Extends JIRA's §Boundaries — never contradicts, only adds. |
+| `constraints: <free text>` | Performance / browser / a11y / deadline constraints. Adds to PART 1 §Constraints alongside JIRA-stated constraints. |
+
+**Per-decision priority (directives are additive, not a flat global override):**
+
+The most common confusion: directives do NOT outrank JIRA ACs globally. The correct framing is per-decision-type. JIRA body + ACs (from MCP or `ticket-input.md`) remain authoritative for **what** must be built; directives shape **how** it gets built and **what additional context** to consider.
+
+| Decision type | Priority order (highest → lowest) |
+|---|---|
+| Scope — what to build (deliverables, ACs) | JIRA body + ACs > `context:` (additive only — can ADD a layer JIRA didn't mention; cannot REMOVE an AC JIRA stated) |
+| Anti-scope — what NOT to touch | UNION (JIRA §Boundaries, `out_of_scope:`) — additive |
+| Pattern / style / file paths / naming | `context:` path hints > `reference:` ticket pattern > project-map > defaults |
+| Layer inclusion (FE / BE / DB / config / i18n / tests) | UNION (JIRA-implied layers, `context:` layer hints) — additive |
+| Constraints (perf, browser, a11y) | UNION (JIRA-stated, `constraints:` directive) — additive |
+| Reuse decisions | `reference:` ticket > `context:` path hints > project-map shared_paths > grep |
+| Pass/fail verdict at bundle-review | JIRA ACs (authoritative). `user_context_compliance: PASS|PARTIAL|FAIL` is an additional advisory flag — drives PARTIAL on the bundle verdict but does not override AC pass/fail |
+
+**Conflict resolution.** If a directive contradicts a JIRA AC text (e.g., AC says "modal", `context:` says "inline"), the orchestrator surfaces the conflict at the **A.5 checkpoint gate** as a blocking item. The user resolves via `Amend:` (refine the AC OR refine the directive) — orchestrator never picks silently because AC text is authoritative for review verdicts and the user must own the decision.
+
+**Why this matters.** The `context:` directive is an **additional priority input layered on top of the ticket**, not a replacement for it. The ticket (from JIRA / `ticket-input.md`) defines the contract; directives shape the implementation and add cross-cutting guidance. Treating directives as an override of the ticket would let a one-line `context:` silently break the AC contract — which is exactly what the conflict-detection at A.5 prevents.
+
+**Parsing rules:**
+
+```
+1. The directive starts with the keyword + colon at the beginning of a line
+   (or after a space following the main "Work on ..." trigger).
+2. Capture extends from immediately after the colon to the next recognized
+   directive OR end-of-trigger, whichever comes first.
+3. Newlines INSIDE a directive's value are preserved (free-form text).
+4. Code fences (```) inside a directive are preserved verbatim.
+5. Length cap per directive: 2000 chars (~500 tokens).
+   Beyond the cap → orchestrator HALTS with:
+     "{directive}: block exceeds 2000 chars. Move long-form spec into
+      contexts/ticket-input.md and trigger again."
+6. Unknown directive (e.g. `pattern: ...`) → HALT with the canonical
+   "unknown directive" message naming the recognized list. Do NOT silently
+   absorb into the previous directive — typos must be loud.
+7. Directives are independent of `--flags`. Order doesn't matter; both can
+   appear in the same trigger.
+8. The same directive twice → HALT ("duplicate directive: context:").
+   Use multi-line within a single directive instead.
+```
+
+**Examples (single-story):**
+
+```
+Work on story IIIWJKN-1234
+context: Mirror the pattern in src/components/metadata/Cards/ —
+         implement card + form + backend + DB. Same naming convention.
+
+Work on PROJ-1234
+reference: PROJ-100
+context: Same approach as PROJ-100 but with the new audit log requirement.
+out_of_scope: bulk operations — defer to a follow-up
+
+Work on PROJ-1234 --fresh
+constraints: Must work on IE11 (legacy customer); first paint <500ms; no new bundle deps.
+```
+
+**Examples (bundle):**
+
+```
+Work on epic stories PROJ-1234, PROJ-2345, PROJ-3432
+context: Refer to the metadata folder pattern (cards + form + backend + DB).
+         Each ticket is a different page/card design but the layered structure
+         should match. Backend should reuse the existing CardController base.
+
+Work on epic stories PROJ-1234, PROJ-2345 --linear
+reference: PROJ-77
+context: Mirror PROJ-77's approach but skip the legacy fallback path.
+
+Work on epic <EPIC_ID> with status="To Do"
+context: All children share the same auth wrapper — implement once in shared,
+         reuse across tickets.
+out_of_scope: i18n — picked up by a separate epic
+```
+
+**Where directives are persisted:** orchestrator writes them into the contexts file frontmatter (single-story: `$CONTEXTS_FILE`; bundle: `$BUNDLE_CONTEXTS_FILE`) as `user_context`, `reference`, `out_of_scope`, `constraints`. Downstream agents read these and use them as priority input during their own per-task work. Sticky on resume — to change, re-issue the trigger with new directives (replaces) OR use `Amend: replace context with: <new text>` at the orchestrator A.5 / C.3 gate.
+
+**Conflict resolution:** if a directive contradicts the JIRA AC text or a `reference:` ticket's pattern, the orchestrator surfaces the conflict at the **A.5 checkpoint gate** as a blocking item — user resolves via `Amend:` (refine the directive) or accepts (orchestrator picks the higher-priority source per the table above).
+
+**Quick reference:**
+
+```
+# Default — per-story execution (no flag needed):
+Work on epic stories PROJ-1234, PROJ-2345, PROJ-3432
+Work on epic <EPIC_ID> with status="In Progress","To Do"
+
+# Opt out — consolidated/legacy execution:
+Work on epic stories PROJ-1234, PROJ-2345, PROJ-3432 --linear
+
+# Combined with --fresh to re-synthesize:
+Work on epic stories PROJ-1234, PROJ-2345 --fresh           # default per-story, fresh
+Work on epic stories PROJ-1234, PROJ-2345 --linear --fresh  # consolidated, fresh
+```
+
+Execution shape (default — per-story):
+
+```
+bundle-orchestrator   (Go at C.3)
+  └─ bundle-explorer  (Go at Phase 0; runs entire bundle's exploration in one pass)
+      └─ bundle-surgeon (Go at Phase 0)
+          ├─ Implement SHARED prelude tasks (multi-source) → per-ticket gate (Go)
+          ├─ Implement PROJ-1234's tasks               → per-ticket gate (Go)
+          ├─ Implement PROJ-2345's tasks               → per-ticket gate (Go)
+          ├─ Implement PROJ-3432's tasks               → end-of-stage gate
+          └─ ...
+              └─ bundle-review (Go at Phase 0)
+                  ├─ Review SHARED tasks       → per-ticket sub-verdict gate (Go)
+                  ├─ Review PROJ-1234's tasks  → per-ticket sub-verdict gate (Go)
+                  ├─ Review PROJ-2345's tasks  → per-ticket sub-verdict gate (Go)
+                  ├─ Review PROJ-3432's tasks  → end-of-stage gate
+                  └─ bundle-ship (Go at Phase 0)
+                      → commit-per-ticket (one_per_ticket, forced)
+                      → ONE PR listing all tickets
+                      → JIRA transitions per ticket
+```
+
+The total number of `Go` gates under `--each` with N implementing tickets is roughly:
+`5 (one start-of-stage per agent) + 2N (per-ticket gates in surgeon and review) + ~3 (orchestrator pre-flight, ship verdict, ship final)`.
+That's a feature, not a bug — `--each` is for users who want explicit pause-points. Use the consolidated default if you want fewer interruptions.
+
+**Bundle agents are DEDICATED — separate from single-story agents.** Bundle mode and single-story mode have entirely different agent files. There is no shared dispatch:
+
+| Stage | Single-story / bug agent | Bundle agent | Trigger (bundle) |
+|---|---|---|---|
+| Step 1 — synthesis | `agents/orchestrator.md` | `agents/bundle-orchestrator.md` | `Work on epic stories <IDs>` / `Work on epic <ID> with status=...` |
+| Step 2 — exploration | `agents/explorer.md` | `agents/bundle-explorer.md` | `Run the bundle explorer` |
+| Step 3 — implementation | `agents/surgeon.md` | `agents/bundle-surgeon.md` | `Run the bundle surgeon` |
+| Step 4 — review | `agents/review.md` | `agents/bundle-review.md` | `Run the bundle review` |
+| Step 5 — ship | `agents/ship.md` | `agents/bundle-ship.md` | `Ship the bundle` |
+
+**Crucial routing rule — single-story triggers NEVER route to bundle mode:**
+
+- `Run the explorer` / `@explorer.md ...` → ALWAYS goes to `agents/explorer.md`. If that file resolves a contexts file with `mode: bundle`, it HALTS with a redirect to `@bundle-explorer.md`. It does NOT auto-route.
+- `Run the surgeon` / `Run the review` / `Ship it` → same rule. Each regular agent refuses bundle context and prints a redirect.
+- This guarantees single-story / bug behavior cannot be polluted by bundle logic and vice-versa. The user's trigger choice picks the agent — frontmatter only validates that the choice was correct.
+
+**Resume triggers (bundle mode) — all route to the dedicated bundle-* agents:**
+
+| Trigger | Dispatches to |
+|---|---|
+| (Re-issuing the original `Work on epic stories ...` / `Work on epic <ID> ...`) | `bundle-orchestrator` — pre-flight `detect_bundle_resume` step routes to the right resume point. |
+| `Resume bundle-orchestrator for <BUNDLE_ID>` | `bundle-orchestrator` — explicit re-entry into Phase A/B if interrupted. |
+| `Resume bundle-explorer for <BUNDLE_ID> from task T<N>` | `bundle-explorer.md` — reads `_bundle-state.yaml`, skips done tasks. |
+| `Resume bundle-surgeon for <BUNDLE_ID> from task T<N>` | `bundle-surgeon.md`. |
+| `Resume bundle-review for <BUNDLE_ID> from task T<N>` | `bundle-review.md`. |
+| `Resume bundle-ship for <BUNDLE_ID>` | `bundle-ship.md` — idempotent re-run. |
+
+If the trigger names a `<BUNDLE_ID>` that has no `_bundle-state.yaml`, the bundle agent halts with: "No bundle state file found. Verify the bundle ID or re-issue the original `Work on epic stories ...` trigger."
+
+**Why dedicated bundle agents (architectural rationale):**
+
+Earlier versions used mode-detection inside the regular agents — `explorer.md` checked frontmatter and lazy-loaded `modes/bundle-explorer-flow.md` when it saw `mode: bundle`. That coupling caused two regressions: (1) bundle gates leaked into single-story decision paths, and (2) "Run the explorer" was ambiguous about which mode would actually run, depending on which contexts file resolved first. Splitting into dedicated `bundle-*.md` files makes the trigger the explicit mode selector. Single-story agents stay byte-identical for non-bundle work.
+
+**Bundle-mode flow files (loaded by the dedicated bundle agents only):**
+
+| Bundle agent | Loads flow file |
+|---|---|
+| `agents/bundle-explorer.md` | `agents/modes/bundle-explorer-flow.md` |
+| `agents/bundle-surgeon.md` | `agents/modes/bundle-surgeon-flow.md` |
+| `agents/bundle-review.md` | `agents/modes/bundle-review-flow.md` |
+| `agents/bundle-ship.md` | `agents/modes/bundle-ship-flow.md` |
+
+`bundle-orchestrator.md` is self-contained — no separate flow file.
+
+## Step 0 triggers (project-analyzer — one-time or on-demand rescan)
+
+| User command | Dispatches to | Mode |
+|--------------|---------------|------|
+| `Analyze project` / `Scan project` / `Run project-analyzer` | project-analyzer | Full scan (creates project-map.md). Errors if file already exists → suggest `Rescan project`. |
+| `Rescan project` | project-analyzer | Full rescan with diff preview |
+| `Rescan frontend` / `Rescan backend` / `Rescan tests` | project-analyzer | Layer-scoped rescan |
+| `Rescan <Stack>` (e.g. `Rescan Java`, `Rescan AngularJS`, `Rescan Python`) | project-analyzer | Stack-scoped rescan — stack token resolved against `skills.layer_map` keys + aliases |
+| `Rescan <Stack>/<Section>` (e.g. `Rescan Java/Services`, `Rescan Python/REST`) | project-analyzer | Narrow stack + section rescan |
+| `Rescan components` / `services` / `endpoints` / `REST` / `contracts` / `consumers` / `templates` / `build` / `config` / `folders` / `stack` / `promotions` | project-analyzer | Section-scoped rescan |
+| `Rescan since {date}` / `Rescan since last rescan` | project-analyzer | Git-delta rescan |
+| `Rescan path: {dir}` / `Rescan {folder}` (legacy) | project-analyzer | Path-scoped rescan |
+| `Reconsider ignored` | project-analyzer | v18 — force-display all entries in `analyzer_ignore` for review, regardless of growth threshold |
+| `Show low-confidence detections` | project-analyzer | v18 — expand Phase 8.6 to include LOW-confidence framework/directory detections |
+| `Apply all A` / `Apply all B` / `Ignore all` | project-analyzer (in-gate) | v18 batch operations during Phase 8.6 gate interaction |
+
+Parsing rule: **most-specific-match-first**. See `project-analyzer.md § Rescan Command Router` for full spec including cascade/dependency logic and preservation rules.
+
+## Flow (Step 0 + 5 story steps, gated)
+
+**Step 0 (one-time or on-demand):** project-analyzer → produces/refreshes `contexts/project-map.md`
+**Story flow:** orchestrator → explorer → surgeon → ac-e2e-check (optional) → review → ship (optional)
+
+Consolidated: Architect merged into Orchestrator. Scout merged into Explorer.
+
+## Gate template (ALL agents use this pattern)
+
+Every agent gate MUST follow these rules:
+
+**Rule 1: Show ONLY the immediate next action.** NEVER show future steps, future agents, or a roadmap. The user should only see what they need to do RIGHT NOW.
+
+**Rule 2: Use a highlighted blockquote + Cursor deeplink for the next-agent handoff.** This grabs attention in Cursor AND lets Cursor users click through to a fresh chat (verified: new chat tab, not current-chat append) with the trigger pre-populated:
+
+```
+> **👉 Next action:** `{copy-paste command}` &nbsp; [▶ Open in new chat](cursor://anysphere.cursor-deeplink/prompt?text={URL-encoded command})
+```
+
+- Cursor users: click the `▶` link → Cursor opens a new chat tab with the command pre-filled → hit Enter. Each agent runs in its own fresh conversation, so the prior agent's tool-call outputs don't bloat the next agent's context (prompt caching on stable files like `pipeline.yaml` splits, `project-map.md`, and skills stays efficient). Matches the "handoff via files, not chat history" rule below.
+- Claude Code users: the deeplink renders as harmless markdown text; copy the `{copy-paste command}` and paste into a new conversation. (A separate Stop hook, if installed via the pipeline installer, copies the command to clipboard + shows a desktop notification — but the manual new-chat step is still required because Claude Code has no equivalent URL scheme.)
+
+**URL-encoding rule** — replace these characters in the command before inserting into the `?text=` parameter:
+`@` → `%40`, space → `%20`, `#` → `%23`, `&` → `%26`, `?` → `%3F`. Letters, digits, `.`, `-`, `_` are safe as-is.
+
+**Deeplinks are ONLY for inter-agent handoffs** (the primary "next action" that invokes a NEW agent in a fresh chat). Gate options that CONTINUE the current conversation — `Amend:`, `Revise:`, `Go`, `Cancel`, `Show details`, `continue`, `retry` — do NOT get deeplinks; they act on the active chat.
+
+**Rule 3: Provide example commands the user can copy.** Don't make the user guess the format — show the exact text they should type.
+
+**Rule 4: List options as simple choices.** Each option should be a short command the user can copy.
+
+**Gate format (ALL agents):**
+
+```
+## [Step X/5] {agent_name} — {phase/status} DONE
+
+**Summary:**
+- {key metric 1}
+- {key metric 2}
+- {key metric 3}
+
+> **👉 Next action:** Pick one of the following:
+> - `{primary next-agent action}` &nbsp; [▶ Open in new chat](cursor://anysphere.cursor-deeplink/prompt?text={URL-encoded}) — {1-sentence description}
+> - `{alternative action}` — {1-sentence description}       _(no deeplink — stays in current chat)_
+> - `{show details action}` — {1-sentence description}      _(no deeplink — stays in current chat)_
+> - `{modify action}` — {1-sentence description}            _(no deeplink — stays in current chat)_
+```
+
+### Cursor deeplink reference (pre-built for standard handoffs — paste verbatim)
+
+Agents copy these exact strings into their gate output to avoid URL-encoding mistakes:
+
+| Next agent | Raw trigger | Clickable link (paste verbatim into gate) |
+|---|---|---|
+| Explorer (single-story) | `@explorer.md Run the explorer` | `[▶ Run Explorer in new chat](cursor://anysphere.cursor-deeplink/prompt?text=%40explorer.md%20Run%20the%20explorer)` |
+| Surgeon (single-story) | `@surgeon.md Run the surgeon` | `[▶ Run Surgeon in new chat](cursor://anysphere.cursor-deeplink/prompt?text=%40surgeon.md%20Run%20the%20surgeon)` |
+| AC-E2E-Check | `@ac-e2e-check.md Run the AC-E2E-Check` | `[▶ Run AC-E2E-Check in new chat](cursor://anysphere.cursor-deeplink/prompt?text=%40ac-e2e-check.md%20Run%20the%20AC-E2E-Check)` |
+| Review (single-story) | `@review.md Run the review` | `[▶ Run Review in new chat](cursor://anysphere.cursor-deeplink/prompt?text=%40review.md%20Run%20the%20review)` |
+| Ship (single-story) | `@ship.md Ship it` | `[▶ Run Ship in new chat](cursor://anysphere.cursor-deeplink/prompt?text=%40ship.md%20Ship%20it)` |
+| **Bundle Explorer** | `@bundle-explorer.md Run the bundle explorer` | `[▶ Run Bundle Explorer in new chat](cursor://anysphere.cursor-deeplink/prompt?text=%40bundle-explorer.md%20Run%20the%20bundle%20explorer)` |
+| **Bundle Surgeon** | `@bundle-surgeon.md Run the bundle surgeon` | `[▶ Run Bundle Surgeon in new chat](cursor://anysphere.cursor-deeplink/prompt?text=%40bundle-surgeon.md%20Run%20the%20bundle%20surgeon)` |
+| **Bundle Review** | `@bundle-review.md Run the bundle review` | `[▶ Run Bundle Review in new chat](cursor://anysphere.cursor-deeplink/prompt?text=%40bundle-review.md%20Run%20the%20bundle%20review)` |
+| **Bundle Ship** | `@bundle-ship.md Ship the bundle` | `[▶ Run Bundle Ship in new chat](cursor://anysphere.cursor-deeplink/prompt?text=%40bundle-ship.md%20Ship%20the%20bundle)` |
+| Project Analyzer (tech lead) | `@project-analyzer.md Analyze project` | `[▶ Analyze project in new chat](cursor://anysphere.cursor-deeplink/prompt?text=%40project-analyzer.md%20Analyze%20project)` |
+
+**For variable triggers** (ticket-specific), agents must URL-encode the variable portion:
+
+| Handoff | Raw trigger | Link template (substitute `{TICKET}`) |
+|---|---|---|
+| Orchestrator (new ticket) | `@orchestrator.md Work on {TICKET}` | `[▶ Work on {TICKET} in new chat](cursor://anysphere.cursor-deeplink/prompt?text=%40orchestrator.md%20Work%20on%20{TICKET})` |
+| Resume Surgeon from task N | `Resume surgeon for {TICKET} from task T{N}` | `[▶ Resume Surgeon from T{N} in new chat](cursor://anysphere.cursor-deeplink/prompt?text=Resume%20surgeon%20for%20{TICKET}%20from%20task%20T{N})` |
+
+`{TICKET}` values like `IIQMAG-1234` or `IIQHAR-42` are URL-safe as-is (letters, digits, dash) — no extra encoding needed. If your ticket prefix ever includes non-ASCII or special characters, URL-encode per Rule 2.
+
+**Do NOT include** in any gate:
+- Future steps beyond the immediate next one
+- Explanations of what the next agent does
+- Multi-step roadmaps
+- Numbered instruction lists for future phases
+
+**CRITICAL: After EVERY user interaction (fix, skip, verify, approve, modify, show, etc.), the LAST thing in the agent's response MUST be a highlighted `> **👉**` next-action block.** This is MANDATORY — no exceptions. If the state changed (e.g., an error was fixed), show an updated gate reflecting the new state. If the state didn't change (e.g., user asked to show details), re-show the current gate options. A response without a `> **👉**` block at the end is INCOMPLETE.
+
+## Post-execution verification (v22.2 — fails loudly if agent didn't actually run)
+
+After executing ANY agent trigger from this file, you MUST verify the agent produced its expected outputs. If expected outputs are missing, emit a structured diagnostic so the user knows what went wrong and how to fix it.
+
+### Expected outputs per trigger
+
+| Trigger | Expected output(s) after completion |
+|---------|-------------------------------------|
+| `Analyze project` / `Scan project` | `contexts/project-map.md` exists AND is non-trivial (>100 lines); `contexts/config/pipeline.yaml` has `shared_paths:`, `operation_patterns:`, and `i18n:` blocks populated |
+| `Rescan project` (full) | `contexts/project-map.md` has new `rescan_log:` entry with today's date; full scope |
+| `Rescan <scope>` (any narrow form) | `contexts/project-map.md` `rescan_log:` has new entry with scope matching the command |
+| `Reconsider ignored` / `Show low-confidence detections` | Phase 8.6 gate output visible in chat (no file writes expected unless user applies) |
+| `Work on <TICKET>` (Orchestrator) | `contexts/{TICKET}.md` or `contexts/<epic>/{TICKET}.md` exists with `# PART 1`, `# PART 2`, `# PART 4` sections; git current branch matches `feature/{TICKET}-*` or `fix/{TICKET}-*` |
+| `Run the explorer` | `contexts/{TICKET}-exploration.md` exists with per-task file-level guidance; `contexts/{EPIC}-codebase-map.md` exists or was updated |
+| `Run the surgeon` | `contexts/{TICKET}-manifest.md` exists listing modified files; `git status` shows uncommitted changes in the files the manifest names |
+| `AC e2e check` / `Demo` / `Verify` | Coverage report visible in chat; if gaps found, either new tasks appended to LLD OR explicit user-declined marker |
+| `Run the review` | `contexts/{TICKET}-review.md` exists with `Ship-ready: YES` or `Ship-ready: NO` line; `contexts/project-map.md` shows `PART 5b` invalidation entries if shared files were touched |
+| `Ship it` / `raise PR` | Git log has new commit(s) matching `{TICKET}` in message; PR URL returned in chat; `contexts/{EPIC}-epic-e2e-plan.md` updated |
+| `Amend: <text>` | `contexts/{TICKET}.md` amendment version bumped + amendment log entry appended |
+| `Work on epic stories <IDs>` / `Work on epic <ID> with status=...` (bundle-orchestrator) | `contexts/<epic>/<BUNDLE_ID>.md` exists with `mode: bundle` frontmatter (and `tickets:`, `review_only_roster:`, `skipped_by_evidence:`, `original_request:` keys populated per A.1.5); `<BUNDLE_ID>-lld.md` + `<BUNDLE_ID>-testplan.md` exist with consolidated PART 1–4; **for each ticket in the impl roster, `<id_lower>.md` (mode: bundle-card) AND `<id_lower>-lld.md` (mode: bundle-card-lld) exist** in the same `$BUNDLE_CONTEXT_DIR`; **for each ticket in the ORIGINAL request (incl. SKIP / REVIEW_ONLY), `<id_lower>-evidence.md` (mode: bundle-evidence) exists** with git evidence + per-AC coverage + recommendation; `_bundle-state.yaml` exists with `stages.orchestrator.status: done` AND `context.evidence_scanned_at` set AND `context.evidence_user_choice` recorded; git current branch matches the bundle branch — **branch only created after user typed `Go` at C.3 gate (NOT at A.1.5 evidence gate or BR.0c pre-existing-context gate); auto-progressing past ANY gate is a verification failure** |
+| `Run the bundle explorer` (`@bundle-explorer.md`) | `<BUNDLE_ID>-exploration.md` exists; `_bundle-state.yaml` `stages.explorer.last_task` advanced; `last_task == total` only when stage `done`. **NOTE:** the regular `Run the explorer` trigger does NOT route here — it halts with a redirect when it sees `mode: bundle`. |
+| `Run the bundle surgeon` (`@bundle-surgeon.md`) | `<BUNDLE_ID>-manifest.md` lists every completed task with `Sources:` row; `_bundle-state.yaml` `stages.surgeon.last_task` advanced; uncommitted changes in working tree. **By default (`flags.each: true`):** `stages.surgeon.story_progress` populated (one entry per boundary); per-ticket gates fired (visible in chat history) at every boundary; the every-N-tasks checkpoint did NOT fire. **Under `--linear` (`flags.each: false`):** every-N-tasks checkpoint gates fired; `story_progress` empty. |
+| `Run the bundle review` (`@bundle-review.md`) | `<BUNDLE_ID>-review.md` with overall `Ship-ready: YES/NO/PARTIAL` + per-ticket sub-verdicts (incl. review_only roster); `$EPIC_CONTEXT` story-log appended once per ticket reviewed. **By default (`flags.each: true`):** `stages.review.story_progress` populated; per-ticket sub-verdict gates fired at every boundary. **Under `--linear`:** every-N-tasks checkpoint gates instead. |
+| `Ship the bundle` (`@bundle-ship.md`) | one PR URL returned; PR body lists every bundled ticket; JIRA transition fired once per ticket in `tickets` ∪ `review_only_roster`; `<BUNDLE_ID>-summary.md` generated; `_bundle-state.yaml` `stages.ship.status: done`. **By default (`flags.each: true`):** commit count on the bundle branch == len(`stages.surgeon.story_boundaries`) (`one_per_ticket` strategy, auto-selected — strategy-pick gate did NOT fire), each subject prefixed `feat(<TICKET>):`. **Under `--linear`:** strategy-pick gate fired; commit count typically equals task count (`one_per_task` default). |
+| `Resume bundle-<agent> for <BUNDLE_ID> from T<N>` | same expected output as the original step, additionally: `_bundle-state.yaml` `last_activity_at` updated; `last_task` ≥ N (resumed from N or beyond) |
+| ANY agent run (story / bug / bundle / standalone) | `$TOOL_USAGE_FILE` exists AND has a new `## {agent_name}` block appended (per § Tool Usage Tracking). If the agent ran but no block was appended → flag in diagnostic block. |
+
+### Verification procedure (run silently after every agent execution)
+
+```
+1. Identify which trigger was invoked (from user's message + this rule's tables)
+2. Look up expected outputs from the table above
+3. For each expected output:
+   - If it's a file: verify it exists AND was modified recently
+   - If it's a git state: run `git status` / `git log` to verify
+   - If it's a chat output: verify it appeared in this conversation
+4. If ALL expected outputs present → operation succeeded, no message needed
+5. If ANY expected output missing → emit the diagnostic block below
+```
+
+### Diagnostic block (shown when verification fails)
+
+```
+⚠ Agent execution verification FAILED
+
+Trigger: {user's command}
+Expected agent: {which agent should have run}
+Expected outputs:
+  ✓ {output that WAS produced}
+  ✗ {output that was NOT produced}
+  ✗ {another missing output}
+
+Why this may have happened:
+  - The agent prompt was not actually invoked (Cursor's LLM chose a
+    conversational response instead of reading the agent file and executing it)
+  - The agent prompt was loaded but stopped partway through execution
+  - A required precondition failed silently (e.g. pipeline.yaml invalid,
+    no git repo, missing directory)
+
+How to fix:
+
+  Option 1 (recommended) — use explicit agent invocation:
+    @<agent-file>.md {same instruction as before}
+
+  Example: instead of `Analyze project`, type:
+    @project-analyzer.md Analyze project
+
+  This is the most reliable invocation pattern for Cursor. The `@` mention
+  forces explicit loading of the agent prompt file, bypassing the LLM's
+  judgment about whether to route via this rule.
+
+  Option 2 — verify manually:
+    Run: Verify last agent run
+    This runs the verification block above and gives you a fresh diagnostic.
+
+  Option 3 — try Claude Code:
+    Claude Code's `.claude/agents/` has more reliable agent invocation than
+    Cursor's rule-based routing. If plain triggers consistently fail in
+    Cursor, consider re-installing with `--target claude` and running
+    agents from there.
+
+  Option 4 — check preconditions:
+    - Is pipeline.yaml valid? Run: node contexts/tools/validate.mjs
+    - Is the project a git repo? Run: git status
+    - Does .cursor/agents/{agent}.md exist? Check the file tree.
+```
+
+### User-triggered verification
+
+If the user types `Verify last agent run` (or `Verify`, `What did you update?`, `Did it work?`, `What's missing?`), run the verification procedure above against the most recent agent trigger in this conversation. Emit either "✓ Agent execution verified — all expected outputs present" OR the diagnostic block.
+
+### Scope boundary
+
+Verification is a passive check — don't auto-retry the agent. If verification fails, surface the diagnostic and let the user decide how to proceed.
+
+## Shared rules (ALL agents)
+
+**Pre-flight pattern:** Before starting, every agent verifies: (1) on correct feature branch, (2) required input artifacts exist, (3) reads inputs fully.
+
+**No hallucinated paths:** Verify every file path with `ls` before referencing.
+
+**Error escalation:** Try fix (3-5 attempts) → present options → NEVER skip silently.
+
+**Tier 1 always-on rules (loaded automatically by every agent run via `alwaysApply: true`):**
+
+| Rule | Scope | Owner |
+|---|---|---|
+| `agent-flow.mdc` (this file) | Pipeline orchestration, agent invocation, shared rules | Kernel |
+| `engineering-principles.mdc` | Tech-agnostic engineering principles (SOLID/KISS/DRY/YAGNI/POLA + cross-cutting). Two modes: greenfield vs legacy. Surgeon self-checks per task. | Kernel |
+| `{pack}-project-scope.mdc` | Pack-specific repo boundary, build commands, forbidden targets | Pack |
+
+Pack-specific Tier 2 rules (naming, placement, postverify) load conditionally per task layer.
+
+**Build safety:** NEVER run destructive targets (drops/resets databases, deploys to shared environments, force-pushes). Project-specific build commands and forbidden targets are declared in the active pack's project scope rule (`{pack}-project-scope.mdc`).
+
+**Branch safety:** ALL work on feature branch. NEVER commit to the base branch (`develop`, `main`, or whatever `runtime.branching.base_branch` is set to in `pipeline.yaml`).
+
+**Git commit ownership:** ONLY SHIP runs `git add/commit/push`. Surgeon writes files but does NOT commit. Surgeon maintains a Change Manifest instead.
+
+**Token awareness:** If running low on context, STOP and provide resume instructions with completed/pending summary. Proactive detection happens via **Context Pressure Detection** below — the agent surfaces a pressure-aware gate at three thresholds (yellow/orange/red) so the user can hand off to a fresh chat before the context window is silently truncated.
+
+## Context Pressure Detection
+
+Every agent maintains a running estimate of its context usage during the run. At every gate (start-of-stage, per-task checkpoint, per-ticket gate under `--each`, end-of-stage), the agent checks pressure and renders the appropriate gate variant. If pressure crosses the emergency threshold, the agent halts mid-step rather than waiting for a natural checkpoint.
+
+**Why this exists:** the LLM running an agent has no programmatic API to query its own context window. Without proactive detection, long bundles or deep surgeon runs silently truncate older content past ~80% utilization, causing forgotten file reads, repeated tool calls, and quality cliffs the user only notices via symptoms. The Pressure Detection mechanism uses the existing `wc -c / 4` heuristic (already documented in `Token usage tracking`) as a running counter and a small threshold table to convert utilization into user-visible gate behavior.
+
+### Configuration (in `pipeline.yaml`)
+
+```yaml
+runtime:
+  context_pressure:
+    enabled: true                                # set false to disable (NOT recommended)
+    estimated_window_tokens: 200000              # adjust per host model (Claude: 200K, GPT-4: 128K)
+    warn_at: 0.60                                # 60% — soft warning folded into next gate
+    urgent_at: 0.80                              # 80% — interrupts at next operation, recommends handoff
+    halt_at: 0.90                                # 90% — emergency halt; refuses next operation
+    estimate_method: "wc_div_4"                  # uses existing token tracking heuristic
+```
+
+If `runtime.context_pressure` is absent from `pipeline.yaml`, agents fall back to defaults above. To disable, set `enabled: false` (validator emits a warning — disabling pressure detection is a footgun).
+
+### Running counter contract (each agent)
+
+```
+At pre-flight:
+  {context_estimated_tokens} = ceil(chars(system_prompt + agent_prompt + loaded_skills + loaded_rules) / 4)
+
+At every Read tool call:
+  {context_estimated_tokens} += ceil(chars(stringify(read_result)) / 4)
+
+At every Bash output:
+  {context_estimated_tokens} += ceil(chars(stringify(bash_output)) / 4)
+
+At every Grep/Glob result:
+  {context_estimated_tokens} += ceil(chars(stringify(result)) / 4)
+
+At every assistant turn (output):
+  {context_estimated_tokens} += ceil(chars(assistant_output) / 4)
+
+At every gate render:
+  pressure_ratio = {context_estimated_tokens} / runtime.context_pressure.estimated_window_tokens
+  Resolve zone:
+    pressure_ratio >= runtime.context_pressure.halt_at      → RED
+    pressure_ratio >= runtime.context_pressure.urgent_at    → ORANGE
+    pressure_ratio >= runtime.context_pressure.warn_at      → YELLOW
+    else                                                     → GREEN
+  Render the appropriate zone variant of the gate (templates below).
+```
+
+**Note on accuracy:** `wc -c / 4` is approximate. Real tokenizer ratios vary by content. Defaults have ~10–15% safety margin built in (warn at 60% catches actual ~70%; halt at 90% catches actual ~95%+). Tune thresholds in `pipeline.yaml` if your project's content (lots of binary-ish data, very high code-density) diverges.
+
+### Active-context block (mandatory for every agent at pre-flight)
+
+After the existing routing/flags lines, every agent appends:
+
+```
+│ Context pressure: ▒▒▒▒▒░░░░░ {N}% (est. {used}K / {window}K)  · {zone_marker} │
+```
+
+Zone markers:
+- `✓ healthy` — GREEN (< warn_at)
+- `⚠ approaching` — YELLOW (≥ warn_at, < urgent_at)
+- `⛔ urgent — handoff` — ORANGE (≥ urgent_at, < halt_at)
+- `🛑 emergency halt` — RED (≥ halt_at)
+
+### Gate templates (three pressure zones)
+
+Each agent's gate render logic at every checkpoint:
+
+```
+IF zone == GREEN:
+  Render the existing gate template verbatim. No pressure annotation.
+
+IF zone == YELLOW:
+  Render the existing gate template AND prepend the YELLOW banner.
+
+IF zone == ORANGE:
+  Render the ORANGE template (replaces the existing gate). User MUST decide
+  whether to continue in this chat or hand off.
+
+IF zone == RED:
+  Render the RED template AND HALT immediately — refuse to process further
+  input until the user explicitly overrides via "Override pressure halt — I accept
+  the risk".
+```
+
+**YELLOW banner (prepended to existing gate, ≥60%):**
+
+```
+⚠ **Context pressure: {N}%** (est. {used}K / {window}K).
+   Recommend taking the fresh-chat resume deeplink below to keep prompt cache
+   warm. Continuing in the same chat is allowed but quality will degrade
+   past ~80%.
+```
+
+**ORANGE template (replaces existing gate, ≥80%):**
+
+```
+## ⚠ Context pressure: URGENT — {N}%
+
+The agent has consumed ~{used}K of an estimated {window}K window. Continuing
+past this point risks silent context truncation (older file reads and prior
+task state may be dropped without warning).
+
+**Recommended action:** stop here and resume in a fresh chat. The state file
+has the resume cursor.
+
+**Current state:**
+- Agent:        {agent_name}
+- {Bundle:      {BUNDLE_ID}  | Ticket: {TICKET_ID} (single-story)}
+- Stage:        {stage}
+- Resume from:  {next pending task / phase}
+- Progress:     {i}/{total} done · {total - i} remaining
+
+> 👉 Pick one (REPLY REQUIRED — agent HALTS until you do):
+> - `Resume in fresh chat` (RECOMMENDED) &nbsp; [▶ Open in new chat]({deeplink})
+> - `Continue anyway` — proceed in this chat (quality degradation likely)
+> - `Pause` — halt; resume manually later via the same deeplink
+```
+
+**RED template (replaces existing gate, ≥90%, emergency halt):**
+
+```
+## 🛑 Context pressure: EMERGENCY — {N}%
+
+The agent has consumed ~{used}K of an estimated {window}K window. Continuing
+in this chat would silently truncate prior context and produce unreliable
+work. Refusing to proceed.
+
+**State has been flushed.** All pending changes saved to disk. Resume in a fresh chat:
+
+```
+{resume_command}
+```
+
+> 👉 [▶ Open in new chat]({deeplink})
+
+**Override (rare — usually a sign something else is wrong):**
+The agent will refuse to process any further input in this chat until the user
+explicitly overrides via:
+   `Override pressure halt — I accept the risk`
+
+If you find yourself overriding regularly, raise `runtime.context_pressure.halt_at`
+in `pipeline.yaml` (e.g. to `0.95`) rather than disabling pressure detection
+entirely. The warnings exist to protect you from silent quality cliffs.
+```
+
+### Where each agent fires the pressure check
+
+Every gate in the pipeline is a pressure checkpoint. Below is the firing matrix:
+
+| Agent | Existing gates that get pressure-aware | Mid-step emergency halt fires when |
+|---|---|---|
+| `orchestrator` (single-story) | A0.6 enrichment gate, A.5 synthesis checkpoint, C.3 final gate | Between A0.6 image-analysis subagent calls (typically the heaviest single contributor) |
+| `bundle-orchestrator` | BR.0c pre-existing context gate, A.1.5 evidence gate, A.5 synthesis checkpoint, C.3 final gate | Between A.0 epic doc fetches and A.1 ticket fetches (these batch-fetch many docs) |
+| `explorer` / `bundle-explorer` | Phase 0 start gate, per-task checkpoint, end-of-stage gate | Mid-task — between codebase grep and file read for any single task |
+| `surgeon` / `bundle-surgeon` | Phase 0 start gate, per-task checkpoint OR per-ticket gate (`--each`), end-of-stage gate | Mid-task — between reuse_verification Read calls and the implement step |
+| `review` / `bundle-review` | Phase 0 start gate, per-task checkpoint OR per-ticket sub-verdict gate (`--each`), end-of-stage gate | Mid-build, mid-task |
+| `ship` / `bundle-ship` | Phase 0 start gate, verdict gate, publish gate, final gate | Pre-commit (before any git op fires under emergency pressure — extra safety since ship is destructive) |
+
+### Override grammar
+
+```
+Override pressure halt — I accept the risk
+```
+
+Verbatim text required. The verbose phrasing is deliberate — accidental triggers via shorter aliases would defeat the purpose. The override clears the halt for the **current chat session only**; pressure detection re-engages on the next agent run (state file is not modified).
+
+### State file integration (bundle mode)
+
+`_bundle-state.yaml` records the highest pressure observed during a stage, for audit:
+
+```yaml
+stages:
+  surgeon:
+    status: in_progress
+    last_task: T7
+    max_pressure_observed: 0.82           # NEW — highest ratio seen during this stage
+    pressure_handoffs: 2                   # NEW — number of times user took fresh-chat handoff
+```
+
+Useful for tuning thresholds: if `max_pressure_observed` repeatedly hits 0.95+ across runs without halt, the heuristic is under-counting — lower `halt_at` to compensate. If `pressure_handoffs` is consistently 0 even on long runs, the heuristic is over-counting — raise `warn_at`.
+
+### Cost note
+
+Pressure detection adds negligible runtime overhead — the running counter is incremented inline at each tool-call return; the threshold check is a single division at gate-render time. Total added cost: ~0% on tokens, ~0.1% on time per gate render. Compared to the cost of a silent context truncation that requires re-running an entire bundle stage, this is essentially free insurance.
+
+**Parallel tool calls (MANDATORY when ops are independent):** Cache reads dominate the API bill — every tool-call turn re-reads the cached system prompt (~80K tokens). Cutting tool-call turns proportionally cuts cost. Therefore:
+
+> Unless a later operation depends on an earlier operation's output (its file path, its return code, its parsed result), all `Read`, `Grep`, `Bash`, and `Glob` operations within a single agent step MUST be issued as **parallel tool calls in one assistant turn** — never sequentially.
+
+Concrete cases this rule covers (non-exhaustive):
+
+- **Pre-flight file reads.** `$CONTEXTS_FILE`, `$LLD_FILE`, `$TESTPLAN_FILE`, `$EXPLORATION_FILE`, `$MANIFEST_FILE`, `$REVIEW_FILE` exist independently — read them in one turn, not five.
+- **Per-task reference reads (Surgeon).** The target file slice + the REF pattern file + the layer-skill file for any single task have no inter-dependency — issue them as 3 parallel `Read` calls in one turn before generating the edit. (Biggest single lever in the pipeline — Surgeon does this 5–10 times per story.)
+- **Independent greps.** N greps for N independent patterns in the same scope: prefer ONE combined `grep -E '(p1|p2|p3)'` OR N parallel `Grep` calls in a single turn. Never N sequential turns.
+- **Git state-gathering clusters.** `git status`, `git diff --stat`, `git log --oneline`, `git rev-parse` etc. used purely to gather state (not to make routing decisions on each result) → one parallel turn.
+- **Multi-file `ls` checks.** Verifying multiple paths exist → one parallel turn or one combined check.
+
+When operations DO depend on each other (e.g., parse `git rev-parse` output to decide which branch to `git diff` against), keep them sequential. The rule is "parallel by default" not "parallel always."
+
+This rule is the cheapest cost reduction in the pipeline: ~10–20% cache-read saving per agent run with zero behavior change. If you see an agent issuing 5 sequential `Read` calls in pre-flight, that's a bug — the agent is paying for 5 cache-read turns instead of 1.
+
+## `--fresh` flag — bypass resume detection and run from scratch
+
+Each agent has resume detection so multi-day stories can be picked up after a reboot, sick day, or partial-pipeline crash. The `--fresh` flag tells the agent to **ignore** all prior outputs and run as if from a clean slate. **Files are NOT deleted** — the agent simply overwrites its own output files when it produces new content (manifests, exploration, verdicts, etc.) as part of its normal operation.
+
+### How to invoke
+
+Append `--fresh` to any agent trigger:
+
+```
+@surgeon.md Run the surgeon --fresh
+@explorer.md Run the explorer --fresh
+@review.md Run the review --fresh
+@orchestrator.md Work on IIQMAG-3332 --fresh
+```
+
+### What each agent does on `--fresh`
+
+| Agent | What it ignores | Resulting behavior |
+|---|---|---|
+| **Orchestrator** | Existing `$CONTEXTS_FILE`, `$LLD_FILE`, `$TESTPLAN_FILE` on disk | Re-fetches JIRA, re-pulls epic HLD + sibling LLDs, re-synthesizes Requirement Summary + AC Registry + LLD + Test Plan. Overwrites the existing files when it writes them. |
+| **Explorer** | Existing `$EXPLORATION_FILE`; existing Task Annotation Summary fields (`Insertion Point:` / `Reuse Match:` / `Explorer Notes:`) in `$LLD_FILE` PART 2 | Re-scans codebase, re-derives annotations, overwrites the exploration file. The LLD's annotation lines are rewritten in place. |
+| **Surgeon** | Existing `$MANIFEST_FILE`, `$SURGEON_BUILD_REPORT`, per-task lint/test reports; per-task `Status: ✅ ALREADY DONE` markers from prior runs | Re-implements every task from task 1. The manifest is rewritten from scratch (no append to old entries). Build reports overwritten as builds run. |
+| **Review** | Existing `$REVIEW_FILE`, `$REVIEW_BUILD_REPORT`, per-layer test reports; Surgeon-verdict freshness reuse | Re-runs full clean build + per-layer test suites without checking Surgeon's verdict. Re-runs Part 2 (code review) — no cached findings. Re-emits the epic-context entry. Verdict file overwritten. |
+| **Ship** | Nothing is auto-overwritten by Ship (commits and PRs are too consequential) | Shows a non-destructive prompt offering `git reset --soft HEAD~N` / close-PR / cancel — the user explicitly chooses any git/PR operation. |
+
+### How "ignore" maps to file behavior
+
+- **Resume signals are not read.** `$MANIFEST_FILE`, `$EXPLORATION_FILE`, `$REVIEW_FILE`, build verdict frontmatter — none are consulted as evidence of "already done".
+- **Per-task ALREADY DONE markers are bypassed.** Surgeon treats every task per its original action verb (🆕 NEW / 🟡 EXTEND / 🔧 MODIFY) regardless of any `✅ ALREADY DONE` from a prior run.
+- **Output files are overwritten in place.** When an agent writes its output (manifest entry, exploration section, verdict line), it does so from scratch — no append to prior content. Pre-existing files stay on disk until the agent reaches the point in its run where it writes the new content.
+- **No proactive deletion.** The agent never runs `rm`. If `--fresh` is invoked but the agent crashes mid-run, prior files are still on disk in their original form (until the crash point) — recoverable.
+
+### What `--fresh` does NOT do
+
+- **Does not run git operations.** Code reverts are the user's responsibility — `git status`, `git checkout -- <files>`, `git restore <files>`.
+- **Does not delete the branch.** Use `git branch -D feature/{TICKET}-...` separately if you want to reset that too.
+- **Does not modify `epic-context.md`.** Story summaries Review wrote to `epic-context.md` in past runs persist until Review runs again (which overwrites this story's entry on its next pass).
+- **Does not propagate to other agents.** `Run the surgeon --fresh` only changes Surgeon's behavior. To reset Explorer's annotations too, run `@explorer.md Run the explorer --fresh` first (or use `Work on {TICKET} --fresh` for the full upstream restart).
+- **Does not require user confirmation.** The flag itself is the explicit consent. The agent renders an Active Context line (`Mode: fresh · ignoring prior outputs`) and proceeds.
+
+### When to use it vs. `Amend:`
+
+| Situation | Use |
+|---|---|
+| Implementation didn't match expectations on 1–2 tasks | `Amend:` at the change-manifest gate (~70% cheaper than --fresh) |
+| Whole story is wrong; want to redo from synthesis | `Work on {TICKET} --fresh` |
+| Surgeon's output is wrong; LLD is fine | `Run the surgeon --fresh` |
+| Build verdicts went stale; want fresh review | `Run the review --fresh` |
+| Just want to skip resume detection | `--fresh` — no other knob to do this |
+
+**Token usage tracking (ALL agents):**
+
+Every agent MUST track its approximate token usage for the pipeline-wide budget in the review report.
+
+**How to estimate tokens:**
+- Count characters in each file/content read → divide by 4 → round up = estimated tokens
+- Count characters in each output/response produced → divide by 4 → round up
+- Agent prompts (`.md` files) count as input tokens
+- Build output counts as input tokens (agent reads it)
+- Use `wc -c` to count characters in files: `wc -c < {file}` → divide result by 4
+
+**What each agent tracks:**
+
+| Agent | Tracks | How |
+|-------|--------|-----|
+| Orchestrator | Agent prompt + skill file + JIRA + Confluence + Figma + LLD output | `wc -c` on each input file. Output = `wc -c < contexts/{TICKET}.md` |
+| Explorer | Agent prompt + LLD parts read + git log for map sync + stale file re-reads + new file scans + exploration output | `wc -c` on each. Track sync overhead (stale re-reads + new scans) separately from exploration |
+| Surgeon | Agent prompt + exploration table + LLD refs + source files + build output + manifest | `wc -c` on each. Track per-task build output chars |
+| Review | Agent prompt + LLD + manifest + diffs + build output + blast radius + review report | `wc -c` on each. Track per-fix-action cost separately |
+
+**Where to record:** Each agent saves its token usage as a comment at the end of its output file:
+```
+<!-- TOKEN_USAGE: agent={name} input={N} output={N} total={N} -->
+```
+
+The review agent collects all these comments from `contexts/` files and compiles the pipeline-wide table in `contexts/{TICKET}-review.md`.
+
+## MCP role resolution (Orchestrator + Review + Ship + AC-E2E-Check)
+
+**Source of truth.** Agents that talk to MCPs (Orchestrator, Review, Ship, AC-E2E-Check) **do NOT hardcode MCP names** in their logic. They consult `mcp_roles` in `pipeline.<pack>.yaml` to decide which MCP handles which role. This lets teams swap Atlassian → Linear, or GitHub → Bitbucket, by editing one config block — no kernel changes.
+
+### The four mandatory roles
+
+| Role | What it does | Typical MCP(s) |
+|---|---|---|
+| `story_source` | Fetches the ticket body + ACs | `atlassian` (JIRA), `linear`, `asana`, `gitlab` |
+| `design_source` | Fetches design frames / visual specs | `figma`, `komabai`, `sketch` |
+| `vcs` | Commits, branches, PRs, reference-PR diff fetch | `github`, `bitbucket`, `gitlab` |
+| `docs_source` | Fetches HLDs, wiki pages, requirements docs | `atlassian` (Confluence), `notion`, `googledocs` |
+
+Each role's value in `mcp_roles` is either a single MCP key (`story_source: atlassian`) or an ordered fallback list (`vcs: [github, bitbucket]`). All four keys are mandatory in every pack.
+
+### Optional fifth role — `docs_publish` (write-side counterpart to `docs_source`)
+
+| Role | What it does | Typical MCP(s) |
+|---|---|---|
+| `docs_publish` | Publishes the LLD as a draft page after Phase C "Go" (Orchestrator C.5b) | `atlassian` (Confluence), `notion`, `slab` |
+
+Opt-in. Omit (or set to `null`) to keep today's local-only LLD flow — `$LLD_FILE` remains canonical regardless. When set, Orchestrator step **C.5b (publish_lld)** runs *after the user approves the LLD at Phase C ("Go")* AND opts in at the publish gate, calling the resolved MCP's `createPage` (first publish) or `updatePage` (amendment) capability.
+
+Companion top-level block `docs_publish_target` carries the publish settings (master `enabled` switch + user-consent `publish_gate` + `space` / `parent_page_id` / `state` / `title_format`). Validator V5 checks the shape; resolution otherwise follows the same ladder as the four mandatory roles. Provider-agnostic contract: any MCP exposing `createPage(space, parent_id, title, body, state) → {id, url}` and `updatePage(id, body, state) → {id, url, version}` plugs in.
+
+**User consent is mandatory by default.** The `publish_gate: always` setting (default) fires a Yes/No/Disable/Never-ask prompt before any tool call. `first_only` confirms only the initial publish; `never` auto-publishes (validator warns). The gate prompt is ~$0.001 per firing.
+
+### Resolution ladder (applied per role, per run)
+
+Every MCP-consuming agent walks this ladder at pre-flight for every role it uses:
+
+```
+0. Config-time skip (equivalent to --skip flag)
+   mcp_roles.<role>: null  OR  mcp_roles.<role>: []
+   → Pack-declared "never use an MCP for this role on this project."
+     Role resolves with mcp=null and reason="skipped (config opt-out)".
+     Downstream gate still fires IF the ticket needs this role's content
+     (e.g. design_source = null + ticket has Figma URLs + no attachments
+     → gate prompts user to upload images). If the ticket does NOT need
+     this role's content on this run (e.g. backend-only ticket + design
+     opted out), gate stays silent — noted in Active Context.
+
+1. Flag overrides (ALWAYS WIN)
+   --offline              → role has no MCP for this run
+   --skip <name,...>      → listed MCPs removed from candidates
+   --only <name,...>      → all MCPs NOT listed removed from candidates
+
+2. Walk mcp_roles.<role> in declared order
+   Take the first candidate still allowed after step 1
+
+3. Consult mcp_guidance.<role> (if present) for declared quirks only
+   e.g. "Ticket IDs starting with ODO- → route to odoo MCP"
+   This is the ONLY place free-form English influences routing.
+
+4. Check the candidate MCP is exposed by the host (probe succeeded)
+   Not exposed / probe failed → try next fallback in step 2's list → repeat
+
+5. All candidates exhausted:
+   IF a flag (--offline / --skip / --only) explains the emptiness:
+     → proceed to local fallback for that role:
+          story_source  → contexts/ticket-input.md OR inline Context:
+          design_source → drag-drop image attachments in trigger
+          docs_source   → local file or inline content
+          vcs           → Ship may still commit via CLI git + gh / glab
+   ELSE (no flag accounts for emptiness):
+     → WARN user + HALT with a clear message naming the role:
+         "⛔ mcp_roles.{role} resolved to no usable MCP and no flag explains it.
+          Check: (a) the MCP is declared in mcp_servers, (b) the MCP is
+          configured in your personal Cursor/Claude Code MCP config,
+          (c) the probe is healthy."
+```
+
+**Rationale for the halt-vs-fallback split:** when the user explicitly said "skip" (via a flag), they're responsible for providing a local alternative, and the existing MCP-failure gates handle that. When no flag is involved, an empty role means something is genuinely broken (missing MCP config, expired token, config error) — we halt loudly so the user doesn't silently proceed with degraded data.
+
+### Active Context block (mandatory)
+
+Every agent that resolves roles MUST render its routing decisions in its Active Context block at pre-flight — the developer should always be able to see which MCP each role landed on, and why. Format:
+
+```
+│ Routing:                                                   │
+│   story_source  → atlassian ✓                              │
+│   design_source → figma ✓                                  │
+│   vcs           → github ✓  (fallback: bitbucket unused)   │
+│   docs_source   → atlassian ✓                              │
+```
+
+Status markers:
+- `✓` — resolved and probe healthy
+- `✗ (--skip / --offline / --only)` — skipped by flag; local fallback applies
+- `✗ (probe failed: <reason>)` — MCP configured but unreachable; gate fired
+- `→ ticket-input.md / attachments / CLI git` — local fallback active
+- `⛔ HALT` — no candidate; warning fired, pipeline stops
+
+### Back-compat with legacy packs
+
+Packs that do NOT declare `mcp_roles:` get the validator warning (V1) and agents fall back to hardcoded MCP routing (today's behavior):
+
+| Role | Legacy fallback MCP |
+|---|---|
+| `story_source` | `atlassian` |
+| `design_source` | `figma` |
+| `vcs` | `github` |
+| `docs_source` | `atlassian` |
+
+This keeps existing installs running unchanged until they adopt `mcp_roles:`. The validator warning nudges pack authors to migrate.
+
+### Who consults `mcp_roles`
+
+| Agent | Roles consumed |
+|---|---|
+| Orchestrator | `story_source` (fetch ticket), `design_source` (image analysis), `docs_source` (HLD), `vcs` (reference-PR status), `docs_publish` (C.5b post-Go LLD publish — opt-in, gated) |
+| Review | `vcs` (reference-PR diff + pattern comparison) |
+| Ship | `vcs` (branch + commit + PR creation), `story_source` (ticket status transition) |
+| AC-E2E-Check | `design_source` (informational — design fidelity) |
+
+Explorer, Surgeon, and Project-Analyzer do not call MCPs directly and do not consult `mcp_roles`.
+
+## Context management (CRITICAL for large stories)
+
+**Problem:** Project files can be 1000+ lines. A large story touches 15-25 files. Context window fills up fast.
+
+**Rule 1 — File reading budget:**
+- Read ONLY the relevant section of large files (function/method level), not the entire file
+- For files >300 lines: use line ranges (e.g., read lines 140-180) not full file
+- Exception: new files being created can be read fully (they're small)
+
+**Rule 2 — Handoff via files, not chat history:**
+- Each agent saves its output to a FILE (LLD, exploration report, Change Manifest)
+- The next agent reads ONLY the file — it does NOT rely on chat history from prior agents
+- This means: if you start surgeon in a NEW conversation, it works — just point it to the LLD and exploration files
+
+**Rule 3 — Surgeon works from the compact table:**
+- Surgeon's primary reference is the Task Annotation Summary table from explorer (small, fits in context)
+- Surgeon reads PART 2 (LLD Tasks) for implementation order and PART 4 (Test Plan Tasks) for test code
+- Surgeon does NOT re-read PART 1 (Design) for every task — only references it for verify_by and AC mapping
+- Surgeon reads the full exploration report ONLY if the compact table lacks detail for a specific task
+
+**Rule 4 — Review works file-by-file:**
+- Review does NOT load all diffs into context at once
+- Process: read T1's files → review T1 → report → read T2's files → review T2 → report → ...
+- Blast radius: grep one file at a time, not all at once
+
+**Rule 5 — Context overflow recovery:**
+If an agent detects it's running low on context (response getting slower, truncation risk):
+```
+STOP. Save progress:
+1. Save completed work to file (Change Manifest, partial review, etc.)
+2. Present resume instructions:
+   "Context is full. To continue:
+   1. Start a new conversation
+   2. Say: 'Resume {agent_name} for {TICKET_ID} from task T{N}'
+   3. I'll read the saved files and continue from where I left off"
+3. List: what's done, what's pending, which files to read
+```
+
+**Rule 6 — New conversation = fresh context:**
+When resuming in a new conversation, the agent:
+1. Re-reads its prompt (automatic — it's the agent file)
+2. Re-reads saved artifacts (LLD, exploration report, Change Manifest)
+3. Skips completed tasks (checks Change Manifest or task reports file)
+4. Continues from the pending task
+
+## Context folder layout (contexts_layout)
+
+Two layouts are supported, controlled by `runtime.contexts_layout.nested_by_epic` in `contexts/config/pipeline.yaml`:
+
+**Nested layout** (`nested_by_epic: true`, default):
+```
+contexts/
+├── proj-epic-42/                         # one folder per epic (lowercased by default)
+│   ├── PROJ-1234.md                   # Requirement Summary + ACs + Companion index
+│   ├── PROJ-1234-lld.md               # PART 1 Design + PART 2 Tasks
+│   ├── PROJ-1234-testplan.md          # PART 3 Test Plan + PART 4 Test Tasks
+│   ├── PROJ-1234-exploration.md
+│   ├── PROJ-1234-manifest.md
+│   ├── PROJ-1234-review.md
+│   └── codebase-map.md                  # no epic-ID prefix; folder encodes it
+└── standalone/                          # tickets with no resolvable epic
+    └── PROJ-9999.md
+```
+
+**Flat layout** (`nested_by_epic: false`, opt-in):
+```
+contexts/
+├── PROJ-1234.md
+├── PROJ-1234-lld.md
+├── PROJ-1234-testplan.md
+├── PROJ-1234-exploration.md
+├── PROJ-1234-manifest.md
+├── PROJ-1234-review.md
+└── EPIC-4567-codebase-map.md
+```
+
+Both layouts coexist. Flipping `nested_by_epic` between runs is safe — previously-shipped tickets are still resolvable because downstream agents glob-discover the context file (see Path resolution below).
+
+## Path resolution (pre-flight, ALL agents)
+
+Every agent uses the following path variables for its IO. Variables resolve at pre-flight from `contexts_layout` config + the ticket's epic ID:
+
+| Variable | Flat layout | Nested layout |
+|----------|-------------|---------------|
+| `$CONTEXT_DIR` | `contexts/` | `contexts/<epic_lower>/` or `contexts/<standalone_folder>/` |
+| `$CONTEXTS_FILE` | `contexts/{TICKET}.md` | `$CONTEXT_DIR{TICKET}.md` |
+| `$LLD_FILE` | `contexts/{TICKET}-lld.md` | `$CONTEXT_DIR<lld_filename>` (default `{TICKET}-lld.md`) |
+| `$TESTPLAN_FILE` | `contexts/{TICKET}-testplan.md` | `$CONTEXT_DIR<testplan_filename>` (default `{TICKET}-testplan.md`) |
+| `$EXPLORATION_FILE` | `contexts/{TICKET}-exploration.md` | `$CONTEXT_DIR{TICKET}-exploration.md` |
+| `$MANIFEST_FILE` | `contexts/{TICKET}-manifest.md` | `$CONTEXT_DIR{TICKET}-manifest.md` |
+| `$REVIEW_FILE` | `contexts/{TICKET}-review.md` | `$CONTEXT_DIR{TICKET}-review.md` |
+| `$CODEBASE_MAP` | `contexts/{EPIC}-codebase-map.md` | `$CONTEXT_DIR<codebase_map_filename>` |
+| `$EPIC_CONTEXT` | `contexts/{EPIC}-epic-context.md` | `$CONTEXT_DIR epic-context.md` |
+| `$PROJECT_MAP` | `contexts/project-map.md` | `contexts/project-map.md` (project-level, same in both layouts) |
+| `$INPUT_FILE` | `contexts/{TICKET}-input.md` | `$CONTEXT_DIR{TICKET}-input.md` (also check legacy `contexts/{TICKET}-input.md`) |
+| `$SURGEON_BUILD_REPORT` | `contexts/{TICKET}-surgeon-build.md` | `$CONTEXT_DIR{TICKET}-surgeon-build.md` |
+| `$REVIEW_BUILD_REPORT` | `contexts/{TICKET}-review-build.md` | `$CONTEXT_DIR{TICKET}-review-build.md` |
+| `$DEMO_BUILD_REPORT` | `contexts/{TICKET}-demo-build.md` | `$CONTEXT_DIR{TICKET}-demo-build.md` |
+| `$TOOL_USAGE_FILE` | `contexts/{TICKET}-tool-usage.md` | `$CONTEXT_DIR{TICKET}-tool-usage.md` |
+
+**Split-output layout:** Orchestrator writes three files per ticket:
+- `$CONTEXTS_FILE` — Requirement Summary + Enriched AC Registry + metadata + **Companion Files** index
+- `$LLD_FILE` — PART 1 (LLD Design) + PART 2 (LLD Tasks)
+- `$TESTPLAN_FILE` — PART 3 (Test Plan) + PART 4 (Test Tasks)
+
+Downstream agents read from the right file per PART. See "Agent outputs" section below for who reads/writes what.
+
+**All literal `contexts/{TICKET}*.md` and `contexts/{EPIC}-codebase-map.md` references in the agent prompts below resolve to the corresponding variable above.** When the variables resolve to nested values (because `nested_by_epic: true` — the default), paths land under `contexts/<epic>/`. When a pack explicitly sets `nested_by_epic: false`, the variables flatten to `contexts/{TICKET}…` and the literal references in the prompts already match.
+
+### Procedure A — Orchestrator (knows the epic from JIRA)
+
+Run during load_context (A0):
+
+```
+1. Read contexts/config/pipeline.yaml → runtime.contexts_layout (or use defaults)
+2. If nested_by_epic == false:
+     CONTEXT_DIR = "contexts/"
+     CODEBASE_MAP = "contexts/{EPIC}-codebase-map.md"
+3. Else (nested_by_epic == true):
+     epic_id = resolve_epic_from_jira(ticket)        # walk parent chain up to 3 levels
+     If epic_id found:
+       folder = lowercase(epic_id) if epic_folder_case == "lower" else epic_id
+       CONTEXT_DIR = "contexts/" + folder + "/"
+     Else:
+       CONTEXT_DIR = "contexts/" + standalone_folder + "/"
+     CODEBASE_MAP = CONTEXT_DIR + codebase_map_filename
+4. mkdir -p $CONTEXT_DIR
+5. Derive remaining variables from $CONTEXT_DIR + ticket ID (see table above). For split-output
+   files, substitute {TICKET} in the configured filenames (or defaults):
+     LLD_FILE      = $CONTEXT_DIR + (lld_filename       || "{TICKET}-lld.md").replace("{TICKET}", ticket)
+     TESTPLAN_FILE = $CONTEXT_DIR + (testplan_filename  || "{TICKET}-testplan.md").replace("{TICKET}", ticket)
+6. Surface in gate_for_approval (C) gate summary:
+     "Context folder: $CONTEXT_DIR"
+     "LLD file:       $LLD_FILE"
+     "Test plan file: $TESTPLAN_FILE"
+```
+
+### Procedure B — Downstream agents (Explorer, Surgeon, Review, Ship)
+
+Downstream agents do not call JIRA. They glob-discover `$CONTEXT_DIR` from the existing `$CONTEXTS_FILE`:
+
+```
+1. Read contexts/config/pipeline.yaml → runtime.contexts_layout (or use defaults)
+2. matches = glob "contexts/**/{TICKET}.md" excluding contexts/archive/**
+   # Exclude the split-output companions so they don't shadow the main file:
+   # the glob above intentionally matches "{TICKET}.md" exactly, not "{TICKET}-*.md",
+   # so {TICKET}-lld.md and {TICKET}-testplan.md do not appear in `matches`.
+3. If exactly 1 match:
+     CONTEXTS_FILE = match
+     CONTEXT_DIR = parent of match (with trailing slash)
+4. If 0 matches:
+     HALT with: "No context file found for {TICKET}. Has Orchestrator run for this ticket?"
+5. If 2+ matches:
+     HALT with: "Ambiguous context file for {TICKET}: {list paths}. Resolve manually (delete or archive duplicates)."
+6. Derive remaining variables from $CONTEXT_DIR (see table above). For split-output files:
+     LLD_FILE      = $CONTEXT_DIR + (lld_filename       || "{TICKET}-lld.md").replace("{TICKET}", ticket)
+     TESTPLAN_FILE = $CONTEXT_DIR + (testplan_filename  || "{TICKET}-testplan.md").replace("{TICKET}", ticket)
+   Verify both companions exist on disk. If either is missing, HALT with:
+     "Split-output companion missing: {path}. Has Orchestrator completed this ticket?"
+7. For codebase map:
+     If nested_by_epic == true:
+       CODEBASE_MAP = $CONTEXT_DIR + codebase_map_filename
+     Else:
+       CODEBASE_MAP = "contexts/" + (epic_id read from $CONTEXTS_FILE metadata) + "-codebase-map.md"
+```
+
+The glob handles flat and nested layouts interchangeably — a ticket previously shipped flat at `contexts/PROJ-1111.md` and a new ticket at `contexts/proj-epic-42/PROJ-1234.md` both resolve correctly without configuration awareness in the downstream agent.
+
+### Procedure C — Bundle mode (bundle-orchestrator + downstream agents in `mode: bundle`)
+
+Bundle mode introduces three additional path variables. They sit alongside the per-ticket variables above and are resolved by `bundle-orchestrator` at Phase A; downstream agents read them from the bundle's `$BUNDLE_CONTEXTS_FILE` frontmatter (no recomputation needed).
+
+| Variable | Resolution rule |
+|----------|-----------------|
+| `$BUNDLE_ID` | Deterministic ID derived from sorted ticket IDs. Form: `{epic_lower}-bundle-{HASH4}` where `HASH4` = first 4 hex chars of sha1 of comma-joined sorted IDs. Example: `iiqmag-4567-bundle-a3f2`. |
+| `$BUNDLE_CONTEXT_DIR` | `contexts/<epic_lower>/` (same directory used by the per-story flow for that epic). Falls back to `contexts/<standalone_folder>/` when `cross_epic_policy == warn_continue` and tickets disagree. |
+| `$BUNDLE_CONTEXTS_FILE` | `$BUNDLE_CONTEXT_DIR{BUNDLE_ID}.md` — main bundle entry doc; carries `mode: bundle` frontmatter. |
+| `$BUNDLE_LLD_FILE` | `$BUNDLE_CONTEXT_DIR{BUNDLE_ID}-lld.md` — consolidated PART 1 + PART 2. |
+| `$BUNDLE_TESTPLAN_FILE` | `$BUNDLE_CONTEXT_DIR{BUNDLE_ID}-testplan.md` — consolidated PART 3 + PART 4. |
+| `$BUNDLE_EXPLORATION_FILE` | `$BUNDLE_CONTEXT_DIR{BUNDLE_ID}-exploration.md` — consolidated explorer output. |
+| `$BUNDLE_MANIFEST_FILE` | `$BUNDLE_CONTEXT_DIR{BUNDLE_ID}-manifest.md` — consolidated surgeon manifest (per-task rows tagged with `Sources: <ticket-list>`). |
+| `$BUNDLE_REVIEW_FILE` | `$BUNDLE_CONTEXT_DIR{BUNDLE_ID}-review.md` — review report grouped by source ticket. |
+| `$BUNDLE_SUMMARY_FILE` | `$BUNDLE_CONTEXT_DIR{BUNDLE_ID}-summary.md` — written post-Ship; per-ticket AC coverage + PR/commit links. |
+| `$BUNDLE_STATE_FILE` | `$BUNDLE_CONTEXT_DIR<state_filename>` (default `_bundle-state.yaml`). The resume oracle. |
+| `$TOOL_USAGE_FILE` | `$BUNDLE_CONTEXT_DIR{BUNDLE_ID}-tool-usage.md` — Tool Usage Ledger (see § Tool Usage Tracking). One file per bundle; every bundle-aware agent appends. |
+| `$TICKET_CARD[id]` | `$BUNDLE_CONTEXT_DIR{id_lower}.md` — per-ticket card (`mode: bundle-card`). Generated view of the ticket's slice (requirement summary + filtered AC registry). One file per bundled ticket. **Read-only / regenerated by bundle-orchestrator B.3.5.** Downstream agents do NOT read these — they read `$BUNDLE_LLD_FILE` / `$BUNDLE_TESTPLAN_FILE`. |
+| `$TICKET_LLD_CARD[id]` | `$BUNDLE_CONTEXT_DIR{id_lower}-lld.md` — per-ticket LLD card (`mode: bundle-card-lld`). Filtered PART 1 sub-section + filtered PART 2/4 rows for that ticket. Same regeneration / read-only rules as `$TICKET_CARD[id]`. |
+
+**Bundle-mode discovery from a downstream agent (Explorer / Surgeon / Review / Ship):**
+
+When a bundle agent is invoked via `Resume bundle-<agent> for <BUNDLE_ID> ...` OR fired from the prior agent's gate (with the gate text using the bundle deeplink), it resolves paths like this:
+
+```
+1. Read contexts/config/pipeline.yaml → runtime.bundle settings
+2. matches = glob "contexts/**/<BUNDLE_ID>.md" excluding contexts/archive/**
+3. If exactly 1 match:
+     BUNDLE_CONTEXTS_FILE = match
+     BUNDLE_CONTEXT_DIR   = parent of match (with trailing slash)
+4. If 0 matches:
+     HALT with: "No bundle context for <BUNDLE_ID>. Verify ID or run bundle-orchestrator first."
+5. Read frontmatter; verify `mode: bundle` AND `bundle_id` matches argument.
+6. Derive remaining $BUNDLE_* paths from $BUNDLE_CONTEXT_DIR + <BUNDLE_ID>.
+7. Read $BUNDLE_STATE_FILE — this drives resume cursor for the agent's specific stage.
+```
+
+**Bundle-state file contract (`_bundle-state.yaml`):**
+
+Every bundle-aware agent reads this file at pre-flight and writes it at every checkpoint AND every stage transition. Atomically: write to `_bundle-state.yaml.tmp`, then rename. Schema:
+
+```yaml
+bundle_id: <BUNDLE_ID>
+epic: <EPIC_ID>
+tickets: [<ID>, <ID>, <ID>, ...]            # sorted, immutable post-creation
+branch: <branch_name>
+mode: bundle
+created_at: <ISO8601>
+last_activity_at: <ISO8601>                 # updated on every write
+
+stages:
+  orchestrator: { status: pending | in_progress | done | failed, started_at, completed_at, error? }
+  explorer:     { status, started_at, completed_at, last_task: T<N>, total: <N>, failed: [T<N>, ...] }
+  surgeon:      { status, started_at, completed_at, last_task: T<N>, total: <N>, failed: [T<N>, ...] }
+  review:       { status, started_at, completed_at, last_task: T<N>, total: <N>, failed: [T<N>, ...] }
+  ship:         { status, started_at, completed_at, pr_url?, commits?: [<sha>, ...] }
+
+context:                                    # what bundle-orchestrator captured
+  hld_loaded: <bool>
+  prd_loaded: <bool>
+  spikes_loaded: <int>
+  cross_epic_warn: <bool>                   # true if tickets crossed epics
+
+flags:                                      # echoes the trigger flags for resume
+  fresh: <bool>
+  deep:  <bool>
+  offline: <bool>
+  skip:  [<mcp>, ...]
+  only:  [<mcp>, ...]
+```
+
+**Resume cursor invariants:**
+- `last_task` = highest task index whose work is COMPLETE in the manifest. The next task to run is `last_task + 1`.
+- `failed[]` is append-only within a stage. Re-running a failed task on resume MOVES it from `failed` back to in-progress; it gets re-added to `failed` only if it fails again.
+- Stage `status` transitions: `pending → in_progress → (done | failed)`. A stage can re-enter `in_progress` from `failed` only after the user picks `Resume from T<N>` at the failure gate.
+
+**Bundle-mode `--fresh`:** Re-issuing the trigger with `--fresh` deletes the resume cursor (`last_task`, `failed[]` reset to defaults) but PRESERVES `bundle_id`, `branch`, and `tickets`. Files on disk are overwritten in place by each agent on its next run, same as single-story `--fresh`. The branch is not deleted.
+
+## Agent outputs
+
+| Agent | Output | Location |
+|-------|--------|----------|
+| orchestrator | Requirement Summary + ACs + index (main) + PART 1/2 (lld) + PART 3/4 (testplan) + branch. Creates `$EPIC_CONTEXT` if first story. | `$CONTEXTS_FILE`, `$LLD_FILE`, `$TESTPLAN_FILE`, `$EPIC_CONTEXT` (create only) |
+| explorer | Synced codebase map (epic-level, always current) + story exploration | `$CODEBASE_MAP` + `$EXPLORATION_FILE` |
+| surgeon | Code changes (uncommitted) + Change Manifest + **final-build report** | Working dir + `$MANIFEST_FILE` + `$SURGEON_BUILD_REPORT` |
+| review | Review report + **epic-context.md story entry** (compact summary with CREATED/MODIFIED/CONFIG files) + **review-gate build report** (only if Review ran its own build — skipped when Surgeon's report is fresh). Runs BEFORE Ship so next story has context even if Ship is deferred. | `$REVIEW_FILE` + `$EPIC_CONTEXT` (append) + `$REVIEW_BUILD_REPORT` (conditional) |
+| ac-e2e-check | Demo/verify results + **demo-build report** (only if `run_build: true`) | `$DEMO_REPORT` + `$DEMO_BUILD_REPORT` (conditional) |
+| ship | Commits + push + PR (with build-report summaries attached) + codebase map metadata update (stories_completed). Optional — may be deferred. | GitHub + `$CODEBASE_MAP` (metadata) |
+| bundle-orchestrator | Consolidated Requirement Summary + cross-ticket AC Registry (main) + consolidated PART 1/2 (lld) + PART 3/4 (testplan) + branch + epic-framing block (PRD/HLD/Spike). Creates/updates `$EPIC_CONTEXT` (Story Roster only). Initializes `$BUNDLE_STATE_FILE`. | `$BUNDLE_CONTEXTS_FILE`, `$BUNDLE_LLD_FILE`, `$BUNDLE_TESTPLAN_FILE`, `$BUNDLE_STATE_FILE`, `$EPIC_CONTEXT` (append) |
+| bundle-explorer | Consolidated exploration tagged by source ticket; codebase map sync. Checkpoints every `runtime.bundle.checkpoint_every.explorer` tasks. | `$BUNDLE_EXPLORATION_FILE`, `$CODEBASE_MAP`, `$BUNDLE_STATE_FILE` (cursor update) |
+| bundle-surgeon | Code changes (uncommitted) + consolidated Change Manifest with `Sources: <ticket-list>` per row + per-task build report. Checkpoints every 5 tasks. | Working dir + `$BUNDLE_MANIFEST_FILE` + `$SURGEON_BUILD_REPORT` (per-checkpoint) + `$BUNDLE_STATE_FILE` |
+| bundle-review | Consolidated review with AC compliance grouped by source ticket; per-ticket sub-verdict + overall `Ship-ready: YES/NO/PARTIAL`. Appends per-ticket entries to `$EPIC_CONTEXT` story log. Checkpoints every 5 tasks. | `$BUNDLE_REVIEW_FILE` + `$EPIC_CONTEXT` (append per ticket) + `$BUNDLE_STATE_FILE` |
+| bundle-ship | One PR closing all bundled tickets (PR body lists each ticket + AC coverage); JIRA `ship_done` transition fired once per ticket against the same PR URL; `$BUNDLE_SUMMARY_FILE` generated post-push; codebase map metadata updated once per bundled ticket. | GitHub (one PR) + `$BUNDLE_SUMMARY_FILE` + `$CODEBASE_MAP` + `$BUNDLE_STATE_FILE` |
+
+### Invocation modes (pipeline vs standalone)
+
+Each agent supports two invocation modes:
+
+- **Pipeline mode** — ticket-driven, full chain (Orchestrator → Explorer → Surgeon → Review → Ship, with optional AC-E2E-Check and Amender gate subagent). Produces full artifacts: LLD, test plan, manifest, review, PR. Inputs come from JIRA ticket + upstream agent outputs.
+- **Standalone mode** — ad-hoc, single-agent. User provides context inline. Produces scoped artifacts only. No LLD, no PR. Good for research, one-off fixes, spot-checks.
+
+Each agent's `detect_invocation_mode (0)` step (first pre-flight step) parses the trigger text to pick the mode. Pipeline mode runs the full flow; standalone mode skips prerequisite checks and runs a reduced flow.
+
+**Standalone-mode support matrix:**
+
+| Agent | Standalone | Standalone trigger pattern |
+|-------|------------|---------------------------|
+| orchestrator | N/A | (it's the start of the pipeline) |
+| explorer | ✅ | `Research: <q>` or `Explore: <spec>` |
+| explorer-bug | ❌ | No standalone — use `Research:` instead |
+| surgeon | ✅ | `Apply: <spec>` (capped: ≤5 files, ≤150 lines) |
+| review | ✅ | `Review changes` (compact — no blast radius / tests / AC compliance) |
+| ac-e2e-check | ✅ | `Demo <URL>` or `Verify: <scenario>` |
+| ship | ❌ | No standalone — safety rail, requires Review verdict |
+
+**Standalone output convention:**
+
+Standalone outputs live under `contexts/standalone/` with a `standalone-` filename prefix and timestamp:
+
+```
+contexts/
+├── <epic>/                                       # pipeline artifacts per ticket
+│   └── <TICKET>.md, <TICKET>-lld.md, ...
+└── standalone/                                   # ad-hoc artifacts
+    ├── standalone-exploration-{timestamp}.md
+    ├── standalone-manifest-{timestamp}.md
+    ├── standalone-review-{timestamp}.md
+    └── standalone-demo-{timestamp}.md
+```
+
+Procedure B's glob (`contexts/**/{TICKET}.md`) ignores these because they don't match the `<TICKET>.md` pattern — standalone and pipeline artifacts never cross-contaminate.
+
+### LLD document structure (split across three files)
+
+```
+$CONTEXTS_FILE  (main — small, human entry point)
+  ─ Metadata (ticket, mode, base_branch, epic)
+  ─ Requirement Summary         ← Explorer + Surgeon read for intent
+  ─ Enriched AC Registry        ← Review + AC-E2E-Check read for coverage
+  ─ Cross-Reference Findings
+  ─ Companion Files             ← index: paths to $LLD_FILE + $TESTPLAN_FILE
+
+$LLD_FILE       (design + implementation)
+  # PART 1 — LLD Design          ← Review reads for compliance; Surgeon for WHY
+  # PART 2 — LLD Tasks           ← Explorer + Surgeon read for implementation;
+                                    AC-E2E-Check appends gap tasks
+
+$TESTPLAN_FILE  (test plan + test tasks)
+  # PART 3 — Test Plan           ← Review validates, Ship includes in PR
+  # PART 4 — Test Tasks          ← Explorer + Surgeon read for test code
+```
+
+Bug mode: same three-file shape. Explorer-bug writes hypotheses to `$TESTPLAN_FILE` PART 3 (repurposed as "Root Cause Hypotheses" in bug mode) and fix tasks to `$LLD_FILE` PART 2 + regression tasks to `$TESTPLAN_FILE` PART 4.
+
+## Build report contract (Surgeon ↔ Review ↔ Ship)
+
+Every build invocation that goes through `builds.runner` (in pipeline config) writes a **structured build report file** alongside the raw log. Reports are the mechanism by which Review avoids re-running Surgeon's clean build, and by which Ship attaches build verdicts to the PR body — without any agent having to carry build output in its conversation context.
+
+**Report schema** (YAML front-matter only — no prose body):
+
+```yaml
+---
+agent: surgeon            # which agent ran the build
+phase: final_build_check  # agent-internal step/task id (e.g. "review_gate", "T5", "pre_verify_build")
+command: 'ant clean build'
+status: 0                 # process exit code
+verdict: PASS             # PASS | FAIL (derived from status)
+started_at: 2026-04-23T14:32:10Z
+ended_at:   2026-04-23T14:34:17Z
+duration_s: 127
+log_path: /tmp/pipeline-build.log
+log_lines: 1847
+tail_30: |
+  [last 30 lines of stdout+stderr, indented 2 spaces so YAML accepts them as a literal block]
+---
+```
+
+**Who writes what:**
+
+| Report file | Writer | When |
+|---|---|---|
+| `$SURGEON_BUILD_REPORT` | Surgeon | After `final_build_check` (Step 4). Always written if a build ran. |
+| `$REVIEW_BUILD_REPORT` | Review | After `full_clean_build` (Step 1a) — **only if Review actually ran a build** (skipped when Surgeon's report is fresh; see freshness check below). |
+| `$DEMO_BUILD_REPORT` | AC-E2E-Check | After `pre_verify_build` (Step 1c) — only if `demo.pre_verify.run_build: true` (not the default). |
+
+**Freshness check (Review's skip-if-fresh logic):**
+
+Review's Step 1a runs this check BEFORE executing `builds.review_gate`:
+
+```
+IF $SURGEON_BUILD_REPORT exists:
+    READ it → parse front-matter → extract .started_at and .verdict
+    manifest_mtime = max(mtime of each file path listed in $MANIFEST_FILE)
+    IF .verdict == PASS AND .started_at > manifest_mtime:
+        echo "→ Surgeon's build report is fresh (verdict=PASS, started_at=...) — reusing verdict, skipping review_gate"
+        copy .verdict / .command / .duration_s into $REVIEW_FILE under "Build Gate" heading
+        DO NOT write $REVIEW_BUILD_REPORT (Surgeon's is the authority)
+        proceed to Step 1b (unit_test_suite)
+    ELSE:
+        run review_gate normally → write $REVIEW_BUILD_REPORT
+ELSE:
+    run review_gate normally → write $REVIEW_BUILD_REPORT
+```
+
+`manifest_mtime` uses the Surgeon-declared file list rather than `git diff` to avoid false invalidation from Review's own in-flight fixes.
+
+**Reading build reports (for downstream agents):**
+
+- **On PASS**: downstream agents should read front-matter fields only (status/verdict/duration_s/command). Do NOT read `tail_30` — it's there for post-mortem, not happy-path context.
+- **On FAIL**: read the full report including `tail_30`. If `tail_30` is insufficient, use the `Read` tool to open `log_path` directly (may not exist on fresh chats — the log file is machine-local and ephemeral; the report's `tail_30` is the durable record).
+
+**Invariants:**
+
+- A report file is written ATOMICALLY — the runner template writes to `{report}.tmp` first in future iterations; for now, a partial report on an interrupted build is tolerable because the agent will re-run the wrapped command.
+- Report files are committed to git along with other `contexts/{TICKET}-*.md` artifacts by Ship — they become part of the permanent record of the story.
+- No agent should delete an existing report; overwriting (on re-run) is fine.
+
+## Tool Usage Tracking (ALL agents — single ledger per pipeline run)
+
+Every agent in the pipeline appends a structured block to `$TOOL_USAGE_FILE` at the **end of its run**, just before rendering the final `## [Step N/5] {agent} — DONE` gate. The ledger is the single audit artifact for "where did this pipeline run actually spend its time and tokens?"
+
+### File location
+
+| Run mode | Path |
+|---|---|
+| Single-story (story / bug) | `$CONTEXT_DIR + {TICKET}-tool-usage.md` |
+| Bundle | `$BUNDLE_CONTEXT_DIR + {BUNDLE_ID}-tool-usage.md` |
+| Standalone | `contexts/standalone/standalone-{agent}-tool-usage-{timestamp}.md` (per agent run; not aggregated) |
+
+The variable `$TOOL_USAGE_FILE` resolves to the appropriate path at pre-flight (path-resolution table extends Procedure A/B/C). Created on first agent's append; subsequent agents append to the same file.
+
+### When to write
+
+At the **last step of the agent's run, immediately before the final gate is rendered**. Write happens regardless of verdict (PASS or FAIL or HALT) so failed runs are still audited. If an agent crashes before reaching the final step, the prior agents' blocks remain on disk — this is acceptable.
+
+For checkpointed agents (bundle-explorer, bundle-surgeon, bundle-review): write a **partial block at each checkpoint** (with `## explorer (checkpoint at T<N>)` heading) and a **final block** at end-of-stage. Each checkpoint's block is independently parseable.
+
+### Schema (markdown — block per agent run)
+
+The first agent to run creates the file with the YAML frontmatter. Subsequent agents append their block.
+
+```markdown
+---
+ticket: PROJ-1234           # OR bundle_id: epic-42-bundle-a3f2
+mode: story                 # story | bug | bundle | standalone
+created_at: 2026-05-06T10:00:00Z
+---
+
+# Tool Usage Ledger
+
+## {agent_name}{run_marker}
+- Started:  {ISO8601}
+- Ended:    {ISO8601}
+- Duration: {seconds}s
+- Mode:     {pipeline | standalone}{ · sub_mode if any}
+- Verdict:  {DONE | HALT(reason) | FAIL(reason)}
+
+### MCP calls
+| Server   | Method                | Count | Approx tokens |
+|---       |---                    |---:   |---:           |
+| atlassian| getIssue              |   N   |   K           |
+| atlassian| searchIssues          |   N   |   K           |
+| atlassian| getConfluencePage     |   N   |   K           |
+| figma    | getFile               |   N   |   K           |
+| github   | (any method)          |   N   |   K           |
+{omit rows where Count == 0; omit whole table if no MCP calls}
+
+### Git operations
+| Command       | Count | Notes                          |
+|---            |---:   |---                             |
+| git rev-parse |   N   |                                |
+| git log       |   N   |                                |
+| git status    |   N   |                                |
+| git diff      |   N   | (e.g. blast-radius)            |
+| git checkout  |   N   | (e.g. created `feature/...`)   |
+| git add       |   N   |                                |
+| git commit    |   N   |                                |
+| git push      |   N   |                                |
+{omit rows where Count == 0}
+
+### Bash invocations (non-git, non-build)
+| Pattern         | Count | Notes                       |
+|---              |---:   |---                          |
+| `cat`           |   N   | small file inspection       |
+| `ls` / `find`   |   N   | directory checks            |
+| `mkdir`         |   N   |                             |
+| `grep` (combined `-E` / parallel) |   N   | counted as 1 turn each, not 1 per pattern |
+| (other)         |   N   | one-line description        |
+
+### File reads (Read tool)
+| File                  | Bytes  | Tokens (≈ bytes/4)  |
+|---                    |---:    |---:                 |
+| pipeline.{PACK}.yaml     |   K    |   K                 |
+| pipeline.{PACK}.skills.yaml |  K  |   K                 |
+| project-map.md        |   K    |   K                 |
+| epic-context.md       |   K    |   K                 |
+| {others}              |   K    |   K                 |
+{aggregate by file; if same file read N times, list once with total}
+
+### File writes (Write/Edit tool)
+| File                  | Bytes  | Action          |
+|---                    |---:    |---              |
+| $CONTEXTS_FILE        |   K    | created/updated |
+| $LLD_FILE             |   K    | created/updated |
+| $TESTPLAN_FILE        |   K    | created/updated |
+| $EPIC_CONTEXT         |   K    | appended        |
+
+### Build invocations
+| Command              | Count | Wrapped | Total wall-clock |
+|---                   |---:   |---      |---:              |
+| `ant clean build`    |   N   | YES     |   {duration}s    |
+| `ant jstests`        |   N   | YES     |   {duration}s    |
+| `ant jtest`          |   N   | YES     |   {duration}s    |
+| (others)             |   N   | YES/NO  |   {duration}s    |
+{from $SURGEON_BUILD_REPORT / $REVIEW_BUILD_REPORT — exact, not estimated}
+{omit table if 0 invocations}
+
+### Estimated cost (Sonnet 4.5 — annotate model used in this run)
+- Cache reads:    ~{N}M tok × $0.30/M = ~${X}.{XX}
+- Fresh input:    ~{N}K tok × $3.00/M = ~${X}.{XX}
+- Output:         ~{N}K tok × $15.00/M = ~${X}.{XX}
+- Cache write:    ~{N}K tok × $3.75/M = ~${X}.{XX}
+- **Subtotal:**   **~${X}.{XX}**
+
+{When mode == "haiku" or other model, swap rates: $1/M input, $5/M output, $1.25/M write, $0.10/M read.}
+
+### Notes
+{Optional 1–3 lines. Anomalies, opt-ins, anything noteworthy. Empty if nothing.}
+
+---
+```
+
+`{run_marker}` is empty for normal runs, ` (checkpoint at T<N>)` for mid-stage checkpoints, ` (resume from T<N>)` when the agent was resumed.
+
+### How to estimate counts (the agent's responsibility)
+
+| Field | How to fill it |
+|---|---|
+| MCP call counts | Count of MCP tool invocations the agent issued during its run. Approx tokens = sum of fetched-content sizes / 4. |
+| Git op counts | Count of distinct `git` shell invocations. |
+| Bash op counts | Count of distinct non-git, non-build shell invocations. |
+| File read counts + bytes | Use `wc -c` on each file at read time; sum per unique file. |
+| File write counts + bytes | Same — `wc -c` on the final written content. |
+| Build invocations | Parse `$SURGEON_BUILD_REPORT` / `$REVIEW_BUILD_REPORT` / `$DEMO_BUILD_REPORT` YAML front-matter. Each report = 1 invocation. Use `duration_s` from the report. |
+| Cache read tokens (estimate) | `cached_prefix_size_tokens × tool_call_turn_count`. Cached prefix ≈ wc -c of agent prompt + always-on rules + project-map + skills loaded, divided by 4. Tool-call turns ≈ count of all the operation rows above. |
+| Fresh input tokens | Sum of file-read bytes / 4 + sum of MCP fetched bytes / 4 + sum of build-report `tail_30` bytes / 4. |
+| Output tokens | `wc -c` on the agent's chat output text / 4. Approximate; agents can use the bottom-of-file `<!-- TOKEN_USAGE: -->` comment as a cross-check. |
+
+The ledger does **not** report billing-grade numbers — it reports agent-known counts plus token estimates. For exact billing, cross-reference with Anthropic Console / Cursor billing dashboard.
+
+### Aggregation
+
+A small Node script `contexts/tools/aggregate-tool-usage.mjs` reads all `*-tool-usage.md` files under `contexts/`, parses them, and produces:
+
+- Cross-story rollup (which agent dominates cost across the last N stories)
+- Cross-pipeline anomalies (this story's Surgeon used 3× the average — flag for review)
+- Optimization-target hints (auto-suggested based on pattern thresholds — e.g. "Surgeon's file_reads / tasks > 5 in this story → see `cost-optimization.md` Pattern D")
+
+Run with: `node contexts/tools/aggregate-tool-usage.mjs [--epic <epic_id>] [--last N]`
+
+### Why it matters
+
+The pipeline previously tracked tokens via per-artifact `<!-- TOKEN_USAGE: -->` comments — useful but scattered, and silent on the **mix** of tool calls (MCP vs git vs bash vs build). This ledger tells you **where** the cost accrues, not just how much. That's what enables targeted optimization (parallelize the read-heavy step, batch the grep-heavy step, swap an agent to Haiku, etc.).
+
+## Codebase map lifecycle (Explorer ↔ Ship contract)
+
+The codebase map (`$CODEBASE_MAP` — see Path resolution above) is the shared knowledge base across all stories in an epic. Two agents write to it:
+
+**Explorer** owns map content (entries about files, methods, patterns):
+- **Full Mode (story 1):** Creates the map with metadata header + file entries
+- **Incremental Mode (story 2+):** Syncs the map every run — updates stale entries in-place, appends new files from prior stories, updates `last_synced_at`
+
+**Ship** owns map metadata (story completion tracking):
+- After every successful push: increments `stories_completed`, appends `STORY_SHIPPED` to `story_log`
+
+**Metadata header contract:**
+
+```yaml
+---
+epic: {EPIC_ID}
+created_by: {TICKET_ID}         # Explorer sets once
+created_at: {YYYY-MM-DD}        # Explorer sets once
+stories_completed: {N}           # Ship increments after each push
+last_synced_at: {YYYY-MM-DD}    # Explorer updates every sync
+last_synced_by: {TICKET_ID}     # Explorer updates every sync
+story_log:                       # Both append
+  - ticket: {TICKET_ID}
+    action: MAP_CREATED          # Explorer (Full Mode)
+  - ticket: {TICKET_ID}
+    action: STORY_SHIPPED        # Ship (after push)
+  - ticket: {TICKET_ID}
+    action: MAP_SYNCED           # Explorer (Incremental Mode)
+---
+```
+
+**Map sync mechanism (Explorer Phase 1.5):**
+
+1. Read `last_synced_at` from metadata
+2. `git log --after=last_synced_at {base_branch}` → files changed by merged PRs
+3. `git log {base_branch}..HEAD` → files changed on current/stacked branch
+4. `comm -12` → stale files (in map + changed) → update entry in-place
+5. `comm -23` → new files (changed + not in map) → filter for relevance → scan and append
+6. Update `last_synced_at` to today
+
+**Rules:**
+- Map allows two mutations: **update in-place** (stale entries) and **append** (new entries). Never remove entries.
+- Every Incremental Mode run syncs the map. No thresholds, no manual triggers.
+- `last_synced_at` is the single source of truth for what's "new" vs "already known."
+- No other agent modifies the map (Surgeon, Review do NOT touch it).
+
+## Skip flow
+- Trivial fix → surgeon directly
+- Docs only → orchestrator only
+- Have LLD → explorer
+- Have exploration → surgeon

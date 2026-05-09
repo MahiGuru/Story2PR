@@ -1,0 +1,54 @@
+---
+description: Starter pack naming conventions — example of a layer-scoped Tier 1 rule. Loads on every agent run but applies guidance only to files matching the globs. Edit globs and conventions to match your project.
+alwaysApply: true
+globs:
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "**/*.js"
+  - "**/*.jsx"
+  - "**/*.vue"
+  - "**/*.java"
+---
+
+# Naming Conventions (starter pack template)
+
+Universal naming rules for this project. Layer-specific extras (Angular `sp-`
+prefixes, NgRx action names, etc.) belong in the corresponding standards
+skill, not here.
+
+## Files
+
+| Type | Convention | Example |
+|------|------------|---------|
+| TS / JS source | kebab-case | `user-service.ts`, `auth-guard.ts` |
+| React component | PascalCase OR kebab-case (pick one, stay consistent) | `UserCard.tsx` or `user-card.tsx` |
+| Vue SFC | PascalCase or kebab-case (project-wide consistency) | `UserCard.vue` or `user-card.vue` |
+| Test file | mirror source + `.spec` / `.test` | `user-service.spec.ts`, `UserResource.test.java` |
+| Java class | PascalCase | `UserService.java`, `UserResource.java` |
+| Java package | all lowercase, dot-separated | `com.example.users.service` |
+
+## Identifiers
+
+| Kind | Convention | Example |
+|------|------------|---------|
+| Variables, fields | `camelCase` | `userId`, `lastLoginAt` |
+| Functions, methods | `camelCase` (verb phrase) | `fetchUser`, `saveProfile` |
+| Classes, interfaces, types | `PascalCase` | `UserService`, `PaymentResult` |
+| Constants (module-level) | `UPPER_SNAKE_CASE` | `MAX_RETRIES`, `API_BASE_URL` |
+| Enum values (TS / Java) | `PascalCase` (TS) or `UPPER_SNAKE_CASE` (Java) | `Status.Active` (TS), `Status.ACTIVE` (Java) |
+| Boolean accessors | `is*` / `has*` / `can*` prefix | `isActive`, `hasPermission`, `canEdit` |
+| Private fields | language-idiomatic (no `_` prefix in TS class fields — use `#` private) | `#cache` (TS), `private cache` (Java) |
+
+## Don't
+
+- Don't abbreviate where the abbreviation isn't industry-standard. `userRepository` over `userRepo` in public APIs (internal short names are fine).
+- Don't use single-letter variables outside of trivial loops (`i`, `j`) and well-known math conventions.
+- Don't use language reserved words even where syntactically allowed (`type`, `interface`, `class` as variable names).
+- Don't mix conventions within a file (e.g., some kebab-case files and some camelCase in the same folder).
+
+## Layer-specific overrides
+
+If a layer has its own conventions on top of these (Angular's `sp-` selector
+prefix, NgRx `[Feature] Verb Description` action names, etc.), they live
+in the corresponding standards skill — `starter-angular18-standards.md`,
+`starter-react-standards.md`, etc.

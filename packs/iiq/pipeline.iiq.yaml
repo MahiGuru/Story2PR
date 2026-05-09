@@ -1,0 +1,1363 @@
+# ═══════════════════════════════════════════════════════════════════════
+# pipeline.iiq.yaml — PACK SEED (source of truth for install)
+# ═══════════════════════════════════════════════════════════════════════
+#
+# This file is the pack-author source. Running:
+#   npm run install-pipeline -- --pack iiq
+# splits it into runtime sibling YAMLs under contexts/config/:
+#   pipeline.iiq.yaml           (core: meta, project, runtime, jira,
+#                                mcp_servers, mcp_roles, mcp_guidance,
+#                                subagents, intent_classification)
+#   pipeline.iiq.skills.yaml    (skills.layer_map + per-agent skills)
+#   pipeline.iiq.builds.yaml    (builds, component_structure,
+#                                operation_patterns, i18n)
+#   pipeline.iiq.analyzer.yaml  (shared_paths, scan_exclusions,
+#                                rescan_hints, analyzer_ignore, ...)
+#   pipeline.iiq.e2e.test.yaml  (demo / E2E config)
+#
+# Token efficiency:
+#   Pack seed keeps generous comments for pack authors (you, reading this).
+#   Comments are ZERO runtime cost — this file is never loaded by agents.
+#   Installer STRIPS all comments when writing the runtime splits, so agents
+#   at pre-flight read slim, agent-optimized YAMLs.
+#
+# Each agent loads ONLY the sibling files it needs. Orchestrator reads the
+# core + skills splits; Surgeon reads core + skills + builds; etc. See
+# pipeline.iiq.forauthor.readme.md for the full per-agent load matrix.
+#
+# After install, tech leads edit the split files in contexts/config/ directly
+# (comments in those files get re-stripped on next re-install with
+# --merge-config). Deep explanations live here in the seed + forauthor readme.
+# ═══════════════════════════════════════════════════════════════════════
+
+meta:
+  schema_version: 4
+  pack: iiq
+
+# ═══════════════════════════════════════════════════════════════════════
+# Pipeline SKILLS config — loaded by: Orchestrator, Surgeon, Explorer
+# ═══════════════════════════════════════════════════════════════════════
+# Sibling of contexts/config/pipeline.iiq.yaml. See pipeline.iiq.README.md
+# for the full file map and how-to-edit guides.
+# ═══════════════════════════════════════════════════════════════════════
+
+skills:
+
+  # Surgeon Step 0a: Layer → skills mapping
+  # Surgeon resolves skills two ways and takes the union:
+  #   Strategy A — matches task.Files against each entry's path_glob
+  #   Strategy B — normalizes task.Layer and looks it up in {key, aliases}
+  layer_map:
+
+    "Frontend/Angular18":
+      # iiq-angular18-standards.md — Angular 18 patterns: NgModule, RxJS subscriptions,
+      #   reactive forms, NgRx state, Material/CDK, LESS styling for web/ui/ts/.
+      skills: [iiq-angular18-standards.md]
+      path_glob: "web/ui/ts/**"
+      build: ui_fast
+      desc: "Modern Angular: NgModule, RxJS, NgRx, TypeScript"
+      aliases: ["Angular18", "Angular 18", "Frontend Angular18", "Modern UI"]
+
+    "Frontend/AngularJS":
+      # iiq-angularjs-standards.md — AngularJS 1.8 patterns: $scope, service injection,
+      #   promise chains, digest cycles for IIQ's legacy frontend at web/ui/js/.
+      skills: [iiq-angularjs-standards.md]
+      path_glob: "web/ui/js/**"
+      build: ui_full
+      desc: "Legacy AngularJS 1.8: $scope, directive, service patterns"
+      aliases: ["AngularJS", "Angular JS", "Frontend AngularJS", "Legacy UI"]
+
+    "Frontend/ExtJS":
+      # iiq-extjs-standards.md — ExtJS class definition, store/model patterns, grid
+      #   columns, renderers, event handling for dynamic grids and admin panels.
+      skills: [iiq-extjs-standards.md]
+      path_glob: "web/ui/extjs/**"
+      build: ui_full
+      desc: "Grid, store, panel patterns"
+      aliases: ["ExtJS", "Ext JS", "Frontend ExtJS", "Admin UI"]
+
+    "Frontend/XHTML":
+      # iiq-xhtml-standards.md — JSF Facelets template structure, layout composition,
+      #   i18n message keys, ng-app bootstrap for server-rendered pages.
+      skills: [iiq-xhtml-standards.md]
+      path_glob: "web/**/*.xhtml"
+      build: ui_full
+      desc: "Template, composition, include patterns"
+      aliases: ["XHTML", "JSF", "Frontend XHTML", "Facelets"]
+
+    "Backend/Java":
+      # iiq-java-standards.md — IIQ Java class structure, import ordering, DAO patterns,
+      #   SailPointContext usage, exception handling for backend services.
+      skills: [iiq-java-standards.md]
+      path_glob: "src/sailpoint/**"
+      build: java_only
+      desc: "Class structure, null handling, SailPoint API"
+      aliases: ["Java", "Backend Java", "backend/java", "Core Java"]
+
+    "Backend/REST":
+      # iiq-java-standards.md      — base Java conventions (see Backend/Java above).
+      # iiq-rest-api-standards.md  — JAX-RS resource classes, authorization decorators,
+      #   input validation, pagination, error response formatting for REST endpoints.
+      skills: [iiq-java-standards.md, iiq-rest-api-standards.md]
+      path_glob: "src/sailpoint/web/rest/**"
+      build: java_only
+      desc: "REST resource + Java conventions"
+      aliases: ["REST", "Java REST", "Backend REST", "Backend API", "API", "Services/REST"]
+
+    "Test":
+      # iiq-test-standards.md — Jasmine/Karma test patterns for AngularJS and Java;
+      #   flags the Angular 18 test gap and when NOT to create .spec.ts files.
+      skills: [iiq-test-standards.md]
+      build: java_only
+      desc: "Test structure, mocks, assertions"
+      aliases: ["Tests", "Unit Test", "Unit Tests", "Testing"]
+
+    "Full-stack":
+      # Composite resolution — match task Files against frontend layers'
+      # path_glob, then always add the backend skill(s).
+      resolve: composite
+      frontend_source: ["Frontend/Angular18", "Frontend/AngularJS", "Frontend/ExtJS", "Frontend/XHTML"]
+      # iiq-java-standards.md — always applied to full-stack tasks so backend conventions
+      #   (class structure, DAO, SailPointContext) are enforced alongside the frontend skill.
+      always_add: [iiq-java-standards.md]
+      # Build picked by "most-expensive matched layer" rule in Surgeon Step 3
+
+  # Surgeon Step 0a: Extra triggers (orthogonal to layer_map, additive).
+  # Each trigger layers an ADDITIONAL skill onto whatever the layer_map already resolved.
+  extra_triggers:
+    - when: "task touches ARIA, accessibility, or interactive UI elements"
+      # iiq-accessibility.md — ARIA labeling, form a11y, screen-reader semantics,
+      #   interactive-element naming for IIQ UI compliance.
+      add: [iiq-accessibility.md]
+    - when: "task touches ExtJS grid, panel, or store (even if Layer = Frontend/AngularJS)"
+      # iiq-extjs-standards.md — applied orthogonally when an AngularJS page embeds ExtJS
+      #   widgets, so ExtJS conventions also load (class def, stores, grids, renderers).
+      add: [iiq-extjs-standards.md]
+    - when: "task ID starts with T-TC (test task convention)"
+      # iiq-test-standards.md — ensures test-framework patterns (Jasmine/Karma/JUnit)
+      #   load whenever the task ID signals it's a test task, regardless of Layer.
+      add: [iiq-test-standards.md]
+
+  # Per-agent skills — loaded once per agent invocation, not per task
+  orchestrator:
+    # iiq-ticket-schema-story.md — parses 14 story ticket sections (ACs, User Story, In Scope,
+    #   Out of Scope, …) and synthesizes a Requirement Summary + AC Registry for Phase B.
+    ticket_schema_story: iiq-ticket-schema-story.md
+    # iiq-ticket-schema-bug.md — parses 12 bug ticket sections (Steps to Reproduce, Expected/
+    #   Actual, Error Signals, …) into a Bug Understanding Summary + Verification Registry.
+    ticket_schema_bug: iiq-ticket-schema-bug.md
+    # iiq-lld-generator.md — LLD document template: 4 parts, 40+ sections, task list format,
+    #   test plan template, security checklist, validation rules used in Phase B synthesis.
+    lld_generator: iiq-lld-generator.md
+    # iiq-ac-templates-intent-aware.md — AC templates chosen by button intent (destructive-confirm,
+    #   submit, async-action, bulk-action, …) with IIQ audit logging + permission rules baked in.
+    ac_templates_intent_aware: iiq-ac-templates-intent-aware.md
+
+  explorer:
+    # iiq-bug-localization.md — layer detection (frontend / backend / cross-stack) and decision
+    #   tree for choosing between the frontend and backend bug-localization sub-skills below.
+    bug_router:   iiq-bug-localization.md
+    # iiq-bug-localization-frontend.md — frontend bug strategies F1-F4: IIQMessages key search,
+    #   URL-to-file resolution, console error grep, symptom pattern matching.
+    bug_frontend: iiq-bug-localization-frontend.md
+    # iiq-bug-localization-backend.md — backend bug strategies B1-B6: stack trace top-frame,
+    #   log line grep, REST endpoint resolution, task/workflow tracing, DB symptoms.
+    bug_backend:  iiq-bug-localization-backend.md
+
+# ═══════════════════════════════════════════════════════════════════════
+# Pipeline ANALYZER config — loaded by: project-analyzer, Explorer
+# ═══════════════════════════════════════════════════════════════════════
+# Sibling of contexts/config/pipeline.iiq.yaml. See pipeline.iiq.README.md
+# for the full file map.
+#
+# Contains: shared_paths, scan_exclusions, component_naming, rescan_hints,
+#           analyzer_ignore, explorer_paths.
+#
+# project-analyzer WRITES to this file (shared_paths is auto-generated).
+# ═══════════════════════════════════════════════════════════════════════
+
+# ─── SHARED PATHS ────────────────────────────────────────────────────────
+# AUTO-GENERATED by project-analyzer (Step 0). Do NOT edit manually.
+# To update: run 'Analyze project' or 'Rescan components'.
+#
+# To override a specific entry's `provides` list, edit the entry AND add
+# `provides_overridden: true`. The rescan will preserve flagged entries.
+# ────────────────────────────────────────────────────────────────────────
+shared_paths:
+
+  # ══════ FRONTEND ═══════════════════════════════════════════════════
+  frontend:
+
+    ui_elements:
+      - path: "web/ui/js/common/directive/"
+        language: javascript
+        framework: AngularJS
+        provides: [button, input, select, radio, checkbox, textarea, dropdown,
+                   multi-select, date-picker, search-input, grid, table, modal,
+                   confirm-dialog, toast, tooltip, pagination, tabs, breadcrumb,
+                   accordion, card, panel, loading, empty-state, user-picker]
+        usage: "directive-in-template"
+      - path: "web/ui/ts/shared/"
+        language: typescript
+        framework: Angular18
+        provides: [button, input, select, modal, toast, card, form-field]
+        usage: "component-in-template"
+      - path: "web/ui/extjs/common/"
+        language: javascript
+        framework: ExtJS
+        provides: [grid, panel, form, tree, toolbar]
+        usage: "extend-base-class"
+
+    services:
+      - path: "web/ui/js/common/service/"
+        language: javascript
+        framework: AngularJS
+        provides: [http, auth, permission, notification, date-validation,
+                   navigation, user-context, error-handler, storage]
+        usage: "inject-via-dependency"
+      - path: "web/ui/js/common/filter/"
+        language: javascript
+        framework: AngularJS
+        provides: [format-date, format-currency, translate, truncate, capitalize]
+        usage: "pipe-in-template"
+
+    templates:
+      - path: "web/ui/page/layout/"
+        language: xhtml
+        type: page-template
+        provides: [list-page, detail-page, wizard-page, form-page]
+      - path: "web/ui/page/include/"
+        language: xhtml
+        type: partial
+        provides: [header, footer, nav, filter-bar, action-toolbar, help-popover]
+
+  # ══════ BACKEND ═══════════════════════════════════════════════════
+  backend:
+
+    services:
+      - path: "src/sailpoint/service/"
+        language: java
+        provides: [audit, authorization, filter, pagination, export,
+                   notification, email, workflow-launch, task-scheduling]
+        usage: "inject-constructor"
+
+    utilities:
+      - path: "src/sailpoint/tools/"
+        language: java
+        provides: [string-util, date-util, xml-util, encryption, validation,
+                   collection-util, io-util, reflection]
+        usage: "static-method-call"
+
+    rest_endpoints:
+      - path: "src/sailpoint/web/rest/"
+        language: java
+        http_methods: [GET, POST, PUT, DELETE, PATCH]
+        base_class: "BaseResource"
+        usage: "extend-resource-class"
+        common_patterns:
+          - "list-endpoint"      # GET /rest/ui/{entity}?query=...&page=...
+          - "detail-endpoint"    # GET /rest/ui/{entity}/{id}
+          - "create-endpoint"    # POST /rest/ui/{entity}
+          - "update-endpoint"    # PUT /rest/ui/{entity}/{id}
+          - "bulk-action"        # POST /rest/ui/{entity}/bulkAction
+
+    persistence:
+      - path: "src/sailpoint/persistence/"
+        language: java
+        provides: [dao, hibernate-entity, query-builder, transaction-manager]
+        usage: "inject-or-static"
+      - path: "src/sailpoint/object/"
+        language: java
+        provides: [sailpoint-object, domain-model]
+        base_class: "SailPointObject"
+
+  # ══════ TESTS ═════════════════════════════════════════════════════
+  tests:
+    frontend:
+      - path: "test/js/"
+        language: javascript
+        framework: Jasmine
+        provides: [unit-test, spec-helper, mock-factory]
+      - path: "test/ts/"
+        language: typescript
+        framework: Jest
+        provides: [unit-test, component-test, service-test]
+    backend:
+      - path: "test/sailpoint/"
+        language: java
+        framework: JUnit
+        provides: [unit-test, integration-test, test-fixture, mock-data]
+
+  # ══════ DOCUMENTATION ═════════════════════════════════════════════
+  docs:
+    - path: "docs/architecture/"
+      type: architecture
+      language: markdown
+    - path: "docs/api/"
+      type: api-reference
+      language: markdown
+    - path: "README.md"
+      type: project-overview
+
+
+# ─── OPERATION PATTERNS ──────────────────────────────────────────────
+# AUTO-GENERATED by project-analyzer. Discovered by inspecting how
+# existing code performs GET/POST/PUT/DELETE.
+# ─────────────────────────────────────────────────────────────────────
+operation_patterns:
+
+  fetch_list:
+    frontend: "httpService.get('/rest/ui/{entity}', { query, page, size })"
+    backend_entry: "@GET @Path('/{entity}') in {Entity}Resource extends BaseResource"
+    backend_logic: "FilterService.buildFilter() + PaginationService.paginate()"
+    database: "Hibernate query via DAO"
+    example_files:
+      - "web/ui/js/common/service/httpService.js"
+      - "src/sailpoint/web/rest/CertificationResource.java"
+      - "src/sailpoint/persistence/CertificationDAO.java"
+
+  fetch_detail:
+    frontend: "httpService.get('/rest/ui/{entity}/{id}')"
+    backend_entry: "@GET @Path('/{entity}/{id}') in {Entity}Resource"
+    database: "DAO.findById()"
+
+  create_record:
+    frontend: "httpService.post('/rest/ui/{entity}', body)"
+    backend_entry: "@POST @Path('/{entity}') in {Entity}Resource"
+    backend_logic: "validation → AuditService.log() → DAO.save()"
+    database: "Hibernate save() in transaction"
+    example_files:
+      - "src/sailpoint/web/rest/CertificationResource.java (createCert method)"
+
+  update_record:
+    frontend: "httpService.put('/rest/ui/{entity}/{id}', body)"
+    backend_entry: "@PUT @Path('/{entity}/{id}') in {Entity}Resource"
+    backend_logic: "validation → AuthorizationService.checkRight() → AuditService.log() → DAO.update()"
+    database: "Hibernate merge() in transaction"
+
+  delete_record:
+    frontend: "httpService.delete('/rest/ui/{entity}/{id}')"
+    backend_entry: "@DELETE @Path('/{entity}/{id}') in {Entity}Resource"
+    backend_logic: "AuthorizationService.requireAdmin() → AuditService.log() → DAO.delete()"
+
+  bulk_action:
+    frontend: "httpService.post('/rest/ui/{entity}/bulkAction', { action, ids })"
+    backend_entry: "@POST @Path('/{entity}/bulkAction') in {Entity}Resource"
+    backend_logic: "batch validation → foreach with AuditService.log() per item"
+
+  form_input_validation:
+    frontend: "AngularJS: ng-required, ng-pattern, custom directive"
+    frontend_service: "web/ui/js/common/service/validationService.js"
+    backend_entry: "validate() method in Resource, throws ValidationException"
+    shared_messages: "messages.properties (ui_validation_*)"
+
+  dropdown_static:
+    source: "messages.properties"
+    frontend: "<sp-dropdown items='[ui_common_yes, ui_common_no]'>"
+
+  dropdown_dynamic:
+    source: "REST endpoint → database"
+    frontend: "httpService.get('/rest/ui/{entity}') → bind to <sp-dropdown items='vm.items'>"
+    rest_endpoint_check: "search backend.rest_endpoints[*].path for existing {entity} endpoint"
+    do_not: "never add dynamic data to messages.properties"
+
+  # Standard error handling templates — Surgeon uses these for consistency.
+  error_handling:
+    frontend_fetch_error:
+      pattern: |
+        .catch(function(error) {
+          vm.items = [];                              // safe fallback (never undefined)
+          vm.loading = false;                         // always stop loading
+          vm.fetchError = true;                       // flag for error state in template
+          notificationService.error(ui.common.fetchError);  // user-visible message
+          $log.error('Failed to fetch {entity}:', error);   // dev logging
+        });
+      notes: "Always in this order: safe state → stop loading → show error → log"
+
+    frontend_save_error:
+      pattern: |
+        .catch(function(error) {
+          vm.saving = false;
+          if (error.status === 403) {
+            notificationService.error(ui.common.permissionDenied);
+          } else if (error.status === 400) {
+            vm.validationErrors = error.data.errors || [];
+            notificationService.error(ui.common.validationError);
+          } else {
+            notificationService.error(ui.common.saveError);
+          }
+          $log.error('Failed to save {entity}:', error);
+        });
+      notes: "Distinguish 403/400/500 for different user messages"
+
+    backend_resource_error:
+      pattern: |
+        try {
+          // ... operation
+        } catch (GeneralException e) {
+          log.error("Failed to {operation} {entity}: " + e.getMessage(), e);
+          throw new WebApplicationException(
+            Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new ErrorDTO(e.getMessage()))
+                    .build());
+        } catch (InvalidParameterException e) {
+          throw new WebApplicationException(
+            Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ErrorDTO(e.getMessage()))
+                    .build());
+        }
+      notes: "Always log before throwing. Distinguish 400/500."
+
+  # Spec file content templates — Surgeon uses these when creating a new spec file.
+  spec_templates:
+    AngularJS_directive:
+      structure: |
+        describe('{DirectiveName}', function() {
+          var element, scope, $compile;
+
+          beforeEach(module('{moduleName}'));  // from register_in in component_structure
+          beforeEach(inject(function(_$compile_, _$rootScope_) {
+            $compile = _$compile_;
+            scope = _$rootScope_.$new();
+          }));
+
+          function createElement(attrs) {
+            var html = '<{directive-name} ' + attrs + '></{directive-name}>';
+            element = $compile(html)(scope);
+            scope.$digest();
+            return element;
+          }
+
+          // AC tests (one per AC this directive participates in)
+          it('should {AC1 Then clause}', function() {
+            // Arrange: {AC1 Given}
+            // Act: {AC1 When}
+            // Assert: {AC1 Then}
+            pending('TC1: fill in assertions');
+          });
+
+          // Edge case: empty/null data
+          it('should show empty state when items is empty', function() {
+            scope.items = [];
+            createElement('items="items"');
+            expect(element.find('[sp-empty-state]').length).toBe(1);
+          });
+
+          // Edge case: loading state
+          it('should show loading indicator when loading is true', function() {
+            scope.loading = true;
+            createElement('loading="loading"');
+            expect(element.find('[sp-loading]').length).toBe(1);
+          });
+        });
+      notes: "Replace {DirectiveName}, {directive-name}, {moduleName}. Fill pending() assertions."
+
+    AngularJS_controller:
+      structure: |
+        describe('{ControllerName}', function() {
+          var $controller, $scope, $httpBackend, {ServiceName};
+
+          beforeEach(module('{moduleName}'));
+          beforeEach(inject(function(_$controller_, _$rootScope_, _$httpBackend_, _{ServiceName}_) {
+            $controller = _$controller_;
+            $scope = _$rootScope_.$new();
+            $httpBackend = _$httpBackend_;
+            {ServiceName} = _{ServiceName}_;
+            $controller('{ControllerName}', { $scope: $scope });
+          }));
+
+          afterEach(function() { $httpBackend.verifyNoOutstandingExpectation(); });
+
+          // AC test
+          it('should {AC Then clause}', function() {
+            $httpBackend.expectGET('/rest/ui/{entity}').respond(200, [{id:1}]);
+            $scope.$digest();
+            $httpBackend.flush();
+            expect($scope.vm.items.length).toBe(1);
+          });
+
+          // Edge case: fetch error
+          it('should show error state when fetch fails', function() {
+            $httpBackend.expectGET('/rest/ui/{entity}').respond(500, {});
+            $scope.$digest();
+            $httpBackend.flush();
+            expect($scope.vm.fetchError).toBe(true);
+            expect($scope.vm.items).toEqual([]);
+          });
+        });
+
+    Java_resource:
+      structure: |
+        public class {ResourceName}Test extends SailPointTest {
+          @Mock private {ServiceName} service;
+          private {ResourceName} resource;
+
+          @Before
+          public void setUp() {
+            MockitoAnnotations.initMocks(this);
+            resource = new {ResourceName}(service);
+          }
+
+          @Test  // AC test
+          public void should_{ac_then_clause_as_method_name}() throws Exception {
+            // Arrange
+            when(service.{method}(any())).thenReturn({expected_result});
+            // Act
+            Response response = resource.{method}({params});
+            // Assert
+            assertEquals(200, response.getStatus());
+          }
+
+          @Test  // Edge case: unauthorized
+          public void should_return_403_when_missing_right() throws Exception {
+            // test without required right
+            pending();
+          }
+
+          @Test  // Edge case: invalid input
+          public void should_return_400_for_invalid_input() throws Exception {
+            pending();
+          }
+        }
+
+
+# ─── i18n / DYNAMIC DATA ─────────────────────────────────────────────────
+# Rules for what goes into messages.properties vs what comes from REST/DB.
+# Enforced by Orchestrator (task decomposition) and Surgeon (implementation).
+# ────────────────────────────────────────────────────────────────────────
+i18n:
+  messages_file: "web/WEB-INF/classes/sailpoint/web/messages/IIQMessages.properties"
+  key_format: "ui_{section}_{key}"
+  allowed_content:      # What CAN go into messages.properties
+    - static_labels     # "Submit", "Cancel", "Name"
+    - static_headings   # "Review Items", "Pending Approvals"
+    - static_errors     # "Field is required"
+    - static_help       # tooltips, help text
+    - static_enums      # Yes/No, Active/Inactive (fixed list, not data)
+  forbidden_content:    # What CANNOT go into messages.properties
+    - entitlement_lists   # comes from database
+    - application_lists   # comes from database
+    - rule_lists          # comes from database
+    - user_lists          # comes from database
+    - role_lists          # comes from database
+    - policy_lists        # comes from database
+    - dynamic_dropdowns   # any list driven by REST/DB data
+    - per_tenant_content  # anything that varies by deployment
+  dynamic_data_source: "REST"   # IIQ dropdowns populate via REST endpoints that query the DB
+
+  # Project map: contexts/project-map.md (created by project-analyzer Step 0)
+  # Epic context: contexts/{epic}/epic-context.md (created by Orchestrator, updated by Review)
+
+# ─── SUBAGENTS ───────────────────────────────────────────────────────────
+# Pack-supplied delegated workers fired at kernel extension points.
+#
+# Valid extension points:
+#   orchestrator_amend_request    — Orchestrator Phase C user gate
+#   surgeon_pre_task              — Surgeon Step 0, after layer resolution, before code
+#   surgeon_post_task             — Surgeon, after per-task build passes
+#   review_post_check             — Review, after AC compliance check
+# ────────────────────────────────────────────────────────────────────────
+subagents:
+
+  orchestrator_amend_request:
+    # subagent-amender.md — classifies the user's amend request and applies targeted
+    # section-level edits to the existing LLD without regenerating untouched sections.
+    - file: subagent-amender.md
+      when: "user selects 'edit' at Phase C gate"
+      return: [amended, cancelled, unchanged]
+      desc: "Targeted LLD amendment — precise section-level edits without regenerating untouched sections. ~6x cheaper than re-running Orchestrator."
+
+  orchestrator_image_analysis:
+    # subagent-image-analysis.md — fetches + extracts UI elements from trigger/JIRA/Figma
+    # images. Keeps image data + intermediate extraction OUT of the orchestrator's
+    # transcript by doing the heavy vision work in its own context and returning only
+    # a compact visual_spec (≤ 1500 tokens). Invoked inline during resolve_enrichments
+    # (A0.6) ONLY when at least one image source is detected — zero cost otherwise.
+    - file: subagent-image-analysis.md
+      when: "resolve_enrichments (A0.6) detects ≥1 image source"
+      return: [complete, partial, failed, skipped]
+      desc: "Image fetch + structured UI extraction. Matches elements to shared_paths, returns ≤1500-token visual_spec. Net +0 to +10K vs inline analysis depending on image count — only pays off when images are present."
+
+  surgeon_pre_task: []
+  surgeon_post_task: []
+  review_post_check: []
+
+# ═══════════════════════════════════════════════════════════════════════
+# Pipeline BUILDS + PATTERNS config — loaded by: Surgeon, Review
+# ═══════════════════════════════════════════════════════════════════════
+# Sibling of contexts/config/pipeline.iiq.yaml. See pipeline.iiq.README.md
+# for the full file map.
+#
+# Contains: builds, component_structure, operation_patterns, i18n.
+# Orchestrator does NOT load this file (saves ~10K tokens).
+# ═══════════════════════════════════════════════════════════════════════
+
+# ─── BUILDS ──────────────────────────────────────────────────────────────
+# Anything Surgeon or Review shells out to run.
+# ────────────────────────────────────────────────────────────────────────
+builds:
+
+  # Runner wrapper — agents MUST compose every build/lint/test invocation
+  # through this template so raw stdout/stderr never lands in the chat tool
+  # result. Raw build output is billed on every subsequent turn of the
+  # calling agent until conversation compaction; left unchecked a single
+  # story bleeds ~600K tokens of Ant/npm chatter.
+  #
+  # Two modes:
+  #
+  # 1. report_path_template SET (recommended — file-only artifact):
+  #    Runner writes a structured report file AND a raw log file; the
+  #    tool result echoes ONLY `exit=N` (~5 tokens). Calling agents read
+  #    the report on demand via the Read tool — the 30-line FAIL tail
+  #    becomes opt-in rather than always-inlined. Cross-agent wins:
+  #    - Review checks $SURGEON_BUILD_REPORT freshness → skips redundant
+  #      `ant clean build` when Surgeon's final build already passed.
+  #    - Ship attaches report summaries to PR body.
+  #    - Auditability: every build verdict is a durable artifact.
+  #
+  # 2. report_path_template UNSET (legacy fallback):
+  #    Runner echoes a 1-line PASS marker or a 30-line FAIL tail directly
+  #    into the tool result. Use `enabled: false` to bypass both modes.
+  #
+  # Placeholders in template / report_template:
+  #   {cmd}      — the raw build command being wrapped
+  #   {log}      — value of builds.runner.log_path
+  #   {report}   — expanded path (calling agent substitutes the _BUILD_REPORT
+  #                variable into report_path_template before invoking)
+  #   {agent}    — calling agent name (surgeon|review|ac-e2e-check)
+  #   {phase}    — calling phase/task id (e.g. "final_build_check", "T5", "review_gate")
+  runner:
+    enabled: true
+    log_path: "/tmp/iiq-build.log"
+
+    # Legacy fallback: used when no report file is requested. Keeps the
+    # original one-line PASS / 30-line FAIL behavior for agents that
+    # haven't been migrated to file-only yet.
+    template: "({cmd}) > {log} 2>&1 && echo \"✓ BUILD PASS ($(wc -l < {log}) lines suppressed — see {log})\" || { EC=$?; echo \"✗ BUILD FAIL (exit $EC) — last 30 lines of {log}:\"; tail -30 {log}; exit $EC; }"
+
+    # File-only mode. When the calling agent supplies {report}, the runner
+    # writes a structured report and echoes ONLY `exit=N`. The report file
+    # uses YAML front-matter so downstream agents can parse status/started_at
+    # without reading the full log.
+    #
+    # Agents compose: echo "$template_with_report" | sed "s|{cmd}|...|; s|{report}|$SURGEON_BUILD_REPORT|; s|{agent}|surgeon|; s|{phase}|final_build_check|; s|{log}|$log_path|g"
+    template_with_report: |
+      STARTED=$(date -u +%Y-%m-%dT%H:%M:%SZ); T0=$(date +%s)
+      ({cmd}) > {log} 2>&1
+      EC=$?
+      T1=$(date +%s); ENDED=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+      mkdir -p "$(dirname {report})"
+      { echo '---';
+        echo "agent: {agent}";
+        echo "phase: {phase}";
+        echo "command: '{cmd}'";
+        echo "status: $EC";
+        echo "verdict: $([ $EC -eq 0 ] && echo PASS || echo FAIL)";
+        echo "started_at: $STARTED";
+        echo "ended_at: $ENDED";
+        echo "duration_s: $((T1 - T0))";
+        echo "log_path: {log}";
+        echo "log_lines: $(wc -l < {log} | tr -d ' ')";
+        echo "tail_30: |";
+        tail -30 {log} | sed 's/^/  /';
+        echo '---';
+      } > {report}
+      echo "exit=$EC"
+      exit $EC
+
+  # Per-layer build commands referenced by skills.layer_map[].build
+  commands:
+    java_only:
+      cmd: "ant core"
+      desc: "Fast Java compile only"
+    ui_full:
+      cmd: "ant core && ant build"
+      desc: "Full Java + JSPM bundling + UI resources"
+    ui_fast:
+      cmd: "cd tools && npx gulp dev-build"
+      desc: "UI only, no Java — fastest Angular 18 iteration"
+    ui_integration:
+      cmd: "ant ui-build -Dui.development=true"
+      desc: "Full UI build via Ant (development mode)"
+    mixed:
+      cmd: "ant core && ant ui-build -Dui.development=true"
+      desc: "Java first, then full Angular 18 UI"
+
+  # Forbidden patterns — Surgeon and Review must never run these,
+  # even if the user explicitly asks. Glob-style matching.
+  forbidden:
+    - "ant deploy*"            # any deploy target
+    - "ant -f DevRebuild.xml*" # drops and recreates databases
+
+  # Lint commands, keyed by Layer suffix (partial suffix match)
+  lint:
+    angular18: "cd tools && npx gulp ui-quality"
+
+  # Unit test commands, keyed by Layer suffix
+  tests:
+    js: "ant jstests"
+    angular18:
+      cmd: "cd tools && npx gulp tests"
+      note: "No .spec.ts files currently exist in the Angular 18 codebase. Karma + Jasmine infrastructure is present but no tests are written yet. Flag first test as 'test infrastructure gap' in the Change Manifest."
+
+  # Final build gate — run by BOTH Surgeon (after all tasks done) and Review (PART 1).
+  review_gate: "ant clean build"
+
+  # Review's full test suite — runs AFTER review_gate, per layer changed
+  review_test_suite:
+    js:       "ant jstests"
+    java:     "ant jtest"
+    angular18: "cd tools && npx gulp tests"
+
+
+# ─── COMPONENT STRUCTURE ─────────────────────────────────────────────
+# Multi-file component atomicity rules. When creating a new component,
+# ALL files in the structure must be created together as one atomic unit.
+# Used by Surgeon (creates all files) and Review (verifies all exist).
+# ─────────────────────────────────────────────────────────────────────
+component_structure:
+
+  AngularJS_directive:
+    required_files:
+      - "{name}.js"           # directive logic + scope definition
+      - "{name}.html"         # directive template (unless inline template)
+      - "{name}Spec.js"       # Jasmine unit test
+    register_in: "web/ui/js/common/module.js"
+    placement: "web/ui/js/common/directive/"
+    pattern_reference: "web/ui/js/common/directive/spDataGrid.js"
+
+  AngularJS_service:
+    required_files:
+      - "{name}.js"           # service logic
+      - "{name}Spec.js"       # Jasmine unit test
+    register_in: "web/ui/js/common/module.js"
+    placement: "web/ui/js/common/service/"
+    pattern_reference: "web/ui/js/common/service/httpService.js"
+
+  Angular18_component:
+    required_files:
+      - "{name}.component.ts"       # component logic
+      - "{name}.component.html"     # template
+      - "{name}.component.spec.ts"  # Karma/Jasmine test
+    register_in: "web/ui/ts/shared/{name}/{name}.module.ts"
+    placement: "web/ui/ts/shared/{name}/"
+    pattern_reference: "web/ui/ts/applicationDefinition/"
+
+  Angular18_service:
+    required_files:
+      - "{name}.service.ts"       # service logic
+      - "{name}.service.spec.ts"  # test
+    placement: "web/ui/ts/shared/services/"
+
+  Java_resource:
+    required_files:
+      - "{name}Resource.java"      # JAX-RS resource
+      - "{name}ResourceTest.java"  # JUnit test
+    placement: "src/sailpoint/web/rest/"
+    base_class: "BaseResource"
+    pattern_reference: "src/sailpoint/web/rest/CertificationResource.java"
+
+  Java_service:
+    required_files:
+      - "{name}Service.java"      # service interface/implementation
+      - "{name}ServiceTest.java"  # JUnit test
+    placement: "src/sailpoint/service/"
+    pattern_reference: "src/sailpoint/service/AuditService.java"
+
+  # Pre-flight environment checks
+  env_checks:
+    - cmd: "ls tools/node_modules"
+      fail_msg: "Angular 18 dependencies not installed. Run: cd tools && npm install"
+      required: false
+
+
+# ─── EXPLORER PATHS ──────────────────────────────────────────────────────
+# Paths fed into `git log` for codebase map sync (Phase 1.5).
+# ────────────────────────────────────────────────────────────────────────
+explorer_paths:
+  - "web/ui/js/"
+  - "web/ui/ts/"
+  - "web/ui/extjs/"
+  - "src/sailpoint/"
+
+
+# ─── SCAN EXCLUSIONS ─────────────────────────────────────────────────────
+# Directories skipped by every recursive scan across the pipeline.
+# ────────────────────────────────────────────────────────────────────────
+scan_exclusions:
+  dependencies:
+    - node_modules
+    - bower_components
+    - vendor
+    - .venv
+    - venv
+    - env
+    - __pypackages__
+    - site-packages
+    - packages
+    - jspm_packages
+
+  build_output:
+    - target
+    - build
+    - out
+    - dist
+    - bin
+    - obj
+    - .gradle
+    - .next
+    - .nuxt
+    - .svelte-kit
+    - .turbo
+    - .cache
+    - .parcel-cache
+
+  caches:
+    - __pycache__
+    - .pytest_cache
+    - .mypy_cache
+    - .ruff_cache
+    - .tox
+    - .nyc_output
+    - coverage
+    - htmlcov
+    - .coverage
+
+  vcs_and_ide:
+    - .git
+    - .svn
+    - .hg
+    - .idea
+    - .vscode
+    - .vs
+
+  infra_state:
+    - .terraform
+    - .serverless
+    - .pulumi
+
+  test_fixtures:
+    - test/fixtures
+    - test/resources
+
+  custom: []
+
+
+# ─── COMPONENT NAMING ───────────────────────────────────────────────────
+# Analyzer scans shared component folders and maps {prefix}{Suffix} filenames
+# to primitive provides. For IIQ: components are named sp-foo (prefix 'sp-').
+# ────────────────────────────────────────────────────────────────────────
+component_naming:
+  prefix: "sp-"
+  custom_suffix_map: {}
+
+
+# ─── INTENT CLASSIFICATION (Phase 10c) ──────────────────────────────────
+# Project-specific verb synonyms added to the decision tree lexicon.
+# Phase 10c uses these to classify every button into one of 7 intents:
+#   destructive-confirm, destructive-immediate, submit, navigation,
+#   async-action, toggle, bulk-action
+# Agent merges these with the shipped defaults (additive, not replacement).
+# ────────────────────────────────────────────────────────────────────────
+intent_classification:
+  verb_synonyms:
+    # IIQ-specific: Certify / Provision / Delegate are async backend work
+    async: [certify, provision, delegate, reassign, escalate, forward]
+    # IIQ-specific: Approve/Revoke are destructive-with-audit
+    destructive: [revoke, terminate, decertify]
+    # IIQ-specific: Bulk prefix variations seen in product
+    bulk_prefix: [bulk, selected, all-selected, checked]
+
+
+# ─── RESCAN HINTS ────────────────────────────────────────────────────────
+# Thresholds + toggles for project-analyzer Phase 8.5.
+# ────────────────────────────────────────────────────────────────────────
+rescan_hints:
+  enabled: true
+
+  drift_thresholds:
+    high_file_count: 25
+    medium_file_count: 10
+    low_file_count: 3
+    stale_days: 60
+
+  detection_thresholds:
+    framework_min_files: 3
+    shared_dir_min_files: 3
+    build_tool_min_files: 1
+    growth_multiplier: 2
+
+  freshness_check:
+    enabled: true
+    min_files_to_check: 3
+    global_recent_rescan_days: 7
+    stale_threshold_days: 30
+    stale_threshold_file_count: 10
+    top_n_candidates: 3
+    default_action: "rescan"
+
+  unmapped_detection:
+    enabled: true
+    min_file_count: 3
+    shared_dir_patterns:
+      - shared
+      - common
+      - util
+      - utilities
+      - base
+      - widgets
+      - wrappers
+      - directive       # IIQ-specific: AngularJS directives folder
+      - components
+
+
+# ─── ANALYZER IGNORE LIST ────────────────────────────────────────────────
+# Frameworks / tools / shared directories the user told the analyzer to
+# stop proposing. Auto-maintained by analyzer; manual edits OK.
+# ────────────────────────────────────────────────────────────────────────
+analyzer_ignore: []
+
+
+# ─── RUNTIME ─────────────────────────────────────────────────────────────
+# How the pipeline behaves, not what it loads.
+# ────────────────────────────────────────────────────────────────────────
+runtime:
+
+  # ── BRANCHING ──────────────────────────────────────────────────────
+  # base_branch: Default branch for new feature/fix branches.
+  # stacking:
+  #   auto-detect → detect current branch, offer stack or base (recommended)
+  #   always-ask  → always ask which branch to create from
+  #   never       → always create from base_branch (ignores current branch)
+  # ───────────────────────────────────────────────────────────────────
+  branching:
+    base_branch: develop
+    stacking: auto-detect
+    prefix_story: "feature/"
+    prefix_bug: "fix/"
+
+  # Per-ticket context folder layout
+  # nested_by_epic: true   → contexts/iiqmag-4567/IIQMAG-1234.md  (default)
+  # nested_by_epic: false  → contexts/IIQMAG-1234.md              (flat)
+  contexts_layout:
+    nested_by_epic: true
+    epic_folder_case: lower         # lower | preserve  (lowercase recommended)
+    standalone_folder: standalone   # folder for tickets with no epic parent
+    codebase_map_filename: codebase-map.md
+    # Split-output filenames (Orchestrator writes three files per ticket).
+    # Tokens: {TICKET} is replaced with the ticket ID at pre-flight.
+    lld_filename: "{TICKET}-lld.md"             # PART 1 (Design) + PART 2 (Tasks)
+    testplan_filename: "{TICKET}-testplan.md"   # PART 3 (Test Plan) + PART 4 (Test Tasks)
+    # Per-ticket design asset folder. Orchestrator + image-analysis subagent
+    # persist fetched Figma frames, JIRA attachments, and user-uploaded
+    # screenshots here so (a) the user can visually confirm the design at the
+    # A.5 checkpoint by opening files in their viewer, (b) the user can
+    # REPLACE an image in the folder and reply `continue` instead of
+    # re-triggering, and (c) downstream agents (Surgeon, Review) can re-read
+    # an image on demand to disambiguate a layout_tree node without carrying
+    # image bytes in their context.
+    # Typical contents: frame-1.png, frame-2.png, upload-1.png, README.md
+    # (auto-written by orchestrator, lists each file's source + tree node refs).
+    # Gitignore this folder unless your team commits design assets for audit.
+    design_folder_name: "{TICKET}-design"
+
+  # How Orchestrator interprets text after the ticket ID.
+  # required (default) — only content under an explicit `Context:` line is parsed.
+  # optional (free-form) — ANY text following the ticket ID is treated as context.
+  trigger:
+    inline_context_keyword: required    # required | optional
+
+  # ── BUNDLE MODE ────────────────────────────────────────────────────
+  # Settings for the multi-story bundled pipeline:
+  #   Work on epic stories <ID>, <ID>, <ID>
+  #   Work on epic <EPIC_ID> with status="<S1>","<S2>"
+  #
+  # Single-story flow (Work on PROJ-1234) IS NOT AFFECTED by anything in
+  # this block — bundle settings are only consulted when the trigger
+  # routes to bundle-orchestrator.md.
+  #
+  # Architecture: bundle-orchestrator writes mode: bundle into the
+  # consolidated $CONTEXTS_FILE frontmatter. Each downstream agent
+  # (explorer, surgeon, review, ship) auto-detects this at pre-flight
+  # and switches to its bundle branch. No new user commands needed.
+  # ───────────────────────────────────────────────────────────────────
+  bundle:
+    # Master switch. When false, the new triggers are rejected with a
+    # clear message and pipeline runs single-story only.
+    enabled: true
+
+    # Hard cap on tickets per bundle. Above this, bundle-orchestrator
+    # halts and recommends splitting into multiple bundles. Reviewer
+    # ergonomics (one PR is hard to review past ~50 files) are the
+    # binding constraint, not token budget.
+    max_tickets: 10
+
+    # Soft warning threshold. At or above this count the gate prompts
+    # "are you sure?" but proceeds on confirmation.
+    warn_tickets: 7
+
+    # When the explicit-list trigger names tickets whose `parent` field
+    # does not match a single common epic:
+    #   warn_continue — surface the mismatch at the gate, default to
+    #                   continuing the bundle anyway (current spec)
+    #   strict        — refuse to bundle; user must split or fix JIRA
+    cross_epic_policy: warn_continue
+
+    # Branch naming for the consolidated branch. ≤3 tickets: list form;
+    # ≥4 tickets: hash form. Both forms are derived deterministically
+    # from sorted ticket IDs so re-running the same trigger reuses the
+    # same branch.
+    branch_naming:
+      list_threshold: 3                         # ≤ this → list form
+      list_form:  "feature/{TICKETS_UNDERSCORE}"
+      hash_form:  "feature/{EPIC_LOWER}-bundle-{HASH4}"
+      hash_algo:  sha1                          # sha1 | sha256
+      hash_chars: 4                             # short hash length
+
+    # Status filter behavior for `with status="A","B"` form. The values
+    # the user types must each appear in jira.status_groups (any group)
+    # or in jira.status_map. Unknown statuses → halt with suggestion.
+    status_filter:
+      allow_groups: true                        # accept group=<key> shorthand
+      allow_raw_jql: false                      # v1 — no raw JQL accepted
+      reject_in_progress_for_merge: false       # v1 — bundle is always merge
+
+    # Bundle-state file (the resume oracle). Written atomically by every
+    # bundle-aware agent at every stage transition + every checkpoint.
+    state_filename: "_bundle-state.yaml"
+
+    # Per-agent checkpoint cadence. After every N tasks, the agent
+    # flushes manifest/exploration/review and emits a Resume gate for a
+    # fresh chat. Smaller = safer (more chats), larger = fewer chats but
+    # higher per-chat context risk.
+    checkpoint_every:
+      explorer: 5
+      surgeon:  5
+      review:   5
+
+    # Task ordering algorithm for bundle-surgeon. Layer-and-dependency
+    # is the locked default per Q2; alternatives included for future
+    # experimentation but not exposed via flag in v1.
+    #   layer_dep — DB → backend services → REST → frontend services →
+    #               components → templates (mirrors builds.dependency_chain)
+    #   by_story  — all tasks for ticket-1, then ticket-2, ...
+    #   phase_a   — defer to Phase A overlap matrix output
+    task_ordering: layer_dep
+
+    # Partial-bundle ship policy when review verdict is mixed
+    # (some tasks PASS, some FAIL). Per Q3 = ask each time.
+    #   ask         — gate prompts each occurrence (default)
+    #   halt        — refuse to ship until all tasks PASS
+    #   ship_passed — ship the passing tasks; failed tickets stay in
+    #                 their pre-bundle JIRA state (advanced; v2)
+    partial_ship_policy: ask
+
+    # Epic framing — the new step that pulls PRD + HLD + Spike before
+    # per-ticket synthesis. Toggle off if your project does not use
+    # Confluence-hosted product/architecture docs.
+    epic_framing:
+      enabled: true
+      fetch_prd: true                           # PRD discovery on/off
+      fetch_hld: true                           # HLD discovery on/off
+      fetch_spikes: true                        # spike discovery on/off
+      # Confluence search hints. Each gets templated with {EPIC_ID} and
+      # {EPIC_TITLE}. Bundle-orchestrator runs them in order, stops at
+      # first hit. Fallbacks: link parsing in epic ticket description.
+      prd_search_queries:
+        - 'parent = "{EPIC_ID}" AND label = "PRD"'
+        - 'title ~ "{EPIC_TITLE} PRD"'
+      hld_search_queries:
+        - 'parent = "{EPIC_ID}" AND label = "HLD"'
+        - 'title ~ "{EPIC_TITLE} HLD"'
+
+    # Optional --deep flag default. When the user passes --deep on the
+    # trigger, bundle-orchestrator runs an extra grep-based overlap
+    # analysis across the working tree per story (~10–20K tokens once
+    # at Phase A, then amortized across explorers). Off by default —
+    # only useful when stories are likely to share files.
+    deep_overlap_default: false
+
+# ═══════════════════════════════════════════════════════════════════════
+# Pipeline DEMO config — loaded by: AC-E2E-Check (Step 3.5)
+# ═══════════════════════════════════════════════════════════════════════
+# Sibling of contexts/config/pipeline.iiq.yaml. See pipeline.iiq.README.md
+# for the full file map.
+#
+# Contains: demo (browser auth, pre-verify, e2e framework, routes, test data).
+# Add this file to .gitignore — it stores demo credentials.
+# ═══════════════════════════════════════════════════════════════════════
+
+demo:
+  enabled: true
+  base_url: "https://iiq-dev.yourcompany.com"
+
+  # ── VERIFICATION MODE ────────────────────────────────────────────
+  # ai_browser    — Cursor controls a real Chromium window interactively.
+  # e2e_generate  — AI generates Protractor/Cypress/Playwright spec files, runs them headless.
+  # terminal_run  — Uses existing spec files. $0 — no LLM. For ALL re-runs.
+  # both          — e2e_generate first, then ai_browser for failures.
+  # See pipeline.iiq.README.md for cost notes and recommended workflow.
+  # ─────────────────────────────────────────────────────────────────
+  verify_mode: "ai_browser"     # ai_browser | e2e_generate | terminal_run | both
+
+  auth:
+    type: "form"                    # form | basic | token | sso
+    login_url: "/ui/login.jsf"
+    username_selector: "input[name='j_username']"
+    password_selector: "input[name='j_password']"
+    submit_selector:   "input[type='submit'], button[type='submit']"
+    success_indicator: "url contains '/ui/'"
+
+    # Credentials stored directly here — no env vars needed.
+    # Add this file to .gitignore if the repo is shared.
+    username: "certadmin"
+    password: "your_password"
+
+    # Optional: a second user without story rights (for permission AC checks)
+    no_right_user:
+      username: ""
+      password: ""
+
+  # ── PRE-VERIFY: BUILD (+ OPTIONAL HEALTH CHECK) ──────────────────
+  pre_verify:
+    shell_init: "source ~/.zshrc"   # null on Windows
+    build_command: "ant deploy-local"
+
+    post_build_wait: 0               # 5 for Tomcat hot-deploy, 0 otherwise
+
+    health_check_url: ""
+    health_check_timeout: 30
+    health_check_required: false     # abort if set to true and server down
+
+    on_build_fail: "block"           # block | warn-continue
+    run_build: true                  # rare — set false for static-only projects
+
+  # ── E2E TEST FRAMEWORK ───────────────────────────────────────────
+  e2e:
+    framework: "protractor"       # protractor | cypress | playwright
+
+    protractor:
+      config_file: "e2e/protractor.conf.js"
+      run_command:  "npx protractor e2e/protractor.conf.js"
+      headless:     true
+      spec_dir:     "e2e/specs/"
+      spec_pattern: "{TICKET_ID}-*.spec.js"
+      base_url_override: "${demo.base_url}"
+
+    cypress:
+      config_file:  "cypress.config.ts"
+      run_command:  "npx cypress run --headless --browser chrome"
+      spec_dir:     "cypress/e2e/"
+      spec_pattern: "{TICKET_ID}-*.cy.ts"
+
+    playwright:
+      config_file:  "playwright.config.ts"
+      run_command:  "npx playwright test"
+      spec_dir:     "e2e/playwright/"
+      spec_pattern: "{TICKET_ID}-*.spec.ts"
+
+    commit_specs: true
+    spec_commit_msg: "test({TICKET_ID}): add E2E specs from AC-E2E-Check"
+
+    screenshots:
+      enabled: true
+      on: "failure"                   # "failure" | "every_step" | "never"
+      output_dir: "contexts/screenshots/{EPIC_ID}/{run_date}/"
+
+  # ── ROUTES ───────────────────────────────────────────────────────
+  routes:
+    dashboard:            "/ui/dashboard.jsf"
+    certification_list:   "/ui/certification/list.jsf"
+    certification_detail: "/ui/certification/certDetail.jsf"
+    access_review_list:   "/ui/accessReview/list.jsf"
+    identity_list:        "/ui/identity/list.jsf"
+    identity_detail:      "/ui/identity/viewIdentity.jsf"
+    role_list:            "/ui/role/list.jsf"
+    task_inbox:           "/ui/task/inbox.jsf"
+
+  # ── TEST DATA ────────────────────────────────────────────────────
+  test_data:
+    group_cert_id:      ""   # cert with certType='group'
+    individual_cert_id: ""   # cert with certType='individual'
+    empty_cert_id:      ""   # cert with no reviewers
+    reviewer_user_id:   ""   # user with reviewer rights
+    certifier_user_id:  ""   # user with CERTIFY_ANYONE right
+
+  wait_strategy:       "networkidle"  # networkidle | domcontentloaded
+  page_load_timeout:   30000          # ms
+  action_delay:        500            # ms between actions (ai_browser only)
+  screenshots_dir:     "contexts/screenshots"
+  on_failure:          "warn-continue" # warn-continue | block
+
+
+# ─── JIRA INTEGRATION ────────────────────────────────────────────────────
+jira:
+  label: iiq-agentic-team
+
+  # When to add the label.
+  #   phase-c-go → after user says "Go" at Phase C gate (branch is created)
+  #   ship       → at Ship time, after PR push succeeds
+  #   both       → adds "iiq-agentic-team-wip" at phase-c-go,
+  #                swaps to "iiq-agentic-team" at ship
+  add_at: phase-c-go
+
+  # On API failure (perms, JIRA down, closed ticket).
+  on_failure: warn-and-continue       # warn-and-continue | block
+
+  # Optional: post a comment at each pipeline event with branch/mode/context path.
+  post_comment: true
+
+  # Reference-story auto-discovery (used by Orchestrator's resolve_enrichments step).
+  # Empty list or missing key → auto-discovery disabled.
+  reference_link_types:
+    - "is similar to"
+
+  # JIRA status transitions — set to null to skip.
+  # Find transition IDs with: GET /rest/api/3/issue/{TICKET}/transitions
+  # These are WRITE-side: Orchestrator/Review/Ship move the ticket through them.
+  status_map:
+    in_development: "In Development"  # Orchestrator "Go" at Phase C → ticket moves to development
+    review_done: "In Review"          # Review gate completes → ticket moves to review
+    ship_done: "Ready for QA"         # Ship PR created → ticket moves to QA queue
+
+  # READ-side: which JIRA statuses count for sibling tracking. Four buckets,
+  # each with distinct downstream semantics:
+  #
+  #   active_hydrate   — in-flight AND content is stable enough to read. Drift
+  #                      check WARNS about coordination AND pulls the sibling's
+  #                      LLD into epic-context on the fly. Typical: "Code Review",
+  #                      "Ready for Testing" (design is locked, code exists).
+  #
+  #   active_flag_only — in-flight but content too volatile to read. Drift check
+  #                      WARNS about coordination only — no LLD fetch. Typical:
+  #                      "In Development", "In Progress" (still churning).
+  #
+  #   completed        — shipped / merged. Drift check pulls the LLD into
+  #                      epic-context AND suggests `git pull` for the code.
+  #
+  #   (everything else) — implicitly skipped (backlog, grooming, rejected,
+  #                       planning states — not real siblings worth surfacing).
+  #
+  # LLD hydration = active_hydrate ∪ completed. Flag-only = active_flag_only.
+  #
+  # Back-compat: if you prefer a flat "all active is the same" model, use a
+  # single `active:` bucket instead (legacy form — treated as active_flag_only,
+  # no LLD hydration for in-flight siblings).
+  #
+  # Example for a team using custom statuses (swap names as needed):
+  #   status_groups:
+  #     active_hydrate:   ["Code Review", "Ready for Testing"]
+  #     active_flag_only: ["In Progress", "Ready for Review"]
+  #     completed:        ["Engineering Complete", "Done", "Closed"]
+  status_groups:
+    active_hydrate:
+      - "In Review"
+      - "Ready for QA"
+    active_flag_only:
+      - "In Development"
+    completed:
+      - "Done"
+
+
+# ─── MCP SERVERS ────────────────────────────────────────────────────────
+# MCP servers the pipeline depends on. The installer reads this block and
+# generates `contexts/config/mcp.sample.json`. Each developer copies entries
+# from the sample into their personal Cursor/Claude MCP config.
+#
+# Three auth patterns:
+#   token          — API key / token, inlined in developer's personal mcp.json
+#   oauth          — browser-based SSO, no token needed
+#   token_or_oauth — developer's choice
+#
+# Per-server flags:
+#   skip: true|false       — declarative opt-out. When true, Orchestrator treats
+#                            this MCP as if the user passed --skip <name> on
+#                            every run (no probe, no fetch). The mcp-sample
+#                            generator omits skipped servers from mcp.sample.json
+#                            so developers don't accidentally re-enable them.
+#                            Default: false.
+#   fallback_prompt: |     — multi-line text rendered by Orchestrator's
+#                            mcp_fallback_gate when this MCP is unavailable
+#                            AND the ticket needs content from it (e.g. Figma
+#                            URLs in ticket but Figma MCP skipped). Lets you
+#                            customize the prompt per server. If omitted,
+#                            Orchestrator uses its built-in per-MCP gate text.
+# ────────────────────────────────────────────────────────────────────────
+# mcp_servers — onboarding registry only (generates mcp.sample.json). Fields:
+# auth · config · setup_hint. Routing lives in mcp_roles. See pipeline.iiq.forauthor.readme.md.
+mcp_servers:
+
+  atlassian:                                      # JIRA + Confluence
+    auth: oauth
+    config:
+      url: "https://mcp.atlassian.com/v1/mcp"
+    setup_hint: |
+      On first agent run, your browser opens for Atlassian login.
+      Click Authorize. Token auto-refreshes; re-login ~daily.
+      Your org admin must have the Atlassian Rovo MCP Server enabled.
+      Docs: https://support.atlassian.com/atlassian-rovo-mcp-server/
+
+  github:
+    auth: token
+    config:
+      command: "npx"
+      args: ["-y", "@modelcontextprotocol/server-github"]
+      env:
+        GITHUB_TOKEN: "${GITHUB_TOKEN}"
+    setup_hint: |
+      Create a GitHub PAT with 'repo' scope:
+        https://github.com/settings/tokens
+      In your personal Cursor / Claude Code MCP config, set env.GITHUB_TOKEN.
+      The committed mcp.sample.json shows REPLACE_WITH_YOUR_GITHUB_TOKEN.
+
+  figma:
+    auth: token
+    config:
+      command: "npx"
+      args: ["-y", "@modelcontextprotocol/server-figma"]
+      env:
+        FIGMA_TOKEN: "${FIGMA_TOKEN}"
+    setup_hint: |
+      Create a Figma personal access token:
+        https://www.figma.com/developers/api#access-tokens
+      In your personal MCP config, set env.FIGMA_TOKEN to your token.
+      Optional for this pack — without it, Figma URLs are listed but frames
+      are not analyzed (design_source degrades to drag-drop attachments only).
+
+# mcp_roles — MANDATORY · 4 role keys, value = mcp_servers key (string) | list | null/[].
+# null/[] = config-time skip (same effect as --skip flag). See pipeline.iiq.forauthor.readme.md.
+#
+# Plus ONE OPTIONAL fifth key: docs_publish — write-side counterpart to docs_source.
+# When set, Orchestrator step B.3.5 publishes the LLD as a draft page on the named
+# MCP after PART 1+2 are written locally. The local $LLD_FILE stays canonical;
+# publication is additive. Omit, leave commented, or set to null to preserve
+# today's local-only flow. See pipeline.iiq.forauthor.readme.md Block 2b.
+mcp_roles:
+  story_source: atlassian       # ticket body + ACs
+  design_source: figma          # design frames / visual spec
+  vcs: [github]                 # branch / commit / PR; list = primary + fallbacks
+  docs_source: atlassian        # HLDs / wiki (Confluence shares atlassian MCP)
+  # docs_publish: atlassian     # OPTIONAL — uncomment + set docs_publish_target below to enable
+
+# docs_publish_target — OPTIONAL settings for the docs_publish role. Required only
+# when mcp_roles.docs_publish is set. The `enabled` key is the master on/off:
+# set to false to keep the config but skip publishing for this run/pack. The
+# `publish_gate` key controls the user-consent prompt that fires in Orchestrator
+# step C.5b (post-Phase-C "Go") before any tool call:
+#   always      — gate fires before every createPage AND updatePage (default)
+#   first_only  — gate fires before createPage; updatePage runs silently
+#   never       — auto-publish, no gate (only choose this for fully trusted automation)
+#
+# See pipeline.iiq.forauthor.readme.md Block 2b for the full provider-agnostic
+# contract (createPage / updatePage) and worked examples.
+# docs_publish_target:
+#   enabled: false              # master switch · false = configured but suspended
+#   publish_gate: always        # always | first_only | never  (default: always)
+#   space: "ENG"                # space / database / topic key (provider-specific)
+#   parent_page_id: "12345"     # parent page / database / topic the draft is filed under
+#   state: draft                # draft | current — leave as draft (recommended)
+#   title_format: "{TICKET_ID} LLD — {title}"
+
+# mcp_guidance — OPTIONAL prose overrides for mcp_roles (quirks only).
+# Empty for the common case. See pipeline.iiq.forauthor.readme.md for worked examples.
+mcp_guidance: {}

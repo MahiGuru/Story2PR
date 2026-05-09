@@ -1,0 +1,46 @@
+---
+description: IIQ Angular 18 file placement — web/ui/ts/ tree structure, common vs feature folders, NgRx store location, template subfolder convention.
+alwaysApply: false
+globs:
+  - "web/ui/ts/**/*.ts"
+  - "web/ui/ts/**/*.html"
+layer: Frontend/Angular18
+---
+
+# IIQ Angular 18 File Placement
+
+Located in `web/ui/ts/`. This is the **Angular 18** codebase — separate from legacy AngularJS in `web/ui/js/`.
+
+```
+web/ui/ts/
+├── common/                 Shared across features
+│   ├── components/         Reusable UI components (forms, tables, dropdowns)
+│   ├── services/           Shared business logic services
+│   ├── core/               Core modules (translation, timeout, config)
+│   ├── pipes/              Custom Angular pipes
+│   └── directives/         Custom directives
+├── <feature-name>/         Feature modules (applicationDefinition, certification, etc.)
+│   ├── components/         Feature-specific components
+│   │   └── template/       HTML templates (imported via !text plugin)
+│   ├── services/           Feature business logic
+│   ├── store/              NgRx state (actions, reducers, effects, selectors) — where used
+│   └── interfaces/         TypeScript interfaces (.interface.ts)
+└── index.d.ts              Global type definitions
+```
+
+| File type | Location | Example |
+|-----------|----------|---------|
+| **Shared component** | `web/ui/ts/common/components/{name}/` | `web/ui/ts/common/components/dropdown/dropdown.component.ts` |
+| **Shared service** | `web/ui/ts/common/services/` | `translation.service.ts` |
+| **Feature component** | `web/ui/ts/{feature}/components/{name}/` | `web/ui/ts/applicationDefinition/components/reconfigure-modal/reconfigure-modal.component.ts` |
+| **Feature service** | `web/ui/ts/{feature}/services/` | `application-definition.service.ts` |
+| **Component template** | Inside `template/` subfolder of component | `dropdown/template/dropdown.component.html` |
+| **NgRx files** | `web/ui/ts/{feature}/store/` | `application-definition.actions.ts`, `.reducer.ts`, `.effects.ts` |
+| **Interfaces** | `web/ui/ts/{feature}/interfaces/` | `application-data.interface.ts` |
+| **Module file** | `web/ui/ts/{feature}/{feature}.module.ts` | Register all components, services, imports here |
+
+**Reference module:** Study `web/ui/ts/applicationDefinition/` as a complete example.
+
+**Decision: Angular 18 or AngularJS?**
+- New feature being built → `web/ui/ts/` (Angular 18)
+- Modifying existing feature → match what's already there (don't mix frameworks within a feature)
