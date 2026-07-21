@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Pipeline — How To</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#1c2333;
+  --surface:#1c2333;--surface2:#21283b;
+  --border:#30363d;--border2:#484f58;
+  --text:#e6edf3;--text2:#8b949e;--text3:#6e7681;
+  --accent:#58a6ff;--accent2:#79c0ff;--accentLt:rgba(56,139,253,0.15);
+  --coral:#ff7b72;--coralLt:rgba(255,123,114,0.15);
+  --teal:#3fb950;--tealLt:rgba(63,185,80,0.15);
+  --amber:#d29922;--amberLt:rgba(210,153,34,0.15);
+  --green:#3fb950;--greenLt:rgba(63,185,80,0.15);
+  --blue:#58a6ff;--blueLt:rgba(56,139,253,0.15);
+  --purple:#bc8cff;--purpleLt:rgba(188,140,255,0.15);
+  --mono:'IBM Plex Mono',monospace;--sans:'DM Sans',system-ui,sans-serif
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.78}
+.page{max-width:880px;margin:0 auto;padding:0 36px}
+
+nav{position:sticky;top:0;z-index:99;background:rgba(13,17,23,0.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);padding:0}
+nav .inner{max-width:880px;margin:0 auto;padding:10px 36px;display:flex;align-items:center;gap:20px;overflow-x:auto}
+nav .brand{font-family:var(--mono);font-weight:600;font-size:12px;color:var(--accent);white-space:nowrap;letter-spacing:-.3px;flex-shrink:0}
+nav a{font-size:12px;color:var(--text2);text-decoration:none;white-space:nowrap;transition:color .15s}
+nav a:hover{color:var(--accent2)}
+
+.hero{padding:72px 0 48px;border-bottom:2px solid var(--border)}
+.chip{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);background:var(--accentLt);padding:4px 12px;border-radius:100px;margin-bottom:16px}
+.hero h1{font-size:44px;font-weight:800;letter-spacing:-2px;line-height:1.06;margin-bottom:14px;color:var(--text)}
+.hero h1 em{font-style:normal;color:var(--accent2)}
+.hero .desc{font-size:16px;color:var(--text2);font-weight:400;max-width:680px;line-height:1.7}
+
+.s{padding:48px 0;border-bottom:1px solid var(--border)}.s:last-child{border-bottom:none}
+.s-tag{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:1.8px;text-transform:uppercase;margin-bottom:6px}
+.s h2{font-size:24px;font-weight:700;letter-spacing:-.5px;margin-bottom:6px;color:var(--text)}
+.s .lead{color:var(--text2);font-size:14px;margin-bottom:22px;max-width:680px}
+h3{font-size:16px;font-weight:700;margin:22px 0 8px;color:var(--text)}
+h4{font-size:13px;font-weight:600;margin:14px 0 6px;color:var(--text2);font-family:var(--mono);letter-spacing:.3px;text-transform:uppercase}
+
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:16px 0}
+.c{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px}
+.c .ct{font-size:13px;font-weight:700;margin-bottom:6px;color:var(--text)}
+.c p{font-size:13px;color:var(--text2);line-height:1.65;margin:0}
+.c ul{padding-left:18px;margin:6px 0 0}
+.c li{font-size:12px;color:var(--text2);margin-bottom:2px}
+
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:12px}
+th{background:var(--bg2);border:1px solid var(--border);padding:8px 12px;text-align:left;font-weight:600;color:var(--accent);font-size:10px;text-transform:uppercase;letter-spacing:.8px;font-family:var(--mono)}
+td{border:1px solid var(--border);padding:8px 12px;color:var(--text2);vertical-align:top}
+td strong{color:var(--text)}
+pre{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 18px;font-family:var(--mono);font-size:12px;line-height:1.7;overflow-x:auto;margin:10px 0;color:var(--text2)}
+code{font-family:var(--mono);font-size:12px;background:var(--bg2);border:1px solid var(--border);padding:0 4px;border-radius:3px;color:var(--accent)}
+pre code{background:none;border:none;padding:0;color:inherit}
+
+.note{padding:14px 18px;border-radius:8px;margin:14px 0;font-size:13px;line-height:1.6;border:1px solid}
+.n-blue{background:var(--accentLt);border-color:rgba(56,139,253,0.4);color:var(--accent2)}
+.n-green{background:var(--greenLt);border-color:rgba(63,185,80,0.4);color:var(--green)}
+.n-amber{background:var(--amberLt);border-color:rgba(210,153,34,0.4);color:var(--amber)}
+.n-purple{background:var(--purpleLt);border-color:rgba(188,140,255,0.4);color:var(--purple)}
+.note strong{color:inherit}
+
+ol{padding-left:22px;margin:10px 0;color:var(--text2)}
+ol li{margin-bottom:10px;font-size:13px;line-height:1.65}
+ol li strong{color:var(--text)}
+ul{padding-left:18px;margin:8px 0;color:var(--text2)}
+ul li{margin-bottom:4px;font-size:13px}
+
+.role-tag{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:1px;padding:2px 8px;border-radius:3px;margin-left:8px}
+.role-lead{background:var(--coralLt);color:var(--coral)}
+.role-dev{background:var(--tealLt);color:var(--teal)}
+
+.foot{text-align:center;padding:36px 0;font-family:var(--mono);font-size:11px;color:var(--text3)}
+.foot a{color:var(--accent);text-decoration:none}
+
+@media(max-width:768px){.hero h1{font-size:28px}.g2{grid-template-columns:1fr}.page{padding:0 18px}nav .inner{padding:10px 18px}}
+</style>
+</head>
+<body>
+
+<nav><div class="inner">
+<span class="brand">How To</span>
+<a href="#roles">Roles</a>
+<a href="#setup">Tech lead setup</a>
+<a href="#daily">Daily use</a>
+<a href="#rescan">Rescan</a>
+<a href="#add-skill">Add a skill</a>
+<a href="#add-rule">Add a rule</a>
+<a href="#add-subagent">Add a subagent</a>
+<a href="#new-pack">New pack</a>
+<a href="#mcp">MCP setup</a>
+<a href="#trouble">Troubleshoot</a>
+</div></nav>
+
+<div class="page">
+
+<div class="hero">
+<div class="chip">How-to guide</div>
+<h1>Use, extend, and maintain <em>in plain steps</em></h1>
+<p class="desc">Recipes for the two people who touch the pipeline: the <strong>tech lead</strong> (one-time setup + extending the pack) and the <strong>team member</strong> (daily ticket flow). Every section is a short, numbered recipe. For full reference material see <em>Agent Team — Packs &amp; Install</em> and <em>Agent Team — Output</em>.</p>
+</div>
+
+
+<!-- ROLES -->
+<div class="s" id="roles">
+<div class="s-tag">Roles &amp; responsibilities</div>
+<h2>Who does what</h2>
+
+<div class="g2">
+<div class="c">
+<div class="ct" style="color:var(--coral)">Tech lead <span class="role-tag role-lead">one-time + on-demand</span></div>
+<p>Sets up the pipeline, runs Project Analyzer, maintains the project-map and shared config, extends the pack with new skills/rules/subagents, rotates shared credentials.</p>
+<ul>
+<li>Install the pipeline into the project</li>
+<li>Run <code>@project-analyzer.md Analyze project</code> once</li>
+<li>Commit <code>contexts/project-map.md</code> + <code>contexts/config/*.yaml</code></li>
+<li>Edit <code>contexts/project-context.md</code> with team prose context</li>
+<li>Extend the pack when adding a layer, standard, or subagent</li>
+<li>Rescan after major refactors</li>
+</ul>
+</div>
+<div class="c">
+<div class="ct" style="color:var(--teal)">Team member <span class="role-tag role-dev">every ticket</span></div>
+<p>Pulls the repo (gets the shared project-map + config), sets up their personal MCP config once, then runs tickets through the pipeline or standalone.</p>
+<ul>
+<li>Set up personal MCP config once (from sample)</li>
+<li>Run tickets: <code>@orchestrator.md Work on PROJ-1234</code></li>
+<li>Use <code>@explorer / @surgeon / @review / @ship</code> as each gate opens</li>
+<li>Use standalone triggers for ad-hoc fixes and research</li>
+<li>Flag in any pack gaps they find (tech lead extends)</li>
+</ul>
+</div>
+</div>
+
+<div class="note n-blue"><strong>The handoff:</strong> the tech lead commits <code>contexts/project-map.md</code>, <code>contexts/project-context.md</code>, and <code>contexts/config/*.yaml</code> to the repo. Team members just <code>git pull</code> and start running tickets — no per-developer analysis or config setup required.</div>
+</div>
+
+
+<!-- TECH LEAD SETUP -->
+<div class="s" id="setup">
+<div class="s-tag">Tech lead</div>
+<h2>One-time setup — four steps</h2>
+<p class="lead">Run once per project. Takes ~15-30 minutes. After this, the team clones the repo and starts working tickets.</p>
+
+<h3>1. Install the pipeline</h3>
+<pre><code># From the unzipped pipeline release folder
+npm run install-pipeline -- --project-root /path/to/your/project --pack myproj</code></pre>
+<p style="font-size:13px;color:var(--text2)">This copies the kernel + pack into your project's <code>.cursor/</code> and <code>contexts/</code> folders. For Claude Code use <code>install-pipeline:claude</code>. Full flag reference: <em>Packs &amp; Install</em>.</p>
+
+<h3>2. Validate the config</h3>
+<pre><code>node contexts/tools/validate.mjs</code></pre>
+<p style="font-size:13px;color:var(--text2)">Expects 10 checks to pass. Most common failure: YAML indentation in one of the 5 split files at <code>contexts/config/</code>.</p>
+
+<h3>3. Run Project Analyzer (CRITICAL — do this before anyone else)</h3>
+<pre><code>@project-analyzer.md Analyze project</code></pre>
+<p style="font-size:13px;color:var(--text2)">Takes 5-15 minutes. Scans the entire codebase and produces:</p>
+<ul>
+<li><code>contexts/project-map.md</code> — 12-section project catalog (tech stack, shared components, REST endpoints, button intents, i18n, build commands, test frameworks, and more)</li>
+<li>Auto-populates <code>shared_paths</code>, <code>operation_patterns</code>, <code>i18n</code>, <code>component_naming</code> in the split YAMLs at <code>contexts/config/</code></li>
+</ul>
+<div class="note n-amber"><strong>If a team member tries to run a ticket before this step, the pipeline halts pre-flight</strong> with "project-map.md missing". That's by design — every downstream agent needs this catalog.</div>
+
+<h3>4. Edit project-context + commit</h3>
+<pre><code># Edit prose context (team boundaries, active migrations, norms)
+vim contexts/project-context.md
+
+# Commit everything
+git add contexts/project-map.md \
+        contexts/project-context.md \
+        contexts/config/*.yaml \
+        contexts/config/_catalog.md
+git commit -m "Agent pipeline: initial setup"
+git push</code></pre>
+<p style="font-size:13px;color:var(--text2)">Team members now <code>git pull</code> to get the shared catalog, then set up their personal MCP config (see §MCP setup below).</p>
+</div>
+
+
+<!-- DAILY USE -->
+<div class="s" id="daily">
+<div class="s-tag">Team member</div>
+<h2>Daily ticket flow</h2>
+<p class="lead">Six commands end-to-end. Every agent stops at a gate — nothing happens until you type the next command.</p>
+
+<h3>Per-ticket pipeline</h3>
+<pre><code>@orchestrator.md Work on PROJ-1234       # Phase C gate: Amend / Go / Cancel
+@explorer.md Run the explorer            # gate
+@surgeon.md Run the surgeon              # gate
+@ac-e2e-check.md Demo PROJ-1234          # OPTIONAL · browser AC verification
+@review.md Run the review                # or --slim for fast check
+@ship.md Ship it                         # commit + PR + JIRA</code></pre>
+
+<h3>At Orchestrator's Phase C gate</h3>
+<pre><code>Go                                       # proceed to Explorer
+Amend: &lt;what to change&gt;                  # fires Amender subagent (section-level LLD edits)
+Cancel                                   # halt pipeline</code></pre>
+
+<h3>Standalone (no ticket)</h3>
+<pre><code>@explorer.md Research: how does X work?          # codebase research
+@surgeon.md Apply: &lt;spec&gt; in &lt;files&gt;              # small fix (≤5 files, ≤150 lines)
+@surgeon.md Implement: + bullet ACs              # AC-driven (≤5 ACs)
+@review.md Review changes                        # diff-only
+@ac-e2e-check.md Demo &lt;URL&gt;                       # ad-hoc browser walk</code></pre>
+
+<h3>Flags you'll actually use</h3>
+<table>
+<tr><th>Flag</th><th>When to use</th></tr>
+<tr><td><code>--offline</code></td><td>No MCPs at all · fill <code>contexts/ticket-input.md</code> + attach images</td></tr>
+<tr><td><code>--skip atlassian</code></td><td>JIRA is down or token expired · provide ticket via file or inline <code>Context:</code></td></tr>
+<tr><td><code>--skip figma</code></td><td>Designs are on your desktop · drag-drop images into chat</td></tr>
+<tr><td><code>— reference: PROJ-100</code></td><td>Work a ticket using a prior ticket as a pattern</td></tr>
+<tr><td><code>--slim</code> (Review)</td><td>Fast integration check · trusts Surgeon's per-task work</td></tr>
+</table>
+
+<div class="note n-green"><strong>If something surprises you:</strong> read (1) the agent's halt message — it always names the next command, (2) the <em>Active Context block</em> printed at pre-flight (shows which MCPs were used, which skills loaded), (3) the file the agent just wrote.</div>
+</div>
+
+
+<!-- RESCAN -->
+<div class="s" id="rescan">
+<div class="s-tag">Tech lead</div>
+<h2>Rescan — keep the project-map fresh</h2>
+<p class="lead">The project-map is a snapshot. Major refactors (new module, new framework, restructured folders) invalidate parts of it. Rescan refreshes those parts without redoing the whole scan.</p>
+
+<h3>When to rescan</h3>
+<ul>
+<li>New top-level module or framework added</li>
+<li>Build system changed (added a layer, new build target)</li>
+<li>Shared components moved to a different folder</li>
+<li>Agents start reporting drift warnings (e.g., Explorer flags unknown shared paths)</li>
+</ul>
+
+<h3>How to rescan</h3>
+<pre><code># Full rescan (all 12 sections — ~5-15 min)
+@project-analyzer.md Rescan project
+
+# Scoped rescan (just one stack or section)
+@project-analyzer.md Rescan Java           # re-scan Java layer only
+@project-analyzer.md Rescan AngularJS      # re-scan AngularJS layer
+@project-analyzer.md Rescan shared         # re-scan shared_paths
+@project-analyzer.md Rescan build          # re-scan build system + commands
+@project-analyzer.md Rescan templates      # re-scan template/layout inheritance
+@project-analyzer.md Rescan tests          # re-scan test directories
+@project-analyzer.md Rescan stack          # re-scan tech stack detection</code></pre>
+<p style="font-size:13px;color:var(--text2)">The analyzer auto-offers a <strong>Rescan menu</strong> at the end of each scan showing exactly which scoped rescans are likely relevant next. Run <code>@project-analyzer.md</code> without a verb to see the menu.</p>
+
+<h3>Configure rescan hints (in pipeline config)</h3>
+<p style="font-size:13px;color:var(--text2)">Edit <code>contexts/config/pipeline.myproj.analyzer.yaml</code> to tune rescan behavior:</p>
+<pre><code>rescan_hints:
+  # When Orchestrator should suggest a rescan before working a ticket
+  freshness_check:
+    enabled: true
+    min_files_to_check: 3        # skip check if ticket references &lt; N files
+    max_age_days: 30             # warn if project-map older than this
+
+  # Which paths trigger which scoped rescan
+  triggers:
+    - path_pattern: "pom.xml"
+      suggest: "Rescan build"
+      reason: "build config changed"
+    - path_pattern: "package.json"
+      suggest: "Rescan build"
+    - path_pattern: "src/web/shared/**"
+      suggest: "Rescan shared"
+    - path_pattern: "src/**/*.java"
+      suggest: "Rescan Java"
+      threshold: 50              # only if &gt; 50 Java files changed</code></pre>
+
+<h3>Commit the refreshed map</h3>
+<pre><code>git add contexts/project-map.md contexts/config/*.yaml
+git commit -m "Rescan: add &lt;what&gt;"
+git push
+# Team members git pull → get the refreshed map</code></pre>
+</div>
+
+
+<!-- ADD A SKILL -->
+<div class="s" id="add-skill">
+<div class="s-tag">Tech lead</div>
+<h2>Extend: add a skill</h2>
+<p class="lead">Skills are per-layer coding standards (e.g., Java, AngularJS, Angular18). Add a skill when a new layer or framework joins the project.</p>
+
+<ol>
+<li><strong>Create the skill file</strong> at <code>packs/myproj/skills/myproj-&lt;layer&gt;-standards.md</code>:
+<pre><code>---
+name: myproj-mynewlayer-standards
+description: Coding standards for &lt;layer description&gt;
+---
+# &lt;Layer&gt; Standards
+
+## Naming
+... your rules ...
+
+## File placement
+...
+
+## Common patterns
+...</code></pre></li>
+
+<li><strong>Wire it into the layer_map</strong> at <code>contexts/config/pipeline.myproj.skills.yaml</code>:
+<pre><code>skills:
+  layer_map:
+    Frontend/MyNewLayer:
+      path_glob: "src/web/mynewlayer/**/*.ts"
+      aliases: [mynewlayer, my-new-layer, MNL]
+      skills: [myproj-mynewlayer-standards]
+      build: build-mynewlayer</code></pre></li>
+
+<li><strong>Re-install so the skill lands in <code>.cursor/skills/</code></strong>:
+<pre><code>npm run install-pipeline -- --project-root /path/to/project --pack myproj --merge-config</code></pre></li>
+
+<li><strong>Validate + regenerate catalog</strong>:
+<pre><code>node contexts/tools/validate.mjs --update-catalog
+# _catalog.md now shows the new layer + resolved skill</code></pre></li>
+
+<li><strong>Commit</strong>:
+<pre><code>git add packs/myproj/skills/myproj-mynewlayer-standards.md
+git add contexts/config/pipeline.myproj.skills.yaml contexts/config/_catalog.md
+git commit -m "Add MyNewLayer coding standards"</code></pre></li>
+</ol>
+
+<div class="note n-amber"><strong>Where it shows up at runtime:</strong> when Surgeon works a task whose file path matches the <code>path_glob</code> OR whose <code>Layer:</code> field matches an alias, it loads <code>myproj-mynewlayer-standards.md</code> into its context. The skill is NOT loaded for tasks outside this layer — on-demand, per-task.</div>
+</div>
+
+
+<!-- ADD A RULE -->
+<div class="s" id="add-rule">
+<div class="s-tag">Tech lead</div>
+<h2>Extend: add a rule (always-on)</h2>
+<p class="lead">Rules are project standards auto-injected into every agent run (via <code>alwaysApply: true</code>). Use a rule for things that should hold project-wide: naming, forbidden patterns, placement rules.</p>
+
+<ol>
+<li><strong>Create the rule file</strong> at <code>packs/myproj/rules/myproj-&lt;name&gt;.mdc</code>:
+<pre><code>---
+description: One-line summary shown to agents
+alwaysApply: true
+---
+# &lt;Rule title&gt;
+
+## What to do
+...
+
+## What NOT to do
+...
+
+## Examples
+...</code></pre></li>
+
+<li><strong>Re-install</strong>:
+<pre><code>npm run install-pipeline -- --project-root /path/to/project --pack myproj --merge-config
+# Installer copies it to .cursor/rules/ (and .claude/rules/ if that host is installed)
+# For Claude Code the .mdc is renamed to .md and alwaysApply is stripped</code></pre></li>
+
+<li><strong>Validate</strong>:
+<pre><code>node contexts/tools/validate.mjs</code></pre></li>
+
+<li><strong>Commit</strong>:
+<pre><code>git add packs/myproj/rules/myproj-&lt;name&gt;.mdc .cursor/rules/
+git commit -m "Rule: &lt;summary&gt;"</code></pre></li>
+</ol>
+
+<div class="note n-blue"><strong>Scope:</strong> rules apply to EVERY agent, EVERY run — so they should be genuinely universal (project-wide conventions, safety constraints, never-do patterns). Per-layer or per-phase guidance belongs in a skill, not a rule.</div>
+</div>
+
+
+<!-- ADD A SUBAGENT -->
+<div class="s" id="add-subagent">
+<div class="s-tag">Tech lead</div>
+<h2>Extend: add a subagent (extension point)</h2>
+<p class="lead">Subagents are delegated workers that fire at specific points in the pipeline. Use when you want heavy intermediate work (e.g., security scan, license check) to stay out of the parent agent's context.</p>
+
+<h3>Four extension points</h3>
+<table>
+<tr><th>Extension point</th><th>Fires when</th><th>Typical uses</th></tr>
+<tr><td><code>orchestrator_amend_request</code></td><td>User types <code>Amend:</code> at Phase C gate</td><td>Kernel ships Amender here — rarely overridden</td></tr>
+<tr><td><code>surgeon_pre_task</code></td><td>Before Surgeon starts a code change</td><td>Security pre-check, scope-drift warning, dependency check</td></tr>
+<tr><td><code>surgeon_post_task</code></td><td>After per-task lint + tests pass</td><td>Snapshot tests, performance gate, secrets scan</td></tr>
+<tr><td><code>review_post_check</code></td><td>After Review's AC compliance check</td><td>License audit, accessibility scan, compliance check</td></tr>
+</table>
+
+<h3>How to add one</h3>
+
+<ol>
+<li><strong>Create the subagent prompt</strong> at <code>packs/myproj/agents/subagent-myproj-&lt;name&gt;.md</code>:
+<pre><code>---
+name: myproj-security-scan
+description: Pack subagent — scans staged changes for secrets / PII at surgeon_post_task
+---
+# Body: what the subagent reads, what it does, which return verbs it uses
+...</code></pre></li>
+
+<li><strong>Declare it in the pack seed</strong> at <code>packs/myproj/pipeline.myproj.yaml</code> (core section):
+<pre><code>subagents:
+  surgeon_post_task:
+    - name: myproj-security-scan
+      agent: subagent-myproj-security-scan
+      when: "task touches src/web/** OR task touches src/api/**"
+      # 'when' is free-form; Surgeon parses it to decide whether to invoke</code></pre></li>
+
+<li><strong>Re-install</strong>:
+<pre><code>npm run install-pipeline -- --project-root /path/to/project --pack myproj --merge-config</code></pre></li>
+
+<li><strong>Validate</strong>:
+<pre><code>node contexts/tools/validate.mjs
+# Checks: subagent file exists + reference in pipeline.yaml matches</code></pre></li>
+
+<li><strong>Commit</strong>:
+<pre><code>git add packs/myproj/agents/subagent-myproj-&lt;name&gt;.md \
+        packs/myproj/pipeline.myproj.yaml .cursor/agents/
+git commit -m "Subagent: &lt;summary&gt;"</code></pre></li>
+</ol>
+
+<div class="note n-purple"><strong>Skill or subagent?</strong> Use a <strong>skill</strong> when the work IS part of the parent agent's main job (applying coding standards). Use a <strong>subagent</strong> when the work has heavy intermediate data the parent doesn't need (license scan output, image bytes) and a small structured return is enough.</div>
+</div>
+
+
+<!-- NEW PACK -->
+<div class="s" id="new-pack">
+<div class="s-tag">Tech lead · stack change</div>
+<h2>Create a new pack (different stack)</h2>
+<p class="lead">A pack bundles all the project-specific knowledge for one stack. Create a new pack when the pipeline should run on a different tech stack (e.g., a Python/Django project vs. a Java/Spring project).</p>
+
+<ol>
+<li><strong>Copy the reference pack</strong>:
+<pre><code>cp -r packs/myproj packs/mystack
+cd packs/mystack</code></pre></li>
+
+<li><strong>Rename the config + skill/rule files</strong>:
+<pre><code># Rename the seed YAML
+mv pipeline.myproj.yaml pipeline.mystack.yaml
+
+# Rename the context template
+mv project-context.myproj.md project-context.mystack.md
+
+# Rename the readme
+mv pipeline.myproj.readme.md pipeline.mystack.readme.md
+
+# Rename skills (iterative — one per file)
+for f in skills/myproj-*.md; do
+  mv "$f" "${f/myproj-/mystack-}"
+done
+
+# Same for rules
+for f in rules/myproj-*.mdc; do
+  mv "$f" "${f/myproj-/mystack-}"
+done</code></pre></li>
+
+<li><strong>Update the <code>meta.pack</code> in the seed</strong>:
+<pre><code># packs/mystack/pipeline.mystack.yaml
+meta:
+  schema_version: 4
+  pack: mystack                   # ← was 'myproj'
+
+# Then update every skills: reference from 'myproj-*' to 'mystack-*':
+skills:
+  orchestrator:
+    lld_generator: mystack-lld-generator.md
+    ticket_schema_story: mystack-ticket-schema-story.md
+    ac_templates_intent_aware: mystack-ac-templates-intent-aware.md
+  layer_map:
+    Backend/Python:
+      skills: [mystack-python-standards]
+    # ... etc
+</code></pre></li>
+
+<li><strong>Replace stack-specific content</strong> in the skill files:
+<ul>
+<li><code>skills/mystack-lld-generator.md</code> — shape the LLD template for your stack</li>
+<li><code>skills/mystack-&lt;layer&gt;-standards.md</code> — rewrite per-layer standards</li>
+<li><code>skills/mystack-bug-localization-&lt;frontend|backend&gt;.md</code> — localize bug strategies</li>
+<li><code>skills/mystack-ticket-schema-&lt;story|bug&gt;.md</code> — match your JIRA custom fields</li>
+<li><code>rules/mystack-*.mdc</code> — rewrite naming/placement/imports for your stack</li>
+</ul></li>
+
+<li><strong>Install into a fresh test project</strong>:
+<pre><code>npm run install-pipeline -- --project-root /path/to/testproject --pack mystack
+node contexts/tools/validate.mjs</code></pre></li>
+
+<li><strong>Run Project Analyzer</strong> on the new project to fill in <code>shared_paths</code>, <code>operation_patterns</code>, <code>i18n</code>:
+<pre><code>@project-analyzer.md Analyze project</code></pre></li>
+</ol>
+
+<div class="note n-green"><strong>Keep the reference pack intact.</strong> Don't delete <code>packs/myproj/</code> — keep it as the worked example. New packs can always diff against it to see how a pack is supposed to be shaped.</div>
+</div>
+
+
+<!-- MCP SETUP -->
+<div class="s" id="mcp">
+<div class="s-tag">Everyone</div>
+<h2>MCP setup — per-developer</h2>
+<p class="lead">The installer writes <code>contexts/config/mcp.sample.json</code> + a per-host setup README. Each developer copies entries into their personal Cursor / Claude Code MCP config. Tokens are personal — never commit them.</p>
+
+<h3>First-time connect (do once)</h3>
+
+<ol>
+<li><strong>Open the sample</strong>:
+<pre><code>cat contexts/config/mcp.sample.json
+cat contexts/config/mcp.sample.README.md   # per-host paths + OAuth steps</code></pre></li>
+
+<li><strong>Atlassian (OAuth — browser)</strong>:
+<ul>
+<li>Copy the Atlassian block from <code>mcp.sample.json</code> into your personal Cursor / Claude Code MCP config</li>
+<li>Trigger OAuth flow in your IDE — browser opens, you approve</li>
+<li>Token stored in your personal config · valid until it expires</li>
+</ul></li>
+
+<li><strong>GitHub (personal access token)</strong>:
+<ul>
+<li>Create a PAT at github.com → Settings → Developer settings (scope: <code>repo</code>)</li>
+<li>Paste into the <code>GITHUB_TOKEN</code> placeholder in the sample, copy to your personal config</li>
+</ul></li>
+
+<li><strong>Figma (personal access token, optional)</strong>:
+<ul>
+<li>Create a PAT in Figma → Settings → Personal access tokens</li>
+<li>Paste into the <code>FIGMA_TOKEN</code> placeholder, copy to your personal config</li>
+</ul></li>
+
+<li><strong>Test</strong>:
+<pre><code>@orchestrator.md Work on PROJ-1234
+# Active Context block should show: atlassian ✓ · github ✓ · figma ✓</code></pre></li>
+</ol>
+
+<h3>Rotate an expired token</h3>
+<ol>
+<li>Update the token in your personal MCP config</li>
+<li>If you were mid-ticket when it expired, Orchestrator's recovery gate offers <code>retry</code> — type it</li>
+<li>If you have no open gate, just trigger the next agent normally</li>
+</ol>
+
+<h3>Add a new MCP to the pack</h3>
+<p style="font-size:13px;color:var(--text2)">If your project needs a new MCP (e.g., a custom internal service MCP), declare it in the pack seed:</p>
+<pre><code># packs/myproj/pipeline.myproj.yaml
+mcp_servers:
+  myservice:
+    auth: token
+    config:
+      command: "npx"
+      args: ["-y", "mcp-server-myservice"]
+      env:
+        MYSERVICE_TOKEN: "${MYSERVICE_TOKEN}"
+    setup_hint: "How developers configure this MCP in their host."</code></pre>
+<p style="font-size:13px;color:var(--text2)">Re-install + run <code>node contexts/tools/mcp-sample-generator.mjs</code> to regenerate <code>mcp.sample.json</code> with the new entry.</p>
+
+<h3>Rewire roles — swap an MCP without touching prompts</h3>
+<p style="font-size:13px;color:var(--text2)"><code>mcp_roles</code> maps four mandatory roles to concrete MCPs. Change the mapping → agents route differently on the next run. No kernel changes.</p>
+
+<ol>
+<li><strong>Edit <code>mcp_roles</code> in the pack seed:</strong>
+<pre><code># pipeline.myproj.yaml (core) — alongside mcp_servers
+mcp_roles:
+  story_source: atlassian              # where tickets live
+  design_source: figma                 # where designs live
+  vcs: [bitbucket, github]             # primary + fallback
+  docs_source: atlassian               # HLDs / wiki
+
+mcp_guidance: {}                        # optional prose quirks
+</code></pre></li>
+
+<li><strong>Validate:</strong>
+<pre><code>node contexts/tools/validate.mjs</code></pre></li>
+
+<li><strong>Re-install + each developer connects the new MCP</strong> in their personal host config.</li>
+
+<li><strong>Test:</strong> trigger a ticket. Active Context block shows the new routing:
+<pre><code>Routing:
+  story_source  → atlassian ✓
+  design_source → figma ✓
+  vcs           → bitbucket ✓  (fallback: github unused)
+  docs_source   → atlassian ✓</code></pre></li>
+</ol>
+
+<div class="note n-amber"><strong>CLI-level caveat:</strong> swapping <code>vcs</code> to Bitbucket is a config change, but Ship's PR-create step uses the <code>gh</code> CLI by default. For non-GitHub VCS, install the matching CLI (<code>glab</code>, <code>bb</code>, etc.) and override Ship's <code>push_and_pr</code> step in a pack rule. The routing decision is abstracted; the tooling isn't — yet.</div>
+
+<div class="note n-blue"><strong>Privacy:</strong> no MCP = graceful fallback. Use <code>--offline</code> when content is sensitive. Use <code>--skip &lt;name&gt;</code> to selectively bypass an MCP for one run.</div>
+</div>
+
+
+<!-- TROUBLESHOOT -->
+<div class="s" id="trouble">
+<div class="s-tag">Everyone</div>
+<h2>Troubleshooting cheatsheet</h2>
+
+<table>
+<tr><th>Symptom</th><th>Fix</th></tr>
+<tr><td><code>No context file found for PROJ-1234</code></td><td>A downstream agent ran before Orchestrator. Start with <code>@orchestrator.md Work on PROJ-1234</code>.</td></tr>
+<tr><td><code>project-map.md missing</code> at pre-flight</td><td>Tech lead hasn't run Project Analyzer yet. Ask them — or if you're the tech lead, run <code>@project-analyzer.md Analyze project</code>.</td></tr>
+<tr><td><code>Ambiguous context file for PROJ-1234</code></td><td>Same ticket ID exists in two folders. Move one to <code>contexts/archive/</code>.</td></tr>
+<tr><td><code>skill_loaded=&lt;none — no config&gt;</code></td><td>A split YAML failed to parse. Run <code>node contexts/tools/validate.mjs</code> — it names the file + line.</td></tr>
+<tr><td><code>top-level key 'X' declared in multiple files</code></td><td>Same key appears in two split YAMLs. Each block lives in exactly one file — see Pack &amp; Install → Config splits.</td></tr>
+<tr><td>Plain trigger didn't route in Cursor</td><td>Use the <code>@&lt;agent&gt;.md &lt;trigger&gt;</code> form. Cursor's router is probabilistic; the <code>@</code>-prefix is reliable.</td></tr>
+<tr><td>Surgeon halted with LLD drift warning</td><td>Amender ran between Surgeon runs. Choose <code>Restart</code> / <code>Proceed</code> / <code>Cancel</code> at the prompt.</td></tr>
+<tr><td>Atlassian MCP gate appears mid-run</td><td>Token expired. Fix your MCP config, then answer <code>retry</code> — or use <code>inline</code> + <code>Context:</code> / <code>file</code> + <code>ticket-input.md</code>.</td></tr>
+<tr><td>Figma MCP gate appears mid-run</td><td>Answer <code>retry</code>, or <code>upload</code> + drag-drop images + <code>continue</code>, or <code>skip</code> (URL-only visual spec).</td></tr>
+<tr><td>Review says "clean" but the code looks broken</td><td>Review checks AC compliance + regressions, not behavioral correctness. LLD may be wrong — amend from the top.</td></tr>
+<tr><td><code>Amend:</code> option missing at Phase C gate</td><td>Amender subagent wasn't installed. Re-run the installer.</td></tr>
+<tr><td>Rescan not picking up new files</td><td>Verify <code>scan_exclusions</code> in <code>pipeline.myproj.analyzer.yaml</code> isn't excluding the new folder.</td></tr>
+<tr><td>Layer resolution picked the wrong skill</td><td>Run <code>node contexts/tools/validate.mjs --update-catalog</code> and check <code>contexts/config/_catalog.md</code>. Adjust <code>path_glob</code> or <code>aliases</code> to disambiguate.</td></tr>
+</table>
+
+<div class="note n-purple"><strong>Debugging sequence:</strong> (1) read the agent prompt at <code>.cursor/agents/&lt;name&gt;.md</code>, (2) read the skill it loaded (listed in the Active Context block), (3) read the config section it consumed at <code>contexts/config/pipeline.*.yaml</code>. The answer is always in one of those three places.</div>
+</div>
+
+
+</div>
+<div class="foot">How-to guide · companion to <a href="Agent%20Team%20-%20Output.html">Agent Team — Output</a> &amp; <a href="Agent%20Team%20-%20Pack%20%26%20Install.html">Packs &amp; Install</a> · see also <a href="Agent%20Team.html">Agent Team — Architecture</a></div>
+</body>
+</html>

@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Pipeline — Packs &amp; Installation</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#1c2333;
+  --surface:#1c2333;--surface2:#21283b;
+  --border:#30363d;--border2:#484f58;
+  --text:#e6edf3;--text2:#8b949e;--text3:#6e7681;
+  --accent:#58a6ff;--accent2:#79c0ff;--accentLt:rgba(56,139,253,0.15);
+  --coral:#ff7b72;--coralLt:rgba(255,123,114,0.15);
+  --teal:#3fb950;--tealLt:rgba(63,185,80,0.15);
+  --amber:#d29922;--amberLt:rgba(210,153,34,0.15);
+  --green:#3fb950;--greenLt:rgba(63,185,80,0.15);
+  --blue:#58a6ff;--blueLt:rgba(56,139,253,0.15);
+  --purple:#bc8cff;--purpleLt:rgba(188,140,255,0.15);
+  --mono:'IBM Plex Mono',monospace;--sans:'DM Sans',system-ui,sans-serif
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.78}
+.page{max-width:880px;margin:0 auto;padding:0 36px}
+
+nav{position:sticky;top:0;z-index:99;background:rgba(13,17,23,0.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);padding:0}
+nav .inner{max-width:880px;margin:0 auto;padding:10px 36px;display:flex;align-items:center;gap:20px;overflow-x:auto}
+nav .brand{font-family:var(--mono);font-weight:600;font-size:12px;color:var(--accent);white-space:nowrap;letter-spacing:-.3px;flex-shrink:0}
+nav a{font-size:12px;color:var(--text2);text-decoration:none;white-space:nowrap;transition:color .15s}
+nav a:hover{color:var(--accent2)}
+
+.hero{padding:72px 0 48px;border-bottom:2px solid var(--border)}
+.chip{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);background:var(--accentLt);padding:4px 12px;border-radius:100px;margin-bottom:16px}
+.hero h1{font-size:44px;font-weight:800;letter-spacing:-2px;line-height:1.06;margin-bottom:14px;color:var(--text)}
+.hero h1 em{font-style:normal;color:var(--accent2)}
+.hero .desc{font-size:16px;color:var(--text2);font-weight:400;max-width:680px;line-height:1.7}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:36px 0 0}
+.kpi{text-align:center;padding:18px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:10px}
+.kpi b{font-family:var(--mono);font-size:22px;font-weight:600;color:var(--accent);display:block}
+.kpi span{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1.2px}
+
+.s{padding:56px 0;border-bottom:1px solid var(--border)}.s:last-child{border-bottom:none}
+.s-tag{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:1.8px;text-transform:uppercase;margin-bottom:6px}
+.s h2{font-size:26px;font-weight:700;letter-spacing:-.6px;margin-bottom:4px;color:var(--text)}
+.s .lead{color:var(--text2);font-size:14px;margin-bottom:28px;max-width:680px}
+h3{font-size:16px;font-weight:700;margin:24px 0 8px;color:var(--text)}
+h4{font-size:14px;font-weight:600;margin:16px 0 6px;color:var(--text)}
+
+.dia{margin:28px 0;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:var(--bg2)}
+.dia.dia-wide{max-width:min(calc(100vw - 32px), 1320px);width:calc(100vw - 32px);margin-left:50%;transform:translateX(-50%)}
+.dia-bar{padding:10px 18px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);background:var(--surface)}
+.dia-bar i{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dia-bar span{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.5px}
+
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:16px 0}
+.c{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+.c .ct{font-size:12px;font-weight:700;margin-bottom:4px;color:var(--text)}
+.c p{font-size:12px;color:var(--text2);line-height:1.6;margin:0}
+
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:12px}
+th{background:var(--bg2);border:1px solid var(--border);padding:8px 12px;text-align:left;font-weight:600;color:var(--accent);font-size:10px;text-transform:uppercase;letter-spacing:.8px;font-family:var(--mono)}
+td{border:1px solid var(--border);padding:8px 12px;color:var(--text2);vertical-align:top}
+td strong{color:var(--text)}
+pre{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 18px;font-family:var(--mono);font-size:11px;line-height:1.7;overflow-x:auto;margin:12px 0;color:var(--text2)}
+code{font-family:var(--mono);font-size:11px;background:var(--bg2);border:1px solid var(--border);padding:0 4px;border-radius:3px;color:var(--accent)}
+pre code{background:none;border:none;padding:0;color:inherit}
+
+.note{padding:14px 18px;border-radius:8px;margin:16px 0;font-size:12px;line-height:1.6;border:1px solid}
+.n-blue{background:var(--accentLt);border-color:rgba(56,139,253,0.4);color:var(--accent2)}
+.n-green{background:var(--greenLt);border-color:rgba(63,185,80,0.4);color:var(--green)}
+.n-amber{background:var(--amberLt);border-color:rgba(210,153,34,0.4);color:var(--amber)}
+.n-purple{background:var(--purpleLt);border-color:rgba(188,140,255,0.4);color:var(--purple)}
+.note strong{color:inherit}
+
+.fcol{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:16px 0}
+.fbox{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 18px}
+.fbox h4{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--accent);margin:0 0 8px}
+
+ul{padding-left:16px;margin:8px 0}li{margin-bottom:4px;font-size:12px;color:var(--text2)}li strong{color:var(--text)}
+
+.foot{text-align:center;padding:36px 0;font-family:var(--mono);font-size:11px;color:var(--text3)}
+.foot a{color:var(--accent);text-decoration:none}
+
+@media(max-width:768px){.hero h1{font-size:28px}.kpi-row,.g2,.g3,.fcol{grid-template-columns:1fr}.page{padding:0 18px}nav .inner{padding:10px 18px}}
+</style>
+</head>
+<body>
+
+<nav><div class="inner">
+<span class="brand">Pack &amp; Install</span>
+<a href="#how">Big picture</a>
+<a href="#packtree">Pack tree</a>
+<a href="#author">Authoring</a>
+<a href="#install">Install command</a>
+<a href="#scripts">npm scripts</a>
+<a href="#hosts">Cursor vs Claude</a>
+<a href="#validate">Validate</a>
+<a href="#mcp">MCP</a>
+<a href="#upgrade">Upgrades</a>
+<a href="#use">Daily use</a>
+</div></nav>
+
+<div class="page">
+
+<div class="hero">
+<div class="chip">Pack &amp; install reference</div>
+<h1>Build a pack, <em>install it</em>, ship work</h1>
+<p class="desc">Everything you need to download the pipeline, install it into your project (Cursor or Claude Code), author or extend a project pack with skills/rules/subagents, and run the validator + MCP setup. Companion to <em>Agent Team — Output</em> which covers what the install writes to your project.</p>
+<div class="kpi-row">
+<div class="kpi"><b>1</b><span>Install command</span></div>
+<div class="kpi"><b>2</b><span>Hosts (Cursor + Claude)</span></div>
+<div class="kpi"><b>4</b><span>Subagent extension points</span></div>
+<div class="kpi"><b>10</b><span>Validator checks</span></div>
+</div>
+</div>
+
+
+<!-- 01 BIG PICTURE DIAGRAM -->
+<div class="s" id="how">
+<div class="s-tag">Big picture</div>
+<h2>Kernel + Pack → Installer → Host output</h2>
+<p class="lead">The kernel is a project-neutral agent prompt set + always-on flow rules. The pack is project-specific knowledge: LLD generator, layer coding standards, ticket schemas, naming/placement rules, and the <code>pipeline.&lt;pack&gt;.yaml</code> seed. The installer composes them and writes a host-specific output (<code>.cursor/</code> or <code>.claude/</code>) plus a host-agnostic <code>contexts/</code> tree.</p>
+
+<div class="dia dia-wide">
+<div class="dia-bar"><i style="background:var(--accent)"></i><span>kernel + pack architecture · authoring → install → host output</span></div>
+<svg viewBox="0 0 1120 760" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;background:#0d1117;font-family:'IBM Plex Mono',ui-monospace,monospace">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#6e7681"/></marker>
+    <marker id="arrowAccent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#58a6ff"/></marker>
+    <marker id="arrowPurple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#bc8cff"/></marker>
+  </defs>
+
+  <!-- Title row -->
+  <text x="30" y="28" font-size="13" fill="#bc8cff" letter-spacing="1.5" font-weight="600">RELEASE TREE · WHAT THE PIPELINE PROJECT SHIPS</text>
+
+  <!-- Kernel box -->
+  <rect x="30" y="50" width="345" height="180" fill="#161b22" stroke="#bc8cff" stroke-width="1.5" rx="6"/>
+  <text x="46" y="72" font-size="11" fill="#6e7681">PROJECT-NEUTRAL · same in every install</text>
+  <text x="46" y="93" font-size="16" font-weight="600" fill="#e6edf3">agent-pipeline/  (kernel)</text>
+  <text x="46" y="115" font-size="12" fill="#8b949e">agents/   · 7 agents + 2 subagents</text>
+  <text x="60" y="131" font-size="11" fill="#6e7681">project-analyzer · orchestrator · explorer ·</text>
+  <text x="60" y="145" font-size="11" fill="#6e7681">surgeon · ac-e2e-check · review · ship</text>
+  <text x="60" y="159" font-size="11" fill="#6e7681">subagent-amender · subagent-image-analysis</text>
+  <text x="46" y="180" font-size="12" fill="#8b949e">rules/    · agent-flow.mdc (always-on)</text>
+  <text x="46" y="198" font-size="12" fill="#8b949e">skills/   · SKILL.md kernel index</text>
+  <text x="46" y="216" font-size="12" fill="#8b949e">bin/ · docs/ · tools sources</text>
+
+  <!-- Pack box -->
+  <rect x="395" y="50" width="345" height="180" fill="#161b22" stroke="#d29922" stroke-width="1.5" rx="6"/>
+  <text x="411" y="72" font-size="11" fill="#6e7681">PROJECT-SPECIFIC · one per stack (e.g. myproj)</text>
+  <text x="411" y="93" font-size="16" font-weight="600" fill="#e6edf3">packs/&lt;name&gt;/</text>
+  <text x="411" y="115" font-size="12" fill="#8b949e">agents/   · pack subagents (optional)</text>
+  <text x="425" y="131" font-size="11" fill="#6e7681">→ wired at extension points</text>
+  <text x="411" y="152" font-size="12" fill="#8b949e">rules/    · &lt;pack&gt;-*.mdc (project standards)</text>
+  <text x="411" y="173" font-size="12" fill="#8b949e">skills/   · &lt;pack&gt;-lld-generator + layer skills</text>
+  <text x="425" y="187" font-size="11" fill="#6e7681">→ ticket schemas, AC templates, bug-localization</text>
+  <text x="411" y="208" font-size="12" fill="#8b949e">pipeline.&lt;pack&gt;.yaml · monolithic seed</text>
+  <text x="425" y="222" font-size="11" fill="#6e7681">→ pack author edits this · installer splits it</text>
+
+  <!-- Tools box -->
+  <rect x="760" y="50" width="330" height="180" fill="#161b22" stroke="#3fb950" stroke-width="1.5" rx="6"/>
+  <text x="776" y="72" font-size="11" fill="#6e7681">CONFIG-DRIVEN TOOLING · vendored (no npm install)</text>
+  <text x="776" y="93" font-size="16" font-weight="600" fill="#e6edf3">contexts/tools/</text>
+  <text x="776" y="115" font-size="12" fill="#8b949e">install.mjs        · npm run install-pipeline</text>
+  <text x="776" y="133" font-size="12" fill="#8b949e">validate.mjs       · 10 checks · _catalog.md</text>
+  <text x="776" y="151" font-size="12" fill="#8b949e">split-pipeline.mjs · seed ⇄ 5 splits</text>
+  <text x="776" y="169" font-size="12" fill="#8b949e">mcp-sample-generator.mjs</text>
+  <text x="776" y="187" font-size="12" fill="#8b949e">help.mjs · README.md · vendor/js-yaml.mjs</text>
+
+  <!-- Arrows down to installer -->
+  <path d="M 200 230 L 480 290" stroke="#484f58" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 560 230 L 560 290" stroke="#484f58" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 920 230 L 640 290" stroke="#484f58" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- Installer command -->
+  <rect x="240" y="290" width="640" height="68" fill="#1c2333" stroke="#58a6ff" stroke-width="1.5" rx="6"/>
+  <text x="258" y="314" font-size="11" fill="#6e7681">INSTALLER · runs in the unzipped release folder</text>
+  <text x="258" y="338" font-size="15" font-weight="600" fill="#58a6ff">npm run install-pipeline -- --project-root &lt;path&gt; --pack &lt;name&gt; --target &lt;cursor|claude&gt;</text>
+
+  <!-- Steps the installer takes -->
+  <text x="30" y="395" font-size="13" fill="#d29922" letter-spacing="1.5" font-weight="600">WHAT THE INSTALLER DOES</text>
+
+  <rect x="30" y="412" width="525" height="115" fill="#1c2333" stroke="#d29922" stroke-width="1" rx="6"/>
+  <text x="46" y="432" font-size="12" font-weight="600" fill="#d29922">1. Compose kernel + pack</text>
+  <text x="46" y="450" font-size="11" fill="#8b949e">Read agent-pipeline/ + packs/&lt;name&gt;/ → merge agents, rules, skills</text>
+  <text x="46" y="471" font-size="12" font-weight="600" fill="#d29922">2. Transform per host target</text>
+  <text x="46" y="489" font-size="11" fill="#8b949e">Cursor: keep .mdc + alwaysApply · flat skills</text>
+  <text x="46" y="503" font-size="11" fill="#8b949e">Claude: rename .mdc→.md · strip alwaysApply · dir-per-skill</text>
+  <text x="46" y="521" font-size="11" fill="#8b949e">Agents: identical (host-agnostic prompts)</text>
+
+  <rect x="565" y="412" width="525" height="115" fill="#1c2333" stroke="#d29922" stroke-width="1" rx="6"/>
+  <text x="581" y="432" font-size="12" font-weight="600" fill="#d29922">3. Split pipeline seed → 5 YAMLs</text>
+  <text x="581" y="450" font-size="11" fill="#8b949e">pipeline.&lt;pack&gt;.yaml (core) + .skills + .builds + .analyzer + .e2e.test</text>
+  <text x="581" y="471" font-size="12" font-weight="600" fill="#d29922">4. Generate MCP sample</text>
+  <text x="581" y="489" font-size="11" fill="#8b949e">mcp.sample.json + per-host setup README (skip with --no-mcp)</text>
+  <text x="581" y="507" font-size="12" font-weight="600" fill="#d29922">5. Run validator</text>
+  <text x="581" y="521" font-size="11" fill="#8b949e">10 checks · regenerate _catalog.md (skip with --no-validate)</text>
+
+  <!-- Outputs -->
+  <text x="30" y="572" font-size="13" fill="#3fb950" letter-spacing="1.5" font-weight="600">RESULT IN YOUR PROJECT</text>
+
+  <rect x="30" y="590" width="345" height="140" fill="#161b22" stroke="#58a6ff" stroke-width="1.5" rx="6"/>
+  <text x="46" y="611" font-size="11" fill="#6e7681">if --target cursor</text>
+  <text x="46" y="632" font-size="16" font-weight="600" fill="#58a6ff">.cursor/</text>
+  <text x="46" y="654" font-size="12" fill="#8b949e">agents/   · 9 .md files</text>
+  <text x="46" y="672" font-size="12" fill="#8b949e">rules/    · .mdc files (alwaysApply)</text>
+  <text x="46" y="690" font-size="12" fill="#8b949e">skills/   · flat .md files</text>
+  <text x="46" y="715" font-size="11" fill="#6e7681" font-style="italic">@&lt;agent&gt;.md trigger — recommended</text>
+
+  <rect x="395" y="590" width="345" height="140" fill="#161b22" stroke="#bc8cff" stroke-width="1.5" rx="6"/>
+  <text x="411" y="611" font-size="11" fill="#6e7681">if --target claude</text>
+  <text x="411" y="632" font-size="16" font-weight="600" fill="#bc8cff">.claude/</text>
+  <text x="411" y="654" font-size="12" fill="#8b949e">agents/   · same 9 .md files</text>
+  <text x="411" y="672" font-size="12" fill="#8b949e">rules/    · .md (alwaysApply stripped)</text>
+  <text x="411" y="690" font-size="12" fill="#8b949e">skills/   · &lt;name&gt;/SKILL.md</text>
+  <text x="411" y="715" font-size="11" fill="#6e7681" font-style="italic">@&lt;agent&gt;.md OR plain trigger</text>
+
+  <rect x="760" y="590" width="330" height="140" fill="#161b22" stroke="#3fb950" stroke-width="1.5" rx="6"/>
+  <text x="776" y="611" font-size="11" fill="#6e7681">always written · host-agnostic</text>
+  <text x="776" y="632" font-size="16" font-weight="600" fill="#3fb950">contexts/</text>
+  <text x="776" y="654" font-size="12" fill="#8b949e">config/   · 5 split YAMLs + sample MCP</text>
+  <text x="776" y="672" font-size="12" fill="#8b949e">tools/    · install/validate/split/help</text>
+  <text x="776" y="690" font-size="12" fill="#8b949e">project-context.md (you edit)</text>
+  <text x="776" y="715" font-size="11" fill="#6e7681" font-style="italic">runtime data populated as agents run</text>
+
+  <!-- Connector arrows from installer to outputs -->
+  <path d="M 480 358 Q 480 470 192 590" stroke="#58a6ff" stroke-width="1.2" stroke-dasharray="3,3" fill="none" marker-end="url(#arrowAccent)"/>
+  <path d="M 560 358 Q 560 470 552 590" stroke="#58a6ff" stroke-width="1.2" stroke-dasharray="3,3" fill="none" marker-end="url(#arrowAccent)"/>
+  <path d="M 640 358 Q 640 470 920 590" stroke="#58a6ff" stroke-width="1.2" stroke-dasharray="3,3" fill="none" marker-end="url(#arrowAccent)"/>
+</svg>
+</div>
+
+<h3>Mental model</h3>
+<ul>
+<li><strong>Kernel</strong> = the agent prompts + cross-agent flow rule. <em>What every project shares.</em></li>
+<li><strong>Pack</strong> = your stack's standards + LLD generator + layer skills + naming rules. <em>What makes the kernel actually run on YOUR codebase.</em></li>
+<li><strong>Installer</strong> = composer. Reads kernel + pack, writes host-targeted output to your project.</li>
+<li><strong>Host</strong> = Cursor or Claude Code. The same agents + skills, packaged differently.</li>
+</ul>
+</div>
+
+
+<!-- 02 PACK TREE -->
+<div class="s" id="packtree">
+<div class="s-tag">Pack tree</div>
+<h2>Anatomy of a pack — <code>packs/&lt;name&gt;/</code></h2>
+<p class="lead">A pack is a folder under <code>packs/</code> with the same shape as the kernel, plus a config seed. The <code>myproj</code> pack below is a worked example — copy it as a starting point for a new stack.</p>
+
+<pre><code>packs/myproj/                                       (reference example)
+├── README.md                                    ← pack overview · install instructions
+├── pipeline.myproj.yaml                            ← MONOLITHIC SEED (you edit this)
+├── pipeline.myproj.forauthor.readme.md             ← pack-author guide (edit recipes)
+├── pipeline.myproj.readme.md                       ← team-member guide (installed to project)
+├── project-context.myproj.md                       ← prose context template (installed)
+│
+├── agents/                                      ← pack subagents (optional)
+│   └── subagent-myproj-&lt;name&gt;.md                  ← e.g. subagent-myproj-security-audit.md
+│                                                   (the myproj pack ships none today — example)
+│
+├── rules/                                       ← project-specific Tier 1 rules
+│   ├── myproj-project-scope.mdc
+│   ├── myproj-file-placement.mdc
+│   ├── myproj-naming-conventions.mdc
+│   ├── myproj-import-patterns.mdc
+│   ├── myproj-naming-{java,angularjs,angular18}.mdc
+│   ├── myproj-placement-{java,angularjs,angular18}.mdc
+│   ├── myproj-imports-{java,angularjs}.mdc
+│   ├── myproj-{java,angularjs,angular18}-postverify.mdc
+│   └── agent-flow.mdc                          (pack-extended; usually kernel only)
+│
+└── skills/                                      ← project-specific Tier 2 skills
+    ├── myproj-lld-generator.md                    ← Orchestrator · Phase B (25-section LLD)
+    ├── myproj-ticket-schema-{story,bug}.md        ← Orchestrator · pre-flight (eager)
+    ├── myproj-ac-templates-intent-aware.md        ← Orchestrator · enrich_ac (A.5)
+    ├── myproj-bug-localization.md                 ← Explorer Bug Mode · router
+    ├── myproj-bug-localization-frontend.md        ← Explorer Bug Mode · F1-F4 strategies
+    ├── myproj-bug-localization-backend.md         ← Explorer Bug Mode · B1-B6 strategies
+    ├── myproj-{java,rest-api,angularjs,angular18,extjs,xhtml}-standards.md
+    │                                              ← Surgeon · per-task layer skills
+    ├── myproj-accessibility.md                    ← Surgeon · cross-layer (a11y)
+    ├── myproj-test-standards.md                   ← Surgeon + Review
+    ├── myproj-security-secrets.md                 ← Surgeon · token/PII rules
+    ├── alias-taxonomy.md                       ← framework-level helper
+    ├── epic-context-strategy.md                ← framework-level helper
+    └── epic-e2e-plan-template.md               ← framework-level helper</code></pre>
+
+<h3>What each role provides</h3>
+<table>
+<tr><th>File / folder</th><th>Role</th><th>Used by</th></tr>
+<tr><td><code>pipeline.&lt;pack&gt;.yaml</code> (seed)</td><td>Source of truth — installer splits this into 5 runtime YAMLs at install time. Pack author edits this.</td><td>Installer · split-pipeline · validator</td></tr>
+<tr><td><code>rules/&lt;pack&gt;-*.mdc</code></td><td>Always-on standards (naming, placement, imports, postverify per layer). Merged with kernel rules at install.</td><td>Every agent (auto-injected via <code>alwaysApply: true</code>)</td></tr>
+<tr><td><code>skills/&lt;pack&gt;-lld-generator.md</code></td><td>The LLD template — what shape the LLD should take for stories in this stack. Pack-defining skill.</td><td>Orchestrator · Phase B (synthesize_lld) only</td></tr>
+<tr><td><code>skills/&lt;pack&gt;-{layer}-standards.md</code></td><td>Per-layer coding standards. Surgeon loads the matching one per task via <code>skills.layer_map</code>.</td><td>Surgeon · per-task</td></tr>
+<tr><td><code>skills/&lt;pack&gt;-bug-*.md</code></td><td>Bug localization strategies — F1-F4 frontend, B1-B6 backend. Loaded only in Bug Mode.</td><td>Explorer · Bug Mode</td></tr>
+<tr><td><code>skills/&lt;pack&gt;-ticket-schema-{story,bug}.md</code></td><td>How to parse JIRA tickets for this project (custom fields, epic linking patterns).</td><td>Orchestrator · pre-flight (eager)</td></tr>
+<tr><td><code>skills/&lt;pack&gt;-ac-templates-intent-aware.md</code></td><td>AC pattern library — given an AC's intent, generates the right shape of test/implementation.</td><td>Orchestrator · enrich_ac (A.5) + synthesize_lld (B.3)</td></tr>
+<tr><td><code>agents/subagent-&lt;pack&gt;-*.md</code></td><td>Pack-defined subagents wired at kernel extension points. Optional.</td><td>Whichever extension point declares it in <code>subagents:</code></td></tr>
+<tr><td><code>project-context.&lt;pack&gt;.md</code></td><td>Prose template installed to <code>contexts/project-context.md</code> — team edits this for project-wide context.</td><td>Orchestrator · every run</td></tr>
+</table>
+</div>
+
+
+<!-- 03 AUTHORING -->
+<div class="s" id="author">
+<div class="s-tag">Authoring</div>
+<h2>How to extend a pack</h2>
+<p class="lead">Three things you typically add: a new skill (per-layer or new domain), a new always-on rule, or a new subagent at one of the kernel extension points. After every change run <code>validate.mjs</code>.</p>
+
+<h3>Add a new layer skill</h3>
+<pre><code># 1. Create the skill file
+packs/myproj/skills/myproj-mynewlayer-standards.md
+
+   ---
+   name: myproj-mynewlayer-standards
+   description: Coding standards for &lt;layer description&gt;
+   ---
+   # &lt;Layer&gt; Standards
+   ... your standards content ...
+
+# 2. Wire it into the layer_map (split file is preferred over seed)
+contexts/config/pipeline.myproj.skills.yaml:
+
+   skills:
+     layer_map:
+       Frontend/MyNewLayer:
+         path_glob: "src/web/mynewlayer/**/*.ts"
+         aliases: [mynewlayer, my-new-layer, MNL]
+         skills: [myproj-mynewlayer-standards]
+         build: build-mynewlayer
+
+# 3. Validate (regenerates _catalog.md)
+node contexts/tools/validate.mjs --update-catalog
+
+# 4. Commit the skill, the YAML edit, and the new _catalog.md</code></pre>
+
+<h3>Add a new always-on rule</h3>
+<pre><code># 1. Create the rule (Cursor format)
+packs/myproj/rules/myproj-myrule.mdc
+
+   ---
+   description: One-line summary
+   alwaysApply: true
+   ---
+   # Rule body
+   ... rule content ...
+
+# 2. Re-install to copy it into the host folder
+npm run install-pipeline:cursor   # or :claude
+# Installer copies it to .cursor/rules/myproj-myrule.mdc
+# (or .claude/rules/myproj-myrule.md — alwaysApply stripped)
+
+# 3. Validate
+node contexts/tools/validate.mjs</code></pre>
+
+<h3>Add a new subagent (kernel extension point)</h3>
+<pre><code># 1. Create the subagent prompt
+packs/myproj/agents/subagent-myproj-security-scan.md
+
+   ---
+   name: myproj-security-scan
+   description: Pack subagent fired at surgeon_post_task to scan for secrets / PII
+   ---
+   # Body: instructions, return verbs, contract...
+
+# 2. Wire it at the extension point in the seed
+packs/myproj/pipeline.myproj.yaml (or contexts/config/pipeline.myproj.yaml core):
+
+   subagents:
+     surgeon_post_task:
+       - name: myproj-security-scan
+         agent: subagent-myproj-security-scan
+         when: "task touches src/web/** OR task touches src/api/**"
+
+# 3. Re-install + validate
+npm run install-pipeline
+node contexts/tools/validate.mjs</code></pre>
+
+<h3>Four extension points (kernel-defined)</h3>
+<table>
+<tr><th>Extension point</th><th>Fires when</th><th>Useful for</th></tr>
+<tr><td><code>orchestrator_amend_request</code></td><td>User types <code>Amend:</code> at Orchestrator's Phase C gate</td><td>Kernel ships <strong>Amender</strong> here. Packs can replace.</td></tr>
+<tr><td><code>surgeon_pre_task</code></td><td>Surgeon, after layer resolution, before code change</td><td>Pre-implementation security audits, dependency checks, scope-drift warnings</td></tr>
+<tr><td><code>surgeon_post_task</code></td><td>Surgeon, after per-task lint + tests pass</td><td>Lightweight code review, snapshot tests, performance gates</td></tr>
+<tr><td><code>review_post_check</code></td><td>Review, after AC compliance check</td><td>License scans, accessibility audits, secrets scans</td></tr>
+</table>
+
+<div class="note n-blue"><strong>Skill vs subagent — when to use which.</strong> Use a <strong>skill</strong> when the work IS the parent agent's job (LLD generation, applying coding standards) and the inputs already live in the parent's context. Use a <strong>subagent</strong> when the work has heavy intermediate data the parent doesn't need (image analysis, audit scans) and a small structured return is enough.</div>
+
+<h3>Edit the pack seed vs the split files</h3>
+<table>
+<tr><th>Edit case</th><th>Where to edit</th><th>Why</th></tr>
+<tr><td>Per-team / per-project tweak</td><td><code>contexts/config/pipeline.&lt;pack&gt;.*.yaml</code> splits</td><td>Lives in your project, version-controlled with your code</td></tr>
+<tr><td>Want to ship the change as a default for all future installs</td><td><code>packs/&lt;name&gt;/pipeline.&lt;name&gt;.yaml</code> seed</td><td>Run <code>npm run pipeline:merge</code> to regenerate the seed from your splits, then PR against the pipeline release repo</td></tr>
+</table>
+</div>
+
+
+<!-- 04 INSTALL COMMAND -->
+<div class="s" id="install">
+<div class="s-tag">Install command</div>
+<h2><code>npm run install-pipeline</code> — full reference</h2>
+<p class="lead">One command, many flags. Sensible defaults: <code>--target cursor</code>, <code>--pack myproj</code>, validates after install, generates MCP sample.</p>
+
+<h3>Most common usage</h3>
+<pre><code># Fresh install — Cursor target, myproj pack
+npm run install-pipeline -- --project-root /path/to/your/project
+
+# Claude Code target
+npm run install-pipeline:claude -- --project-root /path/to/your/project
+
+# Different pack
+npm run install-pipeline -- --project-root /path/to/project --pack mypack
+
+# Both hosts on the same project (run twice)
+npm run install-pipeline:cursor -- --project-root /path/to/project --pack myproj
+npm run install-pipeline:claude -- --project-root /path/to/project --pack myproj</code></pre>
+
+<h3>All flags</h3>
+<table>
+<tr><th>Flag</th><th>Default</th><th>Behavior</th></tr>
+<tr><td><code>--project-root &lt;path&gt;</code></td><td>—</td><td>Target project directory (required for live install)</td></tr>
+<tr><td><code>--target &lt;cursor|claude&gt;</code></td><td><code>cursor</code></td><td>Which host folder to write (<code>.cursor/</code> or <code>.claude/</code>)</td></tr>
+<tr><td><code>--pack &lt;name&gt;</code></td><td><code>myproj</code></td><td>Which pack to install from <code>packs/</code></td></tr>
+<tr><td><code>--no-pack</code></td><td>—</td><td>Kernel-only install — skips pack content</td></tr>
+<tr><td><code>--output-dir &lt;path&gt;</code></td><td>—</td><td>Staging mode — build to a directory instead of live install</td></tr>
+<tr><td><code>--force-config</code></td><td>—</td><td>Overwrite <code>contexts/config/pipeline.*.yaml</code> from pack seed (backs up existing to <code>.bak.&lt;timestamp&gt;</code>)</td></tr>
+<tr><td><code>--merge-config</code></td><td>—</td><td>Section-aware merge: pack-owned sections take new content; analyzer-owned (<code>shared_paths</code>, <code>operation_patterns</code>) preserve dev's edits</td></tr>
+<tr><td><code>--no-mcp</code></td><td>—</td><td>Skip MCP sample generation</td></tr>
+<tr><td><code>--no-validate</code></td><td>—</td><td>Skip validator run after install</td></tr>
+<tr><td><code>--dry-run</code></td><td>—</td><td>Print what would happen, write nothing</td></tr>
+<tr><td><code>--with-handoff-hook</code></td><td>—</td><td><strong>Claude Code only</strong> — install Stop hook (clipboard + desktop notification on agent finish)</td></tr>
+</table>
+
+<h3>What happens during install (in order)</h3>
+<ol>
+<li><strong>Read sources</strong> — scan <code>agent-pipeline/</code> (kernel) + <code>packs/&lt;name&gt;/</code> (pack)</li>
+<li><strong>Compose</strong> — merge agent prompts, rules, skills</li>
+<li><strong>Transform per host</strong> — Cursor keeps <code>.mdc</code> + <code>alwaysApply</code>; Claude renames to <code>.md</code>, strips <code>alwaysApply</code>, packages skills as <code>&lt;name&gt;/SKILL.md</code></li>
+<li><strong>Copy to project</strong> — write <code>.cursor/</code> or <code>.claude/</code> in <code>--project-root</code></li>
+<li><strong>Split config</strong> — read <code>packs/&lt;name&gt;/pipeline.&lt;name&gt;.yaml</code> seed, split into 5 sibling YAMLs at <code>contexts/config/</code></li>
+<li><strong>Copy <code>project-context.&lt;name&gt;.md</code></strong> → <code>contexts/project-context.md</code></li>
+<li><strong>Copy <code>project-input.template.md</code></strong> → <code>contexts/ticket-input.md</code></li>
+<li><strong>Generate MCP sample</strong> (skip with <code>--no-mcp</code>)</li>
+<li><strong>Validate</strong> (skip with <code>--no-validate</code>)</li>
+</ol>
+</div>
+
+
+<!-- 05 NPM SCRIPTS CHEAT SHEET -->
+<div class="s" id="scripts">
+<div class="s-tag">npm scripts cheat sheet</div>
+<h2>The <code>package.json</code> scripts</h2>
+
+<table>
+<tr><th>Script</th><th>Maps to</th><th>When you run it</th></tr>
+<tr><td><code>npm run help</code></td><td><code>node contexts/tools/help.mjs</code></td><td>Quick command reference</td></tr>
+<tr><td><code>npm run install-pipeline</code></td><td><code>node contexts/tools/install.mjs</code></td><td>Default install (Cursor target unless overridden by flag)</td></tr>
+<tr><td><code>npm run install-pipeline:cursor</code></td><td><code>install.mjs --target cursor</code></td><td>Explicit Cursor install</td></tr>
+<tr><td><code>npm run install-pipeline:claude</code></td><td><code>install.mjs --target claude</code></td><td>Explicit Claude Code install</td></tr>
+<tr><td><code>npm run pipeline:split</code></td><td><code>split-pipeline.mjs split</code></td><td><strong>Rare</strong> — pack author edited the monolithic seed and wants to push splits locally for testing</td></tr>
+<tr><td><code>npm run pipeline:merge</code></td><td><code>split-pipeline.mjs merge</code></td><td>One-shot review — generates a throwaway monolithic file at <code>contexts/pipeline.&lt;pack&gt;.yaml</code> for inspection, then delete it</td></tr>
+</table>
+
+<h3>Validator (no script alias — run directly)</h3>
+<pre><code>node contexts/tools/validate.mjs                  # 10 checks · prints report
+node contexts/tools/validate.mjs --update-catalog # also regenerate _catalog.md
+node contexts/tools/validate.mjs --quiet          # CI mode (silent on success)
+node contexts/tools/validate.mjs --emit-catalog   # print catalog to stdout</code></pre>
+
+<div class="note n-amber"><strong>Why no <code>npm install</code>?</strong> The tools vendor their one dependency (<code>js-yaml</code>) at <code>contexts/tools/vendor/js-yaml.mjs</code>. Run them with <code>node</code> directly — they work in any project that has Node 18+. The <code>package.json</code>'s <code>dependencies</code> field exists for the pipeline-release repo itself, not for the projects that install the pipeline.</div>
+</div>
+
+
+<!-- 06 CURSOR vs CLAUDE -->
+<div class="s" id="hosts">
+<div class="s-tag">Dual-host</div>
+<h2>Cursor vs Claude Code — what changes at install</h2>
+<p class="lead">Same agents, same skills content, same <code>contexts/</code>. Only the file format / packaging differs between hosts.</p>
+
+<table>
+<tr><th>Concern</th><th><code>--target cursor</code></th><th><code>--target claude</code></th></tr>
+<tr><td>Agents folder</td><td><code>.cursor/agents/&lt;name&gt;.md</code></td><td><code>.claude/agents/&lt;name&gt;.md</code> (identical content)</td></tr>
+<tr><td>Rules extension</td><td><code>.mdc</code></td><td><code>.md</code> (renamed at install)</td></tr>
+<tr><td>Rules frontmatter</td><td><code>alwaysApply: true</code> preserved (Cursor reads it)</td><td><code>alwaysApply</code> stripped (Claude Code auto-loads all rules)</td></tr>
+<tr><td>Skills layout</td><td>Flat: <code>.cursor/skills/&lt;name&gt;.md</code></td><td>Dir-per-skill: <code>.claude/skills/&lt;name&gt;/SKILL.md</code></td></tr>
+<tr><td>Trigger reliability</td><td><code>@&lt;agent&gt;.md</code> recommended (plain triggers can be flaky)</td><td>Both <code>@&lt;agent&gt;.md</code> and plain triggers work</td></tr>
+<tr><td>Stop hook</td><td>Not supported</td><td><code>--with-handoff-hook</code> installs clipboard + desktop notification on agent finish</td></tr>
+<tr><td><code>contexts/</code> folder</td><td>Identical</td><td>Identical</td></tr>
+<tr><td>MCP setup</td><td>Per-host paths in <code>mcp.sample.README.md</code></td><td>Per-host paths in <code>mcp.sample.README.md</code></td></tr>
+</table>
+
+<h3>Same project, both hosts</h3>
+<pre><code># Run installer twice with different targets
+npm run install-pipeline:cursor -- --project-root /path/to/project --pack myproj
+npm run install-pipeline:claude -- --project-root /path/to/project --pack myproj
+
+# Result:
+.cursor/   ← Cursor uses these
+.claude/   ← Claude Code uses these
+contexts/  ← Both share this
+.gitignore ← typically excludes .cursor/.claude (per-developer); commits contexts/</code></pre>
+</div>
+
+
+<!-- 07 VALIDATE -->
+<div class="s" id="validate">
+<div class="s-tag">Validate</div>
+<h2>The 10 checks</h2>
+<p class="lead"><code>node contexts/tools/validate.mjs</code> runs three tiers of checks. Auto-discovers config files at <code>contexts/config/</code> (supports both monolithic and split layouts). Exit codes: <strong>0</strong> = pass, <strong>1</strong> = errors, <strong>2</strong> = environment problem.</p>
+
+<table>
+<tr><th>Tier</th><th>Check</th><th>What it catches</th></tr>
+<tr><td>1</td><td>Schema version</td><td>Pipeline schema mismatch with installer version</td></tr>
+<tr><td>1</td><td>YAML parse</td><td>Indentation / syntax errors in any of the 5 split files</td></tr>
+<tr><td>1</td><td>Section collisions</td><td>Same top-level key declared in multiple split files (e.g. <code>skills</code> in both core + skills.yaml)</td></tr>
+<tr><td>2</td><td>Layer resolution</td><td>Every layer in <code>skills.layer_map</code> resolves correctly via <code>path_glob</code> + aliases</td></tr>
+<tr><td>2</td><td>Alias collisions</td><td>Two layers declaring overlapping aliases (Surgeon would resolve ambiguously)</td></tr>
+<tr><td>2</td><td>Build command references</td><td>Layers reference build commands that exist in <code>builds.commands</code></td></tr>
+<tr><td>3</td><td>Skill file existence</td><td>Every skill referenced in config (LLD generator, layer skills, bug-localization, etc.) exists in <code>.cursor/skills/</code> or <code>.claude/skills/</code></td></tr>
+<tr><td>3</td><td>Rule file existence</td><td>Every rule file in <code>rules/</code> is properly formatted</td></tr>
+<tr><td>3</td><td>Agent file existence</td><td>Every agent referenced in <code>subagents.*</code> exists in <code>agents/</code></td></tr>
+<tr><td>3</td><td>Retired MCP fields deprecation</td><td>Warns if any <code>mcp_servers.*</code> entry still has the retired fields (<code>used_by</code>, <code>required</code>, <code>skip</code>, <code>fallback_prompt</code>) — routing now lives in <code>mcp_roles</code>; skip is via CLI flags</td></tr>
+</table>
+
+<h3>Catalog</h3>
+<p style="font-size:13px;color:var(--text2)">The validator can regenerate <code>contexts/config/_catalog.md</code> — a human-readable table of every canonical layer, its aliases, the <code>path_glob</code>, the skills it loads, and the build command. Always in sync with what the resolver actually does. Regenerate after any <code>skills.layer_map</code> edit:</p>
+<pre><code>node contexts/tools/validate.mjs --update-catalog</code></pre>
+</div>
+
+
+<!-- 08 MCP -->
+<div class="s" id="mcp">
+<div class="s-tag">MCP setup</div>
+<h2>Connect Atlassian, GitHub, Figma</h2>
+<p class="lead">The installer writes a starter MCP config at <code>contexts/config/mcp.sample.json</code> + <code>mcp.sample.README.md</code> with per-host setup instructions. Each developer copies entries into their personal MCP config (Cursor or Claude Code).</p>
+
+<table>
+<tr><th>MCP</th><th>Auth</th><th>Used by</th><th>Required?</th></tr>
+<tr><td>Atlassian (JIRA + Confluence)</td><td>OAuth (browser-based)</td><td>Orchestrator (ticket fetch + reference auto-discovery), Review (pattern check), Ship (transitions)</td><td>Recommended — fall back to <code>--offline</code> + <code>ticket-input.md</code></td></tr>
+<tr><td>GitHub</td><td>Personal access token (<code>repo</code> scope)</td><td>Orchestrator (PR status), Explorer (multi-repo), Review (reference PR pattern), Ship (PR creation)</td><td>Recommended for Ship</td></tr>
+<tr><td>Figma</td><td>Personal access token</td><td>Orchestrator (frame fetch from URLs)</td><td>Optional — falls back to drag-drop image attachment</td></tr>
+</table>
+
+<h3>Graceful fallback when MCPs are unavailable</h3>
+<pre><code># Use only specific MCPs (skip the rest)
+@orchestrator.md Work on PROJ-1234 --only github
+
+# Skip specific MCPs
+@orchestrator.md Work on PROJ-1234 --skip atlassian,figma
+
+# Fully offline (no MCPs at all)
+@orchestrator.md Work on PROJ-1234 --offline
+# Reads contexts/ticket-input.md as ticket source</code></pre>
+
+<div class="note n-green"><strong>MCP failure = inline gate, not a failed run.</strong> If an MCP is configured but probe fails at runtime, Orchestrator opens a gate: <code>retry / inline / file / skip / cancel</code>. You handle the fallback in the same conversation — no need to abort and re-trigger.</div>
+
+<h3><code>mcp_roles</code> — rewire MCPs without kernel changes</h3>
+<p class="lead">Every MCP-consuming agent (Orchestrator, Review, Ship, AC-E2E-Check) resolves <strong>four mandatory roles</strong> to concrete MCPs at pre-flight. Teams swap Atlassian → Linear or GitHub → Bitbucket by editing one config block — no prompt changes.</p>
+
+<table>
+<tr><th>Role</th><th>Purpose</th><th>Default MCP (shipped pack)</th></tr>
+<tr><td><code>story_source</code></td><td>Fetch ticket body + ACs, transition status on PR open</td><td><code>atlassian</code> (JIRA)</td></tr>
+<tr><td><code>design_source</code></td><td>Fetch design frames / visual specs</td><td><code>figma</code></td></tr>
+<tr><td><code>vcs</code></td><td>Branch, commit, PR creation, reference-PR diff fetch</td><td><code>github</code></td></tr>
+<tr><td><code>docs_source</code></td><td>Fetch HLDs, wiki pages, requirements docs</td><td><code>atlassian</code> (Confluence)</td></tr>
+</table>
+
+<h4>Value shapes per role</h4>
+<table>
+<tr><th>Value</th><th>Meaning</th><th>Gate behavior when content needed</th></tr>
+<tr><td><code>atlassian</code></td><td>Single primary MCP</td><td>Fires only if probe fails</td></tr>
+<tr><td><code>[github, bitbucket]</code></td><td>Primary + ordered fallback list</td><td>Fires only if all candidates fail probe</td></tr>
+<tr><td><code>null</code> or <code>[]</code></td><td><strong>Config-time skip</strong> — equivalent to passing <code>--skip</code> for this role every run. Pack declares "never use an MCP for this role."</td><td><strong>Fires on demand</strong> — if the ticket needs the role's content (e.g. Figma URLs present + no attachments), user is prompted for an alternative (upload image, fill ticket-input.md, paste inline Context:). If content isn't needed this run, stays silent.</td></tr>
+<tr><td><em>(key missing entirely)</em></td><td><strong>Validator error</strong> — mandatory role missing. Forces an explicit decision: pick an MCP or opt out with <code>null</code>.</td><td>n/a (blocks install)</td></tr>
+</table>
+
+<div class="note n-blue"><strong>Why <code>null</code> still prompts:</strong> setting <code>design_source: null</code> doesn't mean "design is irrelevant" — it means "never call the design MCP." If a ticket then shows up with Figma URLs but no attached images, the agent still needs a design input; it prompts you to upload one instead of silently skipping. Same rule applies to all four roles.</div>
+
+<h4>When does the gate actually fire? — per role</h4>
+<p style="font-size: 14px; color: var(--text2); margin-bottom: 14px">
+  The gate is "role has no MCP AND the ticket actually needs its content."
+  Each role has a specific content-dependency check, so backend-only or
+  DB-only tickets don't get prompted for design input they'll never use.
+</p>
+<table>
+<tr><th>Role</th><th>Gate fires when all of these are true</th></tr>
+<tr><td><code>story_source</code></td><td>No <code>contexts/ticket-input.md</code> AND no inline <code>Context:</code> in trigger</td></tr>
+<tr><td><code>design_source</code></td><td>Ticket has Figma/design URLs · <strong>AND</strong> no image attachments in trigger · <strong>AND</strong> <code>scope.ui_involved == true</code></td></tr>
+<tr><td><code>docs_source</code></td><td>Ticket references HLD/wiki pages AND no local doc file provided</td></tr>
+<tr><td><code>vcs</code></td><td>A reference ticket is declared AND its PR diff is requested</td></tr>
+</table>
+
+<h4>Concrete scenarios — <code>design_source: null</code></h4>
+<table>
+<tr><th>Your ticket</th><th>What happens</th></tr>
+<tr><td>Backend / DB change · no Figma URLs · no images</td><td><strong>Silent.</strong> <code>scope.ui_involved = false</code> short-circuits the check. Active Context notes: <em>"design_source not needed this ticket."</em></td></tr>
+<tr><td>UI ticket · Figma URLs in description · <strong>no images attached</strong></td><td><strong>Gate fires.</strong> "design_source is skipped (config). Provide design via: upload image / cancel."</td></tr>
+<tr><td>Any ticket · image attached (flow diagram, sequence diagram, whiteboard sketch, UI mock, screenshot, architecture diagram)</td><td><strong>Silent.</strong> The attachment satisfies the content requirement. The image-analysis subagent extracts whatever structure it finds (boxes+arrows for a flow diagram, component tree for a UI mock) and hands it to downstream agents as context.</td></tr>
+</table>
+
+<div class="note n-green"><strong>Any image type works.</strong> The kernel doesn't classify images — it extracts whatever structure is in them. Flow diagrams, sequence diagrams, whiteboard sketches, screenshots, architecture diagrams all count equally as "design input provided." Your ticket prose is what interprets them. So a backend ticket with a flow diagram attached won't be mistreated as "UI to implement" — the flow becomes supplementary context for the LLD.</div>
+
+<div class="note n-amber"><strong>Scope classification is automatic but overridable.</strong> <code>scope.ui_involved</code> is set by a cheap LLM pass (<code>classify_scope (A0.6.3)</code>) over the ticket title + description. Signals like "screen", "page", "button", "modal", "Figma" → UI-involved; "DAO", "migration", "REST endpoint", "batch job", "schema" → not UI-involved. If the classifier gets it wrong, override at the Phase C gate with <code>Amend: scope.ui_involved = true</code> (or <code>false</code>).</div>
+
+<h4>Minimal config</h4>
+<pre><code># pipeline.&lt;pack&gt;.yaml (core) — co-located with mcp_servers
+mcp_roles:
+  story_source: atlassian
+  design_source: figma
+  vcs: [github]                  # single or ordered fallback list
+  docs_source: atlassian
+
+mcp_guidance: {}                  # optional · prose overrides for quirks only
+
+# Example — a CLI tool with no UI and no wiki
+mcp_roles:
+  story_source: atlassian
+  design_source: null            # never uses designs
+  vcs: [github]
+  docs_source: null              # never fetches wikis</code></pre>
+
+<h4>Resolution ladder (per role, per run)</h4>
+<pre><code>1. Flags win first: --offline / --skip &lt;name&gt; / --only &lt;list&gt;
+2. Walk mcp_roles.&lt;role&gt; → first candidate still allowed after step 1
+3. Consult mcp_guidance.&lt;role&gt; for declared quirks (e.g. "ODO- prefix → odoo")
+4. Check the candidate MCP is reachable at the host · else try next fallback
+5. No candidate left?
+     flag explains it → local fallback (ticket-input.md / attachments / CLI git)
+     no flag          → HALT with a clear per-role error message</code></pre>
+
+<h4>Worked example — swap GitHub for Bitbucket</h4>
+<pre><code># 1. Declare the MCP
+mcp_servers:
+  bitbucket:
+    auth: token
+    config: { command: "npx", args: ["-y", "mcp-server-bitbucket"], env: { BITBUCKET_TOKEN: "${BITBUCKET_TOKEN}" } }
+
+# 2. Wire the role — single source change
+mcp_roles:
+  vcs: [bitbucket, github]       # bitbucket primary, fall back to github
+
+# 3. (Optional) add a guidance quirk
+mcp_guidance:
+  vcs: |
+    If the repo URL is on bitbucket.org, always prefer bitbucket MCP
+    regardless of fallback order.
+
+# 4. Validate + re-install + each developer adds Bitbucket token to their
+#    personal Cursor / Claude Code MCP config.</code></pre>
+
+<div class="note n-blue"><strong>What the validator enforces:</strong> all four <code>mcp_roles</code> keys mandatory · every value references a real <code>mcp_servers</code> key (or is <code>null</code> / <code>[]</code> for explicit opt-out) · orphan guidance keys warned · legacy per-server fields (<code>used_by</code>, <code>required</code>, <code>skip</code>, <code>fallback_prompt</code>) are retired and produce deprecation warnings if still present.</div>
+
+<h3><code>mcp_servers</code> — slim developer-onboarding registry</h3>
+<p class="lead">After the <code>mcp_roles</code> routing landed, <code>mcp_servers</code> was reduced to its original purpose: generating <code>contexts/config/mcp.sample.json</code> for new-developer setup. Three fields per server, nothing else:</p>
+
+<pre><code>mcp_servers:
+  atlassian:
+    auth: oauth                    # oauth | token | token_or_oauth
+    config:                        # connection — source for mcp.sample.json
+      url: "https://mcp.atlassian.com/v1/mcp"
+    setup_hint: |                  # pack-author notes for new developers
+      On first run, browser opens for Atlassian login.
+      Your org admin must have Atlassian Rovo MCP Server enabled.
+
+  github:
+    auth: token
+    config:
+      command: "npx"
+      args: ["-y", "@modelcontextprotocol/server-github"]
+      env:
+        GITHUB_TOKEN: "${GITHUB_TOKEN}"
+    setup_hint: |
+      Create a PAT with 'repo' scope at github.com/settings/tokens.</code></pre>
+
+<h4>What was retired from <code>mcp_servers</code></h4>
+<table>
+<tr><th>Retired field</th><th>Replaced by</th></tr>
+<tr><td><code>used_by: [...]</code></td><td><code>mcp_roles</code> — routing is role-based, not server-based</td></tr>
+<tr><td><code>required: true</code></td><td>Fallback chain — a role halts only if no candidate resolves AND no flag explains it</td></tr>
+<tr><td><code>skip: true</code></td><td>CLI flags (<code>--skip &lt;name&gt;</code>) for per-run opt-out, or <code>mcp_roles.&lt;role&gt;: null</code> for config-time opt-out</td></tr>
+<tr><td><code>fallback_prompt: ...</code></td><td>Built-in per-role gate text. Packs that need different wording override at the rule layer (<code>.cursor/rules/*.mdc</code>), not in <code>pipeline.yaml</code>.</td></tr>
+</table>
+
+<div class="note n-amber"><strong>Legacy packs keep working.</strong> If your pack still has the retired fields, the validator warns (not errors) and the fields are ignored. Routing now always comes from <code>mcp_roles</code>. Safe to strip at leisure.</div>
+
+<div class="note n-amber"><strong>What's abstracted, what's not.</strong> The routing decision (which MCP handles which role) is fully config-driven. The concrete CLI / API calls are still hardcoded in agent prompts — for example, Ship's PR-create step uses <code>gh</code> (GitHub CLI). Swapping vcs to Bitbucket works for pre-flight resolution + status display, but the PR-create command itself needs a pack-specific override (install <code>glab</code> / <code>bitbucket</code> CLI and override the Ship step in a pack rule file). This is honest scope — future PRs can abstract over VCS operations via the resolved MCP's actions.</div>
+</div>
+
+
+<!-- 09 UPGRADES -->
+<div class="s" id="upgrade">
+<div class="s-tag">Upgrade flow</div>
+<h2>Re-installing for upgrades</h2>
+<p class="lead">When a new pipeline release ships, re-run the installer. Section ownership in the split YAMLs determines what gets replaced and what's preserved.</p>
+
+<h3>Standard upgrade (preserves your config)</h3>
+<pre><code># Re-run the installer in the new release folder
+npm run install-pipeline -- --project-root /path/to/project --pack myproj --merge-config
+
+# Behavior:
+# - .cursor/ (or .claude/) agents, rules, skills → REPLACED
+# - contexts/config/pipeline.*.yaml → MERGED (section-aware)
+#   * skills.* / builds.* / jira.* / subagents.*  → take new pack version
+#   * shared_paths, operation_patterns, i18n, component_naming → KEPT (your edits + analyzer's auto-fills)
+#   * runtime.* / mcp_servers.* → KEPT (your customizations)
+# - contexts/project-map.md → UNCHANGED (your project's catalog)
+# - contexts/project-context.md → UNCHANGED (your team's prose)
+# - contexts/&lt;epic&gt;/* → UNCHANGED (your runtime data)</code></pre>
+
+<h3>Force-overwrite upgrade (rare)</h3>
+<pre><code>npm run install-pipeline -- --project-root /path/to/project --pack myproj --force-config
+
+# Behavior:
+# - All split YAMLs OVERWRITTEN from the new pack seed
+# - Existing splits backed up to .bak.&lt;timestamp&gt;
+# - You'll lose project-analyzer-written sections — re-run @project-analyzer.md after</code></pre>
+
+<h3>Section ownership reference</h3>
+<table>
+<tr><th>Section</th><th>Owner</th><th>Behavior on <code>--merge-config</code></th></tr>
+<tr><td><code>skills.layer_map · skills.orchestrator · skills.explorer</code></td><td>Pack author</td><td>Replaced</td></tr>
+<tr><td><code>builds.commands · builds.runner · builds.review_gate</code></td><td>Pack author</td><td>Replaced</td></tr>
+<tr><td><code>jira.* · mcp_servers.* defaults</code></td><td>Pack author</td><td>Replaced (then you re-customize)</td></tr>
+<tr><td><code>subagents.*</code></td><td>Pack author</td><td>Replaced</td></tr>
+<tr><td><code>shared_paths · component_naming · operation_patterns · i18n</code></td><td>Project Analyzer</td><td>Preserved</td></tr>
+<tr><td><code>runtime.contexts_layout · runtime.branching</code></td><td>You</td><td>Preserved</td></tr>
+</table>
+
+<div class="note n-blue"><strong>Upgrade workflow:</strong> commit your <code>contexts/config/</code> splits before re-installing. After install, run <code>git diff contexts/config/</code> to see what changed and merge any conflicts manually if needed. Then run <code>node contexts/tools/validate.mjs</code> to confirm.</div>
+</div>
+
+
+<!-- 10 DAILY USE -->
+<div class="s" id="use">
+<div class="s-tag">Daily use</div>
+<h2>Using the pipeline in your project</h2>
+<p class="lead">Once installed and analyzed, the daily-driver flow is six commands. Tech lead does the one-time setup; team members run tickets.</p>
+
+<h3>One-time setup (tech lead)</h3>
+<pre><code># 1. Install
+npm run install-pipeline -- --project-root /path/to/project --pack myproj
+
+# 2. Validate
+node contexts/tools/validate.mjs
+
+# 3. Analyze the project (Step 0)
+@project-analyzer.md Analyze project
+# Takes 5-15 min · produces contexts/project-map.md + auto-fills 5 split YAMLs
+
+# 4. Edit contexts/project-context.md with team-specific prose
+
+# 5. Commit project-map.md, project-context.md, and contexts/config/*.yaml to your repo
+
+# 6. Each developer:
+#    - Pulls the repo
+#    - Sets up their personal MCP config (see contexts/config/mcp.sample.README.md)
+#    - Starts running tickets</code></pre>
+
+<h3>Per-ticket flow (every developer)</h3>
+<pre><code>@orchestrator.md Work on PROJ-1234       # Phase C gate: Amend / Go / Cancel
+@explorer.md Run the explorer            # gate
+@surgeon.md Run the surgeon              # gate
+@ac-e2e-check.md Demo PROJ-1234          # OPTIONAL — browser AC verification
+@review.md Run the review                # gate
+@ship.md Ship it                          # commit + PR + JIRA</code></pre>
+
+<h3>Standalone (no ticket)</h3>
+<pre><code>@explorer.md Research: how does X work?
+@surgeon.md Apply: &lt;spec&gt; in &lt;files&gt;     # ≤5 files / ≤150 lines
+@review.md Review changes
+@ac-e2e-check.md Demo &lt;URL&gt;</code></pre>
+
+<h3>Maintenance</h3>
+<pre><code># Codebase shifted significantly — refresh project-map
+@project-analyzer.md Rescan &lt;stack&gt;        # e.g. Rescan java
+
+# Edit a config split
+vim contexts/config/pipeline.myproj.skills.yaml
+node contexts/tools/validate.mjs --update-catalog
+
+# Inspect merged config (one-time review)
+npm run pipeline:merge                       # writes throwaway contexts/pipeline.myproj.yaml
+# ... read it ...
+rm contexts/pipeline.myproj.yaml                # done — splits are source of truth</code></pre>
+
+<div class="note n-purple"><strong>Where to look when something surprises you:</strong> (1) the agent's prompt at <code>.cursor/agents/&lt;name&gt;.md</code>, (2) the skill it loaded (listed in the Active Context block printed at pre-flight), (3) the config section it consumed at <code>contexts/config/pipeline.*.yaml</code>. The answer is always in one of those three places.</div>
+</div>
+
+
+</div>
+<div class="foot">Pack &amp; install reference · companion to <a href="Agent%20Team%20-%20Output.html">Agent Team — Output</a> · see also <a href="Agent%20Team.html">Agent Team — Architecture</a></div>
+</body>
+</html>

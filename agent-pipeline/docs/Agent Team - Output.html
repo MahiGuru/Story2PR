@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Pipeline — What Gets Installed</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#1c2333;
+  --surface:#1c2333;--surface2:#21283b;
+  --border:#30363d;--border2:#484f58;
+  --text:#e6edf3;--text2:#8b949e;--text3:#6e7681;
+  --accent:#58a6ff;--accent2:#79c0ff;--accentLt:rgba(56,139,253,0.15);
+  --coral:#ff7b72;--coralLt:rgba(255,123,114,0.15);
+  --teal:#3fb950;--tealLt:rgba(63,185,80,0.15);
+  --amber:#d29922;--amberLt:rgba(210,153,34,0.15);
+  --green:#3fb950;--greenLt:rgba(63,185,80,0.15);
+  --blue:#58a6ff;--blueLt:rgba(56,139,253,0.15);
+  --purple:#bc8cff;--purpleLt:rgba(188,140,255,0.15);
+  --mono:'IBM Plex Mono',monospace;--sans:'DM Sans',system-ui,sans-serif
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.78}
+.page{max-width:880px;margin:0 auto;padding:0 36px}
+
+nav{position:sticky;top:0;z-index:99;background:rgba(13,17,23,0.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);padding:0}
+nav .inner{max-width:880px;margin:0 auto;padding:10px 36px;display:flex;align-items:center;gap:20px;overflow-x:auto}
+nav .brand{font-family:var(--mono);font-weight:600;font-size:12px;color:var(--accent);white-space:nowrap;letter-spacing:-.3px;flex-shrink:0}
+nav a{font-size:12px;color:var(--text2);text-decoration:none;white-space:nowrap;transition:color .15s}
+nav a:hover{color:var(--accent2)}
+
+.hero{padding:72px 0 48px;border-bottom:2px solid var(--border)}
+.chip{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);background:var(--accentLt);padding:4px 12px;border-radius:100px;margin-bottom:16px}
+.hero h1{font-size:44px;font-weight:800;letter-spacing:-2px;line-height:1.06;margin-bottom:14px;color:var(--text)}
+.hero h1 em{font-style:normal;color:var(--accent2)}
+.hero .desc{font-size:16px;color:var(--text2);font-weight:400;max-width:680px;line-height:1.7}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:36px 0 0}
+.kpi{text-align:center;padding:18px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:10px}
+.kpi b{font-family:var(--mono);font-size:22px;font-weight:600;color:var(--accent);display:block}
+.kpi span{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1.2px}
+
+.s{padding:56px 0;border-bottom:1px solid var(--border)}.s:last-child{border-bottom:none}
+.s-tag{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:1.8px;text-transform:uppercase;margin-bottom:6px}
+.s h2{font-size:26px;font-weight:700;letter-spacing:-.6px;margin-bottom:4px;color:var(--text)}
+.s .lead{color:var(--text2);font-size:14px;margin-bottom:28px;max-width:680px}
+h3{font-size:16px;font-weight:700;margin:24px 0 8px;color:var(--text)}
+h4{font-size:14px;font-weight:600;margin:16px 0 6px;color:var(--text)}
+
+.dia{margin:28px 0;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:var(--bg2)}
+.dia.dia-wide{max-width:min(calc(100vw - 32px), 1320px);width:calc(100vw - 32px);margin-left:50%;transform:translateX(-50%)}
+.dia-bar{padding:10px 18px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);background:var(--surface)}
+.dia-bar i{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dia-bar span{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.5px}
+
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:16px 0}
+.c{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+.c .ct{font-size:12px;font-weight:700;margin-bottom:4px;color:var(--text)}
+.c p{font-size:12px;color:var(--text2);line-height:1.6;margin:0}
+
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:12px}
+th{background:var(--bg2);border:1px solid var(--border);padding:8px 12px;text-align:left;font-weight:600;color:var(--accent);font-size:10px;text-transform:uppercase;letter-spacing:.8px;font-family:var(--mono)}
+td{border:1px solid var(--border);padding:8px 12px;color:var(--text2);vertical-align:top}
+td strong{color:var(--text)}
+pre{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 18px;font-family:var(--mono);font-size:11px;line-height:1.7;overflow-x:auto;margin:12px 0;color:var(--text2)}
+code{font-family:var(--mono);font-size:11px;background:var(--bg2);border:1px solid var(--border);padding:0 4px;border-radius:3px;color:var(--accent)}
+pre code{background:none;border:none;padding:0;color:inherit}
+
+.note{padding:14px 18px;border-radius:8px;margin:16px 0;font-size:12px;line-height:1.6;border:1px solid}
+.n-blue{background:var(--accentLt);border-color:rgba(56,139,253,0.4);color:var(--accent2)}
+.n-green{background:var(--greenLt);border-color:rgba(63,185,80,0.4);color:var(--green)}
+.n-amber{background:var(--amberLt);border-color:rgba(210,153,34,0.4);color:var(--amber)}
+.n-purple{background:var(--purpleLt);border-color:rgba(188,140,255,0.4);color:var(--purple)}
+.note strong{color:inherit}
+
+.fcol{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:16px 0}
+.fbox{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 18px}
+.fbox h4{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--accent);margin:0 0 8px}
+
+ul{padding-left:16px;margin:8px 0}li{margin-bottom:4px;font-size:12px;color:var(--text2)}li strong{color:var(--text)}
+
+.foot{text-align:center;padding:36px 0;font-family:var(--mono);font-size:11px;color:var(--text3)}
+.foot a{color:var(--accent);text-decoration:none}
+
+@media(max-width:768px){.hero h1{font-size:28px}.kpi-row,.g2,.g3,.fcol{grid-template-columns:1fr}.page{padding:0 18px}nav .inner{padding:10px 18px}}
+</style>
+</head>
+<body>
+
+<nav><div class="inner">
+<span class="brand">Output Reference</span>
+<a href="#how">Overview</a>
+<a href="#cursor">.cursor/</a>
+<a href="#mcp">MCPs at runtime</a>
+<a href="#agents">Agents</a>
+<a href="#rules">Rules (always-on)</a>
+<a href="#skills">Skills (on-demand)</a>
+<a href="#contexts">contexts/</a>
+<a href="#config">Config splits</a>
+<a href="#runtime">Runtime artifacts</a>
+<a href="#tools">Tools</a>
+<a href="#claude">.claude/ (also)</a>
+</div></nav>
+
+<div class="page">
+
+<div class="hero">
+<div class="chip">Output reference</div>
+<h1>The <code>.cursor/</code> &amp; <code>contexts/</code> folders <em>explained</em></h1>
+<p class="desc">A guided tour of <strong>.cursor/</strong> (the host folder Cursor reads) and <strong>contexts/</strong> (host-agnostic runtime data, configuration, and tools). Covers what's always loaded into every agent run vs what's loaded on demand. Claude Code users — see the brief note at the end; the model is identical, only the file format differs. For install commands and pack authoring, see the companion doc <em>Agent Team — Packs &amp; Install</em>.</p>
+<div class="kpi-row">
+<div class="kpi"><b>9</b><span>Agents</span></div>
+<div class="kpi"><b>~5</b><span>Always-on rules</span></div>
+<div class="kpi"><b>~42</b><span>On-demand skills</span></div>
+<div class="kpi"><b>5</b><span>Config splits</span></div>
+</div>
+</div>
+
+
+<!-- 01 OUTPUT FOLDERS OVERVIEW -->
+<div class="s" id="how">
+<div class="s-tag">Overview</div>
+<h2>Two folders, two loading patterns</h2>
+<p class="lead">After install, your project has two new top-level folders to know about: <code>.cursor/</code> (Cursor reads agents, rules, skills from here) and <code>contexts/</code> (host-agnostic runtime data, configuration, tools). Inside <code>.cursor/</code>, two loading patterns matter — <strong>rules are always-on</strong> (injected into every agent run automatically), <strong>skills are on-demand</strong> (loaded by an agent only when it needs them).</p>
+
+<div class="dia dia-wide">
+<div class="dia-bar"><i style="background:var(--accent)"></i><span>.cursor/ + contexts/ · always-on rules + on-demand skills</span></div>
+<svg viewBox="0 0 1120 620" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;background:#0d1117;font-family:'IBM Plex Mono',ui-monospace,monospace">
+
+  <!-- ===== .CURSOR LAYER ===== -->
+  <text x="30" y="30" font-size="13" fill="#58a6ff" letter-spacing="1.5" font-weight="600">.cursor/  ·  HOST FOLDER · what Cursor reads on every agent invocation</text>
+
+  <rect x="30" y="48" width="1090" height="280" fill="#161b22" stroke="#58a6ff" stroke-width="1.5" rx="6"/>
+  <text x="46" y="72" font-size="20" font-weight="600" fill="#58a6ff">.cursor/</text>
+
+  <!-- agents/ -->
+  <rect x="60" y="92" width="320" height="220" fill="#1c2333" stroke="#ff7b72" stroke-width="1" rx="6"/>
+  <text x="76" y="114" font-size="14" font-weight="600" fill="#e6edf3">agents/   · 9 prompts</text>
+  <text x="76" y="134" font-size="11" fill="#6e7681" font-style="italic">invoked by you · @&lt;name&gt;.md trigger</text>
+  <text x="76" y="158" font-size="12" fill="#8b949e">project-analyzer.md</text>
+  <text x="76" y="174" font-size="12" fill="#8b949e">orchestrator.md</text>
+  <text x="76" y="190" font-size="12" fill="#8b949e">explorer.md</text>
+  <text x="76" y="206" font-size="12" fill="#8b949e">surgeon.md</text>
+  <text x="76" y="222" font-size="12" fill="#8b949e">ac-e2e-check.md</text>
+  <text x="76" y="238" font-size="12" fill="#8b949e">review.md</text>
+  <text x="76" y="254" font-size="12" fill="#8b949e">ship.md</text>
+  <text x="76" y="274" font-size="12" fill="#bc8cff">subagent-amender.md</text>
+  <text x="76" y="290" font-size="12" fill="#bc8cff">subagent-image-analysis.md</text>
+
+  <!-- rules/ -->
+  <rect x="395" y="92" width="320" height="220" fill="#1c2333" stroke="#3fb950" stroke-width="1" rx="6"/>
+  <text x="411" y="114" font-size="14" font-weight="600" fill="#3fb950">rules/   · ALWAYS-ON</text>
+  <text x="411" y="134" font-size="11" fill="#6e7681" font-style="italic">.mdc with alwaysApply: true</text>
+  <text x="411" y="148" font-size="11" fill="#6e7681" font-style="italic">→ Cursor injects into EVERY agent run</text>
+  <text x="411" y="172" font-size="12" fill="#e6edf3" font-weight="600">Kernel rule</text>
+  <text x="411" y="188" font-size="12" fill="#8b949e">agent-flow.mdc</text>
+  <text x="425" y="202" font-size="10" fill="#6e7681">cross-agent flow · path resolution</text>
+  <text x="425" y="214" font-size="10" fill="#6e7681">build-report contract · gates</text>
+  <text x="411" y="238" font-size="12" fill="#e6edf3" font-weight="600">Pack rules (myproj-*.mdc)</text>
+  <text x="411" y="254" font-size="12" fill="#8b949e">myproj-project-scope.mdc</text>
+  <text x="411" y="270" font-size="12" fill="#8b949e">myproj-naming-*.mdc</text>
+  <text x="411" y="286" font-size="12" fill="#8b949e">myproj-placement-*.mdc</text>
+  <text x="411" y="302" font-size="12" fill="#8b949e">myproj-{layer}-postverify.mdc</text>
+
+  <!-- skills/ -->
+  <rect x="730" y="92" width="375" height="220" fill="#1c2333" stroke="#d29922" stroke-width="1" rx="6"/>
+  <text x="746" y="114" font-size="14" font-weight="600" fill="#d29922">skills/   · ON-DEMAND</text>
+  <text x="746" y="134" font-size="11" fill="#6e7681" font-style="italic">flat .md files · loaded by agent ONLY when needed</text>
+  <text x="746" y="158" font-size="12" fill="#e6edf3" font-weight="600">Loaded by Orchestrator</text>
+  <text x="746" y="174" font-size="11" fill="#8b949e">myproj-ticket-schema-*.md (eager pre-flight)</text>
+  <text x="746" y="188" font-size="11" fill="#8b949e">myproj-lld-generator.md (Phase B only)</text>
+  <text x="746" y="202" font-size="11" fill="#8b949e">myproj-ac-templates-intent-aware.md</text>
+  <text x="746" y="222" font-size="12" fill="#e6edf3" font-weight="600">Loaded by Explorer (Bug Mode)</text>
+  <text x="746" y="238" font-size="11" fill="#8b949e">myproj-bug-localization{,-frontend,-backend}.md</text>
+  <text x="746" y="258" font-size="12" fill="#e6edf3" font-weight="600">Loaded by Surgeon (per task)</text>
+  <text x="746" y="274" font-size="11" fill="#8b949e">myproj-{layer}-standards.md</text>
+  <text x="746" y="288" font-size="11" fill="#6e7681" font-style="italic">resolved via skills.layer_map</text>
+  <text x="746" y="305" font-size="11" fill="#8b949e">myproj-accessibility · myproj-test-standards · ...</text>
+
+  <!-- ===== CONTEXTS LAYER ===== -->
+  <text x="30" y="362" font-size="13" fill="#3fb950" letter-spacing="1.5" font-weight="600">contexts/  ·  RUNTIME · CONFIGURATION · TOOLS · host-agnostic</text>
+
+  <rect x="30" y="380" width="1090" height="210" fill="#161b22" stroke="#3fb950" stroke-width="1.5" rx="6"/>
+  <text x="46" y="404" font-size="20" font-weight="600" fill="#3fb950">contexts/</text>
+
+  <!-- 4 internal columns -->
+  <text x="46" y="430" font-size="13" font-weight="600" fill="#e6edf3">Project files</text>
+  <text x="46" y="448" font-size="11" fill="#8b949e">project-map.md</text>
+  <text x="46" y="462" font-size="11" fill="#8b949e">project-context.md</text>
+  <text x="46" y="476" font-size="11" fill="#8b949e">ticket-input.md</text>
+  <text x="46" y="494" font-size="10" fill="#6e7681" font-style="italic">team-shared catalog +</text>
+  <text x="46" y="507" font-size="10" fill="#6e7681" font-style="italic">prose context + offline fallback</text>
+
+  <text x="296" y="430" font-size="13" font-weight="600" fill="#e6edf3">config/</text>
+  <text x="296" y="448" font-size="11" fill="#8b949e">5 split YAMLs:</text>
+  <text x="296" y="462" font-size="11" fill="#8b949e">pipeline.&lt;pack&gt;.yaml (core)</text>
+  <text x="296" y="476" font-size="11" fill="#8b949e">.skills · .builds · .analyzer</text>
+  <text x="296" y="490" font-size="11" fill="#8b949e">.e2e.test · _catalog.md</text>
+  <text x="296" y="507" font-size="10" fill="#6e7681" font-style="italic">machine config · agents read</text>
+  <text x="296" y="520" font-size="10" fill="#6e7681" font-style="italic">these on every run</text>
+
+  <text x="546" y="430" font-size="13" font-weight="600" fill="#e6edf3">tools/</text>
+  <text x="546" y="448" font-size="11" fill="#8b949e">install.mjs · validate.mjs</text>
+  <text x="546" y="462" font-size="11" fill="#8b949e">split-pipeline.mjs</text>
+  <text x="546" y="476" font-size="11" fill="#8b949e">mcp-sample-generator.mjs</text>
+  <text x="546" y="490" font-size="11" fill="#8b949e">help.mjs · vendor/js-yaml.mjs</text>
+  <text x="546" y="507" font-size="10" fill="#6e7681" font-style="italic">5 Node scripts · vendored deps</text>
+
+  <text x="816" y="430" font-size="13" font-weight="600" fill="#e6edf3">Runtime data</text>
+  <text x="816" y="448" font-size="11" fill="#8b949e">&lt;epic-lower&gt;/  per ticket:</text>
+  <text x="816" y="462" font-size="11" fill="#8b949e">  LLD · exploration · manifest</text>
+  <text x="816" y="476" font-size="11" fill="#8b949e">  review · build reports</text>
+  <text x="816" y="490" font-size="11" fill="#8b949e">standalone/  ad-hoc outputs</text>
+  <text x="816" y="507" font-size="10" fill="#6e7681" font-style="italic">populated by agents · build</text>
+  <text x="816" y="520" font-size="10" fill="#6e7681" font-style="italic">reports commit with PR</text>
+
+  <!-- Column dividers in contexts box -->
+  <line x1="276" y1="416" x2="276" y2="575" stroke="#30363d" stroke-width="1" stroke-dasharray="2,3"/>
+  <line x1="526" y1="416" x2="526" y2="575" stroke="#30363d" stroke-width="1" stroke-dasharray="2,3"/>
+  <line x1="796" y1="416" x2="796" y2="575" stroke="#30363d" stroke-width="1" stroke-dasharray="2,3"/>
+</svg>
+</div>
+
+<div class="note n-blue"><strong>Two loading patterns to remember:</strong>
+<br>(1) <strong>Rules</strong> in <code>.cursor/rules/</code> are <em>always-on</em>. The <code>alwaysApply: true</code> frontmatter tells Cursor to inject every rule file into every agent run, automatically. You don't choose which rules apply — they all do, every time.
+<br>(2) <strong>Skills</strong> in <code>.cursor/skills/</code> are <em>on-demand</em>. Each agent's pre-flight resolves which skills it needs (from <code>contexts/config/pipeline.&lt;pack&gt;.skills.yaml</code>) and reads them — Orchestrator loads the LLD generator only at Phase B; Surgeon loads layer skills per-task; Explorer loads bug skills only in Bug Mode.</div>
+</div>
+
+
+<!-- 02 .cursor/ TREE -->
+<div class="s" id="cursor">
+<div class="s-tag">Cursor host output</div>
+<h2>The <code>.cursor/</code> folder</h2>
+<p class="lead">The Cursor host folder. Cursor reads agents from <code>.cursor/agents/</code>, rules from <code>.cursor/rules/</code> (auto-injecting any with <code>alwaysApply: true</code>), and skills from <code>.cursor/skills/</code> (loaded on demand by agents).</p>
+
+<pre><code>.cursor/
+├── agents/                              ← agent prompts (host invokes via @&lt;name&gt;.md)
+│   ├── project-analyzer.md              Step 0 — codebase scan → project-map.md
+│   ├── orchestrator.md                  Step 1/5 — JIRA → 3-file LLD + branch
+│   ├── explorer.md                      Step 2/5 — codebase-map sync, reuse + IPs
+│   ├── surgeon.md                       Step 3/5 — per-task implementation loop
+│   ├── ac-e2e-check.md                  Step 3.5 — browser AC verification (optional)
+│   ├── review.md                        Step 4/5 — build + AC compliance + blast radius
+│   ├── ship.md                          Step 5/5 — commit + PR + JIRA transitions
+│   ├── subagent-amender.md              kernel subagent — fires at orchestrator_amend_request
+│   └── subagent-image-analysis.md       kernel subagent — fires inside Orchestrator A0.6
+│
+├── rules/                               ← .mdc with alwaysApply: true → injected every run
+│   ├── agent-flow.mdc                   kernel: cross-agent flow rules (path resolution,
+│   │                                    build report contract, gate behavior)
+│   └── &lt;pack&gt;-*.mdc                     pack: project standards (naming, placement,
+│                                        imports, postverify per layer)
+│
+└── skills/                              ← .md files loaded on demand by agents
+    ├── &lt;pack&gt;-lld-generator.md          Orchestrator · Phase B only
+    ├── &lt;pack&gt;-ticket-schema-{story,bug}.md   Orchestrator · pre-flight (eager)
+    ├── &lt;pack&gt;-ac-templates-intent-aware.md   Orchestrator · eager v16+
+    ├── &lt;pack&gt;-bug-localization*.md      Explorer · Bug Mode
+    ├── &lt;pack&gt;-{layer}-standards.md      Surgeon · per-task by skills.layer_map
+    ├── &lt;pack&gt;-accessibility.md          Surgeon · cross-layer (a11y)
+    ├── &lt;pack&gt;-test-standards.md         Surgeon + Review
+    └── ...                              other utility skills</code></pre>
+
+<div class="g3">
+<div class="c"><div class="ct" style="color:var(--coral)">9 agents</div><p>Same agent set whatever host you install to. Cursor invokes them with <code>@&lt;name&gt;.md &lt;trigger&gt;</code>. Plain triggers route via <code>agent-flow.mdc</code> but can be flaky.</p></div>
+<div class="c"><div class="ct" style="color:var(--coral)">Rules format</div><p>Cursor uses <code>.mdc</code> with frontmatter. <code>alwaysApply: true</code> tells Cursor to inject the rule into every agent run — that's how kernel + pack standards reach every agent.</p></div>
+<div class="c"><div class="ct" style="color:var(--teal)">Skills loading</div><p>Skills are flat <code>.md</code> files. Agents read them on demand (Orchestrator's LLD-generator at Phase B; Surgeon's layer skills per task; Explorer's bug-localization in Bug Mode).</p></div>
+</div>
+
+<h3>Agent invocation — triggers</h3>
+
+<h4>Pipeline mode (ticket end-to-end)</h4>
+<pre><code>@orchestrator.md Work on PROJ-1234           # Phase C gate: Amend / Go / Cancel
+@explorer.md Run the explorer                # gate
+@surgeon.md Run the surgeon                  # gate
+@ac-e2e-check.md Demo PROJ-1234              # OPTIONAL · browser AC verification
+@review.md Run the review                    # gate  (or: --slim for fast check)
+@ship.md Ship it                             # commit + PR + JIRA</code></pre>
+
+<h4>At Orchestrator's Phase C gate — user responses</h4>
+<pre><code>Go                                           # proceed to Explorer
+Amend: &lt;what to change&gt;                      # fires Amender subagent · section-level LLD edits
+Cancel                                       # halt pipeline</code></pre>
+
+<h4>Standalone mode (no ticket)</h4>
+<pre><code># Explorer
+@explorer.md Research: how does X work?      # codebase research
+@explorer.md Explore: &lt;task spec&gt;             # ad-hoc exploration
+
+# Surgeon  (caps: ≤5 files, ≤150 lines)
+@surgeon.md Apply: &lt;spec&gt; in &lt;files&gt;          # small direct change
+@surgeon.md Implement:                       # AC-driven, ≤5 ACs
+  - AC1: ...
+  - AC2: ...
+
+# Review
+@review.md Review changes                    # diff-only (code quality)
+@review.md Review PROJ-1234                  # AC coverage against existing ticket
+@review.md Review against:                   # inline ACs
+  - AC1: ...
+
+# AC-E2E-Check
+@ac-e2e-check.md Demo &lt;URL&gt;                   # ad-hoc browser walkthrough
+@ac-e2e-check.md Verify: &lt;scenario&gt;</code></pre>
+
+<h3>Runtime flags — add to any pipeline trigger</h3>
+
+<table>
+<tr><th>Flag</th><th>Effect</th><th>You provide</th></tr>
+<tr><td><code>--offline</code></td><td>Skip ALL MCPs (Atlassian + GitHub + Figma)</td><td><code>contexts/ticket-input.md</code> filled in + images attached</td></tr>
+<tr><td><code>--skip atlassian</code></td><td>Skip JIRA/Confluence MCP only</td><td><code>ticket-input.md</code> OR inline <code>Context:</code> block</td></tr>
+<tr><td><code>--skip figma</code></td><td>Skip Figma MCP only</td><td>Drag-drop design images into chat</td></tr>
+<tr><td><code>--skip github</code></td><td>Skip GitHub MCP only</td><td>Usually nothing — rarely on critical path</td></tr>
+<tr><td><code>--skip atlassian,figma</code></td><td>Skip multiple MCPs (comma-separated)</td><td>ticket-input.md + images</td></tr>
+<tr><td><code>--only github</code></td><td>Use ONLY GitHub, skip Atlassian + Figma</td><td>ticket-input.md + images</td></tr>
+<tr><td><code>--slim</code> (Review only)</td><td>Fast integration check — skips per-task checklist</td><td>—</td></tr>
+</table>
+
+<h4>Example — offline trigger with local content</h4>
+<pre><code># 1. Edit the input file ONCE
+vim contexts/ticket-input.md
+# Fill: title, summary, ACs, in/out of scope
+
+# 2. Drag 1-3 design screenshots into the Cursor chat
+
+# 3. Trigger with --offline
+@orchestrator.md Work on PROJ-1234 --offline
+
+# Orchestrator reads ticket-input.md + attached images · no network calls
+# Saves ~15-40K tokens vs full MCP run</code></pre>
+
+<h4>Example — selective skip</h4>
+<pre><code># Have JIRA ticket open already; want Figma + GitHub but skip Atlassian
+@orchestrator.md Work on PROJ-1234 --skip atlassian
+# → Orchestrator reads ticket-input.md; still uses Figma + GitHub MCPs</code></pre>
+
+<h3>Inline enrichment — one-shot context per trigger</h3>
+
+<h4>Reference ticket (pattern match)</h4>
+<pre><code>@orchestrator.md Work on PROJ-1234 — reference: PROJ-100
+# Orchestrator loads PROJ-100's LLD as a pattern reference
+# If GitHub MCP is connected, also fetches PROJ-100's merged PR diff
+
+@surgeon.md Implement: — reference: PROJ-100
+  - AC1: ...
+
+@review.md Review PROJ-1234 against pattern PROJ-100</code></pre>
+
+<h4>Image attachments (designs / screenshots)</h4>
+<pre><code># Drag image into the Cursor chat input, then trigger normally
+@orchestrator.md Work on PROJ-1234        # ← with 1-3 images attached
+# Orchestrator spawns subagent-image-analysis for each image
+# Returns compact visual_spec (~3K) · raw bytes stay out of context</code></pre>
+
+<h4>Inline <code>Context:</code> block</h4>
+<pre><code>@orchestrator.md Work on PROJ-1234 --offline Context:
+Title: Add entitlement filter to cert list
+ACs:
+  AC1: Dropdown appears between search bar and status filter
+  AC2: Selection persists on reload (session storage)
+In scope: UI filter + session storage
+Out of scope: backend (endpoint exists)
+Epic: PROJ-1200</code></pre>
+
+<div class="note n-blue"><strong>Caps:</strong> 1 reference ticket + up to 3 images per run. Over cap → Orchestrator uses the first matches and notes the rest as skipped in the Active Context block.</div>
+</div>
+
+
+<!-- 02b MCPs AT RUNTIME -->
+<div class="s" id="mcp">
+<div class="s-tag">MCPs at runtime</div>
+<h2>How agents use MCPs — and what happens when they fail</h2>
+<p class="lead">Three MCP servers extend the pipeline's reach: Atlassian (JIRA + Confluence), GitHub, and Figma. Agents consume them at specific pre-flight phases. <strong>All three are optional</strong> — every agent has a graceful fallback. For how to initially connect each MCP to your IDE, see the <em>Packs &amp; Install</em> doc's MCP section.</p>
+
+<h3>What each MCP unlocks per agent</h3>
+
+<table>
+<tr><th>MCP</th><th>Used by</th><th>Auto-discovers / fetches at runtime</th></tr>
+<tr><td><strong>Atlassian</strong><br>(JIRA + Confluence)</td><td>Orchestrator · Review · Ship</td><td><strong>Orchestrator:</strong> fetches the JIRA ticket + Confluence HLD + sibling LLDs; auto-discovers reference tickets via <code>jira.reference_link_types</code>; fetches JIRA image attachments.<br><strong>Review:</strong> pattern comparison against reference ticket's LLD.<br><strong>Ship:</strong> JIRA transitions on PR open (e.g. In Progress → In Review).</td></tr>
+<tr><td><strong>GitHub</strong></td><td>Orchestrator · Explorer · Review · Ship</td><td><strong>Orchestrator:</strong> inspects reference ticket's PR status (merged / open / closed).<br><strong>Explorer:</strong> multi-repo support (follow imports across repos).<br><strong>Review:</strong> fetches reference ticket's merged PR diff for pattern fidelity comparison.<br><strong>Ship:</strong> creates the PR.</td></tr>
+<tr><td><strong>Figma</strong></td><td>Orchestrator only</td><td>Fetches structured frame data from Figma URLs referenced in the JIRA description (component tree, spacing, states, copy). Falls back to drag-drop image attachments.</td></tr>
+</table>
+
+<h3>Graceful fallback — what happens when an MCP isn't available</h3>
+
+<table>
+<tr><th>Setup</th><th>Behavior</th></tr>
+<tr><td>No MCPs configured, no explicit trigger</td><td>Standard pipeline unchanged. Uses local files only (<code>ticket-input.md</code>, prose context). Requires full local content upfront.</td></tr>
+<tr><td>MCPs configured, no explicit flag</td><td>Auto-discovered enrichment flows through all 5 phases. Orchestrator probes each MCP; uses whatever responds healthy.</td></tr>
+<tr><td>MCPs configured, explicit <code>--skip</code> / <code>--offline</code></td><td>Respected — specific MCPs skipped. Fallback sources used (file + inline + images).</td></tr>
+<tr><td>MCP probe succeeds but runtime call fails mid-way</td><td>Inline recovery gate fires (see below) — <em>no re-trigger needed</em>.</td></tr>
+<tr><td>Reference ticket pack mismatch</td><td>Warn + proceed without the reference. Pipeline never halts over enrichment.</td></tr>
+</table>
+
+<h3>MCP failure → inline recovery gate</h3>
+<p style="font-size:13px;color:var(--text2)">If an MCP probe succeeds at pre-flight but the runtime call fails (OAuth token expired, network timeout, rate-limited, server down), Orchestrator opens a gate in the same conversation. You answer it inline — no need to abort and re-trigger.</p>
+
+<h4>Atlassian failure</h4>
+<pre><code>⚠ Atlassian MCP failed to connect — OAuth token expired (403 Unauthorized)
+
+JIRA ticket content for PROJ-1234 can't be fetched automatically. Pick one:
+
+  1. retry    — Try connecting again (fix your MCP token, then reply `retry`)
+  2. inline   — Reply with "Context:" + ticket summary + ACs, I'll parse as JIRA
+  3. file     — Fill contexts/ticket-input.md, then reply `continue`
+  4. skip     — Proceed with whatever local content exists
+  5. cancel   — Exit; re-trigger when MCP is back
+
+> 👉 Pick one:</code></pre>
+
+<h4>Figma failure</h4>
+<pre><code>⚠ Figma MCP failed — network timeout
+2 Figma URL(s) referenced in ticket can't be fetched.
+
+Pick one:
+  1. retry    — Try again
+  2. upload   — Drag design image(s) into chat, reply `continue`
+  3. skip     — Continue with URL-only Visual Spec (weaker Phase B biasing)
+  4. cancel   — Exit
+
+> 👉 Pick one:</code></pre>
+
+<div class="note n-green"><strong>Silent degradation</strong> — the gate does NOT fire when the failure is immaterial: Figma down but ticket has no Figma URLs; Atlassian down but <code>ticket-input.md</code> is pre-filled; GitHub down and no reference ticket declared. Orchestrator notes the skipped probe in the Active Context block and proceeds.</div>
+
+<h3>The Active Context block — what Orchestrator tells you about MCPs</h3>
+<p style="font-size:13px;color:var(--text2)">Every Orchestrator pre-flight prints an Active Context block showing which MCPs were used, skipped, degraded, or recovered. Read it when something surprises you — it always reports what actually drove the run.</p>
+
+<pre><code>┌─ Active Context — Orchestrator ────────────────────────┐
+│ Ticket:  PROJ-1234 · Story                             │
+│ MCPs:    atlassian ✓ · github ✓ · figma ✗              │
+│          figma degraded → using 2 uploaded images      │
+│ Input:   JIRA ✓ · trigger attachments ✓ (2 images)     │
+│ Skills:  myproj-ticket-schema-story ✓                  │
+│          myproj-ac-templates-intent-aware ✓            │
+│          myproj-lld-generator (Phase B only)           │
+└────────────────────────────────────────────────────────┘</code></pre>
+
+<p style="font-size:12px;color:var(--text3);font-style:italic">Status markers: ✓ healthy · ✗ failed/skipped · degraded → &lt;recovery method&gt; · skipped (&lt;--flag or reason&gt;). If you see <code>→ recovered via &lt;method&gt;</code>, the failure gate fired and your fallback (inline / file / upload) was applied.</p>
+
+<h3>When to use a flag vs let the gate handle it</h3>
+<table>
+<tr><th>Situation</th><th>Recommended approach</th></tr>
+<tr><td>MCP works normally; you want to save tokens or keep content private</td><td><code>--skip &lt;name&gt;</code> upfront — cleaner, no gate</td></tr>
+<tr><td>MCP typically works, occasionally flakes</td><td>Default trigger. When it flakes, answer the gate</td></tr>
+<tr><td>MCP down for extended time (org-wide outage)</td><td><code>--offline</code> or <code>--skip atlassian,figma</code> to avoid gate-per-story</td></tr>
+<tr><td>Content is sensitive; don't want MCP calls at all</td><td>Fill <code>ticket-input.md</code>, attach images, use <code>--offline</code></td></tr>
+</table>
+
+<div class="note n-purple"><strong>Why this design:</strong> you don't have to predict MCP outages. Default triggers work most of the time. If something breaks, you handle it in the same conversation — no need to abort, re-configure, and re-trigger.</div>
+</div>
+
+
+<!-- 04 contexts/ TREE -->
+<div class="s" id="contexts">
+<div class="s-tag">Host-agnostic runtime</div>
+<h2>The <code>contexts/</code> folder</h2>
+<p class="lead">Always written. Holds three things: <strong>configuration</strong> (machine-read at every agent run), <strong>tools</strong> (the install / validate / split scripts), and <strong>runtime data</strong> (project-wide context + per-ticket artifacts produced by the agents). Same shape regardless of host.</p>
+
+<pre><code>contexts/
+├── README.md                            primary reference for this folder
+├── project-map.md                       Project Analyzer Step 0 output (12 sections)
+│                                        ↳ commit this to your repo · shared by team
+├── project-context.md                   YOU edit this — team prose context
+│                                        ↳ team boundaries, active migrations, norms
+├── ticket-input.md                      offline / --skip atlassian fallback (you edit)
+│
+├── config/                              machine config — split YAMLs (commit these)
+│   ├── pipeline.&lt;pack&gt;.yaml             core: runtime, jira, mcp_servers, subagents
+│   ├── pipeline.&lt;pack&gt;.skills.yaml      layer_map, orchestrator/explorer skills
+│   ├── pipeline.&lt;pack&gt;.builds.yaml      build commands, runner, review_gate, i18n
+│   ├── pipeline.&lt;pack&gt;.analyzer.yaml    shared_paths, scan_exclusions, rescan_hints
+│   ├── pipeline.&lt;pack&gt;.e2e.test.yaml    demo.* (browser auth, framework, routes)
+│   ├── pipeline.&lt;pack&gt;.readme.md        per-team editing guide (recipes)
+│   ├── ticket-input.template.md         blank template you copy per ticket
+│   ├── mcp.sample.json                  starter MCP server config
+│   ├── mcp.sample.README.md             per-host MCP setup instructions
+│   └── _catalog.md                      auto-generated layer map catalog (validator)
+│
+├── tools/                               operational scripts (vendored js-yaml)
+│   ├── install.mjs                      this installer — re-run for upgrades
+│   ├── validate.mjs                     10 config checks · regenerates _catalog.md
+│   ├── split-pipeline.mjs               monolithic seed ⇄ 5 split YAMLs
+│   ├── mcp-sample-generator.mjs         writes mcp.sample.json + README
+│   ├── help.mjs                         command reference
+│   ├── README.md                        tool reference
+│   └── vendor/js-yaml.mjs               vendored — no `npm install` needed
+│
+├── &lt;epic-lower&gt;/                        per-ticket artifacts (runtime, gitignored)
+│   ├── codebase-map.md                  Explorer maintains · per epic
+│   ├── epic-context.md                  Orchestrator + Review · per epic
+│   ├── PROJ-1234.md                     Requirement Summary + ACs + Companion index
+│   ├── PROJ-1234-lld.md                 PART 1 Design + PART 2 Tasks
+│   ├── PROJ-1234-testplan.md            PART 3 Test Plan + PART 4 Test Tasks
+│   ├── PROJ-1234-exploration.md         Explorer's task annotation summary
+│   ├── PROJ-1234-manifest.md            Surgeon's per-task change rows
+│   ├── PROJ-1234-review.md              Review verdict + epic-context append
+│   ├── PROJ-1234-surgeon-build.md       Surgeon's final build verdict (front-matter + tail_30)
+│   ├── PROJ-1234-review-build.md        only if Review re-ran the build
+│   └── PROJ-1234-demo-build.md          only if AC-E2E ran a build
+│
+├── standalone/                          ad-hoc outputs (no ticket)
+│   ├── standalone-exploration-{ts}.md
+│   ├── standalone-manifest-{ts}.md
+│   ├── standalone-review-{ts}.md
+│   └── ...
+│
+└── archive/                             on-demand · old ticket-input files</code></pre>
+
+<div class="note n-blue"><strong>What to commit, what to gitignore:</strong> commit <code>project-map.md</code>, <code>project-context.md</code>, all 5 <code>config/pipeline.&lt;pack&gt;.*.yaml</code> files, and <code>config/_catalog.md</code> — these are team-shared. Per-ticket artifacts (<code>&lt;epic&gt;/*</code>) and <code>standalone/*</code> are usually gitignored, but Ship commits the build report files (<code>*-build.md</code>) along with the diff so the PR has the verdict trail.</div>
+
+<h3>Three lifecycle zones</h3>
+<table>
+<tr><th>Zone</th><th>Lifecycle</th><th>Who writes it</th><th>Commit?</th></tr>
+<tr><td><strong>Project-wide</strong> (top of <code>contexts/</code>)</td><td>One per project · rescanned on drift</td><td>Project Analyzer (auto) + you (prose)</td><td>YES</td></tr>
+<tr><td><strong>Configuration</strong> (<code>contexts/config/</code>)</td><td>Edited as the project evolves</td><td>You (manual) + Project Analyzer (auto blocks)</td><td>YES</td></tr>
+<tr><td><strong>Per-ticket runtime</strong> (<code>contexts/&lt;epic&gt;/</code>)</td><td>Per ticket · grows as pipeline runs</td><td>Every agent</td><td>Build reports YES, rest typically NO</td></tr>
+</table>
+
+<h3>First-time setup</h3>
+<pre><code># 1. Tech lead / architect runs Project Analyzer ONCE per project
+@project-analyzer.md Analyze project
+# Takes 5-15 min · produces contexts/project-map.md + auto-fills 5 split YAMLs
+
+# 2. Edit contexts/project-context.md with team-specific prose context
+
+# 3. Commit both to repo so the team shares the catalog
+
+# 4. Each developer copies contexts/config/mcp.sample.json into their personal MCP config
+#    (see contexts/config/mcp.sample.README.md for per-host paths)</code></pre>
+</div>
+
+
+<!-- 05 AGENTS -->
+<div class="s" id="agents">
+<div class="s-tag">agents/ inventory</div>
+<h2>The 9 agent prompts</h2>
+<p class="lead">Same files in <code>.cursor/agents/</code> and <code>.claude/agents/</code>. The agent prompts are host-agnostic — only rules + skills format differ between hosts.</p>
+
+<table>
+<tr><th>File</th><th>Step</th><th>Reads</th><th>Writes</th></tr>
+<tr><td><code>project-analyzer.md</code></td><td>0 (one-time)</td><td>Codebase tree, build configs, package files, test patterns</td><td><code>contexts/project-map.md</code> + auto-blocks in 5 split YAMLs</td></tr>
+<tr><td><code>orchestrator.md</code></td><td>1/5</td><td>JIRA ticket, project-map, epic-context, ticket schema + LLD generator + AC templates skills, optional images via image-analysis subagent</td><td>3-file LLD: <code>$CONTEXTS_FILE</code> + <code>$LLD_FILE</code> + <code>$TESTPLAN_FILE</code> + branch</td></tr>
+<tr><td><code>explorer.md</code></td><td>2/5</td><td><code>$LLD_FILE</code> PART 2, codebase-map, project-map, git log since <code>last_synced_at</code>. Bug mode: <code>skills.explorer.bug_*</code></td><td><code>$EXPLORATION_FILE</code> + synced <code>codebase-map.md</code></td></tr>
+<tr><td><code>surgeon.md</code></td><td>3/5</td><td><code>$EXPLORATION_FILE</code>, <code>$LLD_FILE</code> PART 2, <code>$TESTPLAN_FILE</code> PART 4, target files, layer skills per task</td><td>Code (uncommitted) + <code>$MANIFEST_FILE</code> + <code>$SURGEON_BUILD_REPORT</code></td></tr>
+<tr><td><code>ac-e2e-check.md</code></td><td>3.5 (optional)</td><td>Enriched AC Registry, <code>$LLD_FILE</code> PART 2, <code>demo.*</code> config</td><td>Browser verdicts + gap-task additions + optional <code>$DEMO_BUILD_REPORT</code></td></tr>
+<tr><td><code>review.md</code></td><td>4/5</td><td>Git diff, <code>$MANIFEST_FILE</code>, <code>$LLD_FILE</code>, <code>$SURGEON_BUILD_REPORT</code> (freshness-checked)</td><td><code>$REVIEW_FILE</code> + <code>$EPIC_CONTEXT</code> append + <code>$REVIEW_BUILD_REPORT</code> (only if re-ran)</td></tr>
+<tr><td><code>ship.md</code></td><td>5/5</td><td>All <code>*_BUILD_REPORT</code> front-matters, <code>$REVIEW_FILE</code>, <code>$MANIFEST_FILE</code>, <code>$LLD_FILE</code></td><td>Git commit + PR + JIRA transitions + codebase-map metadata bump</td></tr>
+<tr><td><code>subagent-amender.md</code></td><td>kernel subagent</td><td>3 LLD files + amendment text</td><td>Targeted section edits + version bump + amendment log</td></tr>
+<tr><td><code>subagent-image-analysis.md</code></td><td>kernel subagent</td><td>Pipeline.yaml core + analyzer.yaml + raw image bytes</td><td>Compact <code>visual_spec</code> (~3K) returned to Orchestrator</td></tr>
+</table>
+</div>
+
+
+<!-- 06 RULES -->
+<div class="s" id="rules">
+<div class="s-tag">rules/ inventory</div>
+<h2>Rules — <em>always loaded</em> into every agent run</h2>
+<p class="lead">Every <code>.mdc</code> file in <code>.cursor/rules/</code> with <code>alwaysApply: true</code> in its frontmatter is auto-injected by Cursor at the start of every agent invocation. You don't pick which rules apply — they all do, every time. The kernel ships one (<code>agent-flow.mdc</code>); the pack adds project-specific standards (naming, placement, imports, postverify per layer).</p>
+
+<table>
+<tr><th>File</th><th>Source</th><th>Purpose</th></tr>
+<tr><td><code>agent-flow.mdc</code></td><td>Kernel</td><td>Cross-agent rules: path resolution (Procedure B), companion file contracts, build report contract, gate behavior, mode detection</td></tr>
+<tr><td><code>myproj-project-scope.mdc</code></td><td>Pack: myproj</td><td>Tech stack, repo boundary, allowed/forbidden build commands, ticket prefix (<code>PROJ-XXXX</code>), source paths</td></tr>
+<tr><td><code>myproj-file-placement.mdc</code></td><td>Pack: myproj</td><td>Where new files go — shared vs feature, module registration, package structure</td></tr>
+<tr><td><code>myproj-naming-conventions.mdc</code></td><td>Pack: myproj</td><td>File, class, method, variable, i18nMessages key naming rules</td></tr>
+<tr><td><code>myproj-import-patterns.mdc</code></td><td>Pack: myproj</td><td>Import / require / module registration patterns per layer (AngularJS / Angular18 / Java)</td></tr>
+<tr><td><code>myproj-{java,angularjs,angular18}-postverify.mdc</code></td><td>Pack: myproj</td><td>Surgeon post-build verification per layer — invariants Surgeon must check after each task</td></tr>
+</table>
+
+<div class="note n-amber"><strong>Format difference:</strong> in <code>.cursor/rules/</code> these are <code>.mdc</code> with <code>alwaysApply: true</code> in frontmatter. In <code>.claude/rules/</code> they're <code>.md</code> with that frontmatter stripped (Claude Code auto-loads all rules in the folder).</div>
+</div>
+
+
+<!-- 07 SKILLS -->
+<div class="s" id="skills">
+<div class="s-tag">skills/ inventory</div>
+<h2>Skills — <em>loaded on demand</em>, only when needed</h2>
+<p class="lead">Skills in <code>.cursor/skills/</code> are NOT auto-injected. Each agent's pre-flight resolves which skills it needs (from <code>contexts/config/pipeline.&lt;pack&gt;.skills.yaml</code>) and reads them into its own context — keeping the rest out. This is how the LLD generator stays out of every non-Orchestrator agent, why Surgeon only loads the layer skill matching the current task, and why Bug Mode skills don't pollute Story Mode runs.</p>
+
+<table>
+<tr><th>Category</th><th>Files (myproj pack)</th><th>Loaded by · when</th></tr>
+<tr><td><strong>LLD generation</strong></td><td><code>myproj-lld-generator.md</code></td><td>Orchestrator · Phase B (synthesize_lld) only</td></tr>
+<tr><td><strong>Ticket schemas</strong></td><td><code>myproj-ticket-schema-story.md</code> · <code>myproj-ticket-schema-bug.md</code></td><td>Orchestrator · pre-flight (eager)</td></tr>
+<tr><td><strong>AC templates</strong></td><td><code>myproj-ac-templates-intent-aware.md</code></td><td>Orchestrator · pre-flight (eager v16+)</td></tr>
+<tr><td><strong>Bug localization</strong></td><td><code>myproj-bug-localization.md</code> + <code>-frontend</code> + <code>-backend</code></td><td>Explorer · Bug Mode only</td></tr>
+<tr><td><strong>Layer coding standards</strong></td><td><code>myproj-{java,rest-api,angularjs,angular18,extjs,xhtml}-standards.md</code></td><td>Surgeon · per-task by <code>skills.layer_map</code></td></tr>
+<tr><td><strong>Cross-layer</strong></td><td><code>myproj-accessibility.md</code> · <code>myproj-test-standards.md</code> · <code>myproj-security-secrets.md</code></td><td>Surgeon + Review · when applicable</td></tr>
+<tr><td><strong>Utilities</strong></td><td><code>alias-taxonomy.md</code> · <code>epic-context-strategy.md</code> · <code>epic-e2e-plan-template.md</code></td><td>Various · framework-level helpers</td></tr>
+</table>
+
+<div class="note n-green"><strong>Layer resolution</strong> — Surgeon picks which skill to load per task two ways: (A) by file path against <code>path_glob</code> in <code>skills.layer_map</code>, (B) by the LLD's <code>Layer:</code> field normalized through <code>aliases:</code>. Takes the union. Run <code>node contexts/tools/validate.mjs --update-catalog</code> to regenerate <code>contexts/config/_catalog.md</code> showing the live mapping.</div>
+</div>
+
+
+<!-- 08 CONFIG SPLITS -->
+<div class="s" id="config">
+<div class="s-tag">contexts/config/ — 5 split YAMLs</div>
+<h2>Why split, and what each file owns</h2>
+<p class="lead">The pack ships one monolithic <code>pipeline.&lt;pack&gt;.yaml</code> seed. The installer splits it into 5 sibling files at <code>contexts/config/</code> — each agent only loads the splits it needs. Per-agent token savings: ~10K each (Orchestrator skips builds.yaml, AC-E2E-Check skips skills.yaml, etc.).</p>
+
+<table>
+<tr><th>File</th><th>Owns these top-level keys</th><th>Loaded by</th></tr>
+<tr><td><code>pipeline.&lt;pack&gt;.yaml</code> (core)</td><td><code>meta · project · runtime · jira · mcp_servers · subagents · intent_classification</code></td><td>Every agent</td></tr>
+<tr><td><code>pipeline.&lt;pack&gt;.skills.yaml</code></td><td><code>skills.layer_map · skills.orchestrator · skills.explorer · skills.extra_triggers</code></td><td>Orchestrator, Explorer, Surgeon, Review, Project-Analyzer</td></tr>
+<tr><td><code>pipeline.&lt;pack&gt;.builds.yaml</code></td><td><code>builds.commands · builds.forbidden · builds.runner · builds.review_gate · builds.tests · builds.review_test_suite · component_structure · operation_patterns · i18n</code></td><td>Surgeon, Review, AC-E2E-Check</td></tr>
+<tr><td><code>pipeline.&lt;pack&gt;.analyzer.yaml</code></td><td><code>shared_paths · scan_exclusions · explorer_paths · rescan_hints · component_naming · analyzer_ignore</code></td><td>Project-Analyzer, Explorer, Orchestrator</td></tr>
+<tr><td><code>pipeline.&lt;pack&gt;.e2e.test.yaml</code></td><td><code>demo.*</code> (browser auth, E2E framework, routes, credentials)</td><td>AC-E2E-Check</td></tr>
+</table>
+
+<h3>Section ownership (matters for upgrade merges)</h3>
+<table>
+<tr><th>Section</th><th>Source of truth</th><th>Behavior on <code>--merge-config</code></th></tr>
+<tr><td><code>skills.*</code> · <code>builds.*</code> · <code>jira.*</code> · <code>subagents.*</code></td><td><strong>Pack-owned</strong></td><td>Replaced by new pack version</td></tr>
+<tr><td><code>shared_paths · operation_patterns · i18n · component_naming</code></td><td><strong>Project-Analyzer-owned</strong></td><td>Preserved (your dev's edits + analyzer's auto-fills are kept)</td></tr>
+<tr><td><code>runtime.* · mcp_servers</code></td><td><strong>You-owned</strong> (start from pack defaults)</td><td>Preserved if you've customized</td></tr>
+</table>
+
+<div class="note n-amber"><strong>Edit pattern:</strong> always edit the split files at <code>contexts/config/</code> — that's the source of truth. The validator merges them at runtime. (For pack-author tools that produce a unified view of all 5 splits, see the companion <em>Packs &amp; Install</em> doc.)</div>
+</div>
+
+
+<!-- 09 RUNTIME ARTIFACTS -->
+<div class="s" id="runtime">
+<div class="s-tag">Per-ticket runtime artifacts</div>
+<h2>What the agents write while they work</h2>
+<p class="lead">Each ticket produces a small folder of artifacts under <code>contexts/&lt;epic-lower&gt;/</code> (when <code>runtime.contexts_layout.nested_by_epic: true</code>, the default). Files on disk carry state between agents — that's the staged/artifact-driven design.</p>
+
+<table>
+<tr><th>File</th><th>Variable</th><th>Written by</th><th>Purpose</th></tr>
+<tr><td><code>PROJ-1234.md</code></td><td><code>$CONTEXTS_FILE</code></td><td>Orchestrator</td><td>Requirement Summary · Enriched AC Registry · Companion Files index · Visual Specification</td></tr>
+<tr><td><code>PROJ-1234-lld.md</code></td><td><code>$LLD_FILE</code></td><td>Orchestrator</td><td>PART 1 Design (UseCases, Implementation, Button Intents, Constraints, Amendment Log) + PART 2 Tasks (T1..Tn, AC-Matrix, Dependency Graph)</td></tr>
+<tr><td><code>PROJ-1234-testplan.md</code></td><td><code>$TESTPLAN_FILE</code></td><td>Orchestrator</td><td>PART 3 Test Plan + PART 4 Test Tasks (T-TC1..T-TCn)</td></tr>
+<tr><td><code>PROJ-1234-exploration.md</code></td><td><code>$EXPLORATION_FILE</code></td><td>Explorer</td><td>Task Annotation Summary · per-file insertion points · reuse flags · smart-read budgets</td></tr>
+<tr><td><code>PROJ-1234-manifest.md</code></td><td><code>$MANIFEST_FILE</code></td><td>Surgeon</td><td>Per-task change rows · files touched · skip log</td></tr>
+<tr><td><code>PROJ-1234-review.md</code></td><td><code>$REVIEW_FILE</code></td><td>Review</td><td>Build verdict · per-task code review · AC compliance · blast radius · ship-ready</td></tr>
+<tr><td><code>PROJ-1234-surgeon-build.md</code></td><td><code>$SURGEON_BUILD_REPORT</code></td><td>Surgeon</td><td>Final build verdict · YAML front-matter (status, command, duration_s) + tail_30</td></tr>
+<tr><td><code>PROJ-1234-review-build.md</code></td><td><code>$REVIEW_BUILD_REPORT</code></td><td>Review</td><td>Only when Review re-ran the build (Surgeon's report wasn't fresh)</td></tr>
+<tr><td><code>PROJ-1234-demo-build.md</code></td><td><code>$DEMO_BUILD_REPORT</code></td><td>AC-E2E-Check</td><td>Only when <code>demo.pre_verify.run_build: true</code></td></tr>
+<tr><td><code>codebase-map.md</code></td><td><code>$CODEBASE_MAP</code></td><td>Explorer</td><td>Per-epic shared catalog · Mode A creates, Mode B syncs every story</td></tr>
+<tr><td><code>epic-context.md</code></td><td><code>$EPIC_CONTEXT</code></td><td>Orchestrator (creates) · Review (appends per story)</td><td>Decisions log + reuse catalog · feeds into next story's Orchestrator</td></tr>
+</table>
+
+<h3>Standalone outputs (no ticket)</h3>
+<pre><code>contexts/standalone/
+├── standalone-exploration-{ts}.md       @explorer.md Research: / Explore:
+├── standalone-manifest-{ts}.md          @surgeon.md Apply: (≤5 files / ≤150 lines)
+├── standalone-ac-manifest-{ts}.md       @surgeon.md Implement: + bullets (≤5 ACs)
+├── standalone-review-{ts}.md            @review.md Review changes
+├── standalone-ticket-review-{ts}.md     @review.md Review &lt;TICKET&gt;
+├── standalone-ac-review-{ts}.md         @review.md Review against: + bullets
+└── standalone-demo-{ts}.md              @ac-e2e-check.md Demo &lt;URL&gt;</code></pre>
+</div>
+
+
+<!-- 10 TOOLS -->
+<div class="s" id="tools">
+<div class="s-tag">contexts/tools/ — operational scripts</div>
+<h2>The 5 tools shipped under <code>tools/</code></h2>
+<p class="lead">Five Node.js scripts that ship inside <code>contexts/tools/</code>. They use a vendored <code>js-yaml</code> (at <code>contexts/tools/vendor/js-yaml.mjs</code>) so they work in any project with Node 18+ — no separate dependency install required.</p>
+
+<table>
+<tr><th>File</th><th>Purpose</th></tr>
+<tr><td><code>install.mjs</code></td><td>The installer itself — also used for upgrades. Detailed flags + recipes live in the companion <em>Packs &amp; Install</em> doc.</td></tr>
+<tr><td><code>validate.mjs</code></td><td>10 checks across the 5 split YAMLs: schema version, YAML parse, section collisions, layer resolution, alias collisions, file references for skills/rules/agents. <code>--update-catalog</code> regenerates <code>_catalog.md</code>.</td></tr>
+<tr><td><code>split-pipeline.mjs</code></td><td>Converts between the monolithic pack seed and the 5 runtime splits. <code>merge</code> writes a throwaway combined file for review; <code>split</code> is rare (only when a pack author edited the seed).</td></tr>
+<tr><td><code>mcp-sample-generator.mjs</code></td><td>Reads <code>mcp_servers:</code> from config, writes <code>config/mcp.sample.json</code> + per-host setup README. Each developer copies into their personal MCP config.</td></tr>
+<tr><td><code>help.mjs</code></td><td>Quick command reference.</td></tr>
+</table>
+
+<div class="note n-purple"><strong>What lives in <code>vendor/</code>:</strong> only <code>js-yaml.mjs</code>. Vendoring keeps the tools self-contained — agents and tools work without a separate dependency install in the target project.</div>
+</div>
+
+
+<!-- 11 CLAUDE CODE (BRIEF APPENDIX) -->
+<div class="s" id="claude">
+<div class="s-tag">Claude Code (also)</div>
+<h2>Same model in <code>.claude/</code>, just a different file format</h2>
+<p class="lead">Everything above describes the Cursor host. Claude Code works exactly the same way — same 9 agents, same always-on rules, same on-demand skills, same <code>contexts/</code> folder. Only the file format / packaging differs in the host folder.</p>
+
+<pre><code>.claude/
+├── agents/    ← byte-identical to .cursor/agents/ (host-agnostic prompts)
+├── rules/     ← .md (renamed from .mdc) · alwaysApply: stripped
+│              ↳ Claude Code auto-loads ALL rules in this folder — no frontmatter needed
+└── skills/    ← &lt;name&gt;/SKILL.md (dir-per-skill, Claude Code packaging)
+               ↳ same skill content as .cursor — just wrapped in a folder per skill</code></pre>
+
+<h3>Format diff at a glance</h3>
+<table>
+<tr><th>Concern</th><th>.cursor/</th><th>.claude/</th></tr>
+<tr><td>Agents</td><td><code>agents/&lt;name&gt;.md</code></td><td><code>agents/&lt;name&gt;.md</code> (identical)</td></tr>
+<tr><td>Rules extension</td><td><code>.mdc</code></td><td><code>.md</code> (renamed)</td></tr>
+<tr><td>Rules frontmatter</td><td><code>alwaysApply: true</code> preserved</td><td>Stripped — Claude Code auto-loads all</td></tr>
+<tr><td>Skills layout</td><td>Flat: <code>skills/&lt;name&gt;.md</code></td><td>Dir-per-skill: <code>skills/&lt;name&gt;/SKILL.md</code></td></tr>
+<tr><td>Trigger reliability</td><td><code>@&lt;agent&gt;.md</code> recommended</td><td>Both <code>@&lt;agent&gt;.md</code> and plain work</td></tr>
+<tr><td>Stop hook (post-agent notification)</td><td>Not supported</td><td>Optional via install flag</td></tr>
+<tr><td><code>contexts/</code></td><td>Identical</td><td>Identical</td></tr>
+</table>
+
+<h3>Both hosts on the same project</h3>
+<p style="font-size:13px;color:var(--text2)">A project can have both <code>.cursor/</code> and <code>.claude/</code> at the same time — they're independent host folders. The shared <code>contexts/</code> is identical for both:</p>
+<pre><code>your-project/
+├── .cursor/    ← used when you work in Cursor
+├── .claude/    ← used when you work in Claude Code
+└── contexts/   ← shared by both — config + runtime data + tools</code></pre>
+
+<div class="note n-purple"><strong>Mental model:</strong> everything in this doc — the 9 agents, always-on rules, on-demand skills, the <code>contexts/</code> tree — applies to Claude Code unchanged. Just translate the file paths: <code>.cursor/rules/&lt;name&gt;.mdc</code> → <code>.claude/rules/&lt;name&gt;.md</code>, and <code>.cursor/skills/&lt;name&gt;.md</code> → <code>.claude/skills/&lt;name&gt;/SKILL.md</code>. The behavior is the same.</div>
+
+<p style="font-size:12px;color:var(--text3);font-style:italic;margin-top:18px">For how to install one or both hosts, see <em>Agent Team — Packs &amp; Install</em>.</p>
+</div>
+
+
+</div>
+<div class="foot">Output reference · companion to <a href="Agent%20Team%20-%20Pack%20%26%20Install.html">Agent Team — Packs &amp; Install</a> · see also <a href="Agent%20Team.html">Agent Team — Architecture</a></div>
+</body>
+</html>

@@ -1,0 +1,2090 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agent Pipeline — Management Overview</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      :root {
+        --bg: #0d1117;
+        --bg2: #161b22;
+        --bg3: #1c2333;
+        --surface: #1c2333;
+        --surface2: #21283b;
+        --border: #30363d;
+        --border2: #484f58;
+        --text: #e6edf3;
+        --text2: #8b949e;
+        --text3: #6e7681;
+        --accent: #58a6ff;
+        --accent2: #79c0ff;
+        --accentLt: rgba(56, 139, 253, 0.15);
+        --coral: #ff7b72;
+        --coralLt: rgba(255, 123, 114, 0.15);
+        --teal: #3fb950;
+        --tealLt: rgba(63, 185, 80, 0.15);
+        --amber: #d29922;
+        --amberLt: rgba(210, 153, 34, 0.15);
+        --green: #3fb950;
+        --greenLt: rgba(63, 185, 80, 0.15);
+        --blue: #58a6ff;
+        --blueLt: rgba(56, 139, 253, 0.15);
+        --purple: #bc8cff;
+        --purpleLt: rgba(188, 140, 255, 0.15);
+        --mono: "IBM Plex Mono", monospace;
+        --sans: "DM Sans", system-ui, sans-serif;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        font-size: 16px;
+        line-height: 1.75;
+      }
+      .page {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 0 40px;
+      }
+
+      nav {
+        position: sticky;
+        top: 0;
+        z-index: 99;
+        background: rgba(13, 17, 23, 0.92);
+        backdrop-filter: blur(14px);
+        border-bottom: 1px solid var(--border);
+        padding: 0;
+      }
+      nav .inner {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 10px 40px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        overflow-x: auto;
+      }
+      nav .brand {
+        font-family: var(--mono);
+        font-weight: 600;
+        font-size: 12px;
+        color: var(--accent);
+        white-space: nowrap;
+        letter-spacing: -0.3px;
+        flex-shrink: 0;
+      }
+      nav a {
+        font-size: 12px;
+        color: var(--text2);
+        text-decoration: none;
+        white-space: nowrap;
+        transition: color 0.15s;
+      }
+      nav a:hover {
+        color: var(--accent2);
+      }
+
+      /* HERO — big, bold, presentation-style */
+      .hero {
+        padding: 110px 0 80px;
+        border-bottom: 2px solid var(--border);
+      }
+      .chip {
+        display: inline-block;
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--accent);
+        background: var(--accentLt);
+        padding: 6px 14px;
+        border-radius: 100px;
+        margin-bottom: 24px;
+      }
+      .hero h1 {
+        font-size: 58px;
+        font-weight: 800;
+        letter-spacing: -2.5px;
+        line-height: 1.04;
+        margin-bottom: 20px;
+        color: var(--text);
+      }
+      .hero h1 em {
+        font-style: normal;
+        color: var(--accent2);
+      }
+      .hero .desc {
+        font-size: 20px;
+        color: var(--text2);
+        font-weight: 400;
+        max-width: 720px;
+        line-height: 1.5;
+      }
+
+      /* SECTIONS — slide-like spacing */
+      .s {
+        padding: 80px 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .s:last-child {
+        border-bottom: none;
+      }
+      .s-tag {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--accent);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+        font-weight: 600;
+      }
+      .s h2 {
+        font-size: 38px;
+        font-weight: 700;
+        letter-spacing: -1px;
+        margin-bottom: 12px;
+        color: var(--text);
+        line-height: 1.15;
+      }
+      .s h2 em {
+        font-style: normal;
+        color: var(--accent2);
+      }
+      .s .lead {
+        color: var(--text2);
+        font-size: 18px;
+        margin-bottom: 36px;
+        max-width: 720px;
+        line-height: 1.55;
+      }
+      .s h3 {
+        font-size: 19px;
+        font-weight: 700;
+        margin: 30px 0 10px;
+        color: var(--text);
+      }
+
+      /* KPI — big numbers */
+      .kpi-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin: 40px 0 0;
+      }
+      .kpi {
+        text-align: center;
+        padding: 26px 14px;
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+      }
+      .kpi b {
+        font-family: var(--mono);
+        font-size: 32px;
+        font-weight: 600;
+        color: var(--accent);
+        display: block;
+        line-height: 1.1;
+      }
+      .kpi span {
+        font-size: 11px;
+        color: var(--text3);
+        text-transform: uppercase;
+        letter-spacing: 1.4px;
+        margin-top: 4px;
+        display: block;
+      }
+
+      /* CARDS — prominent */
+      .g2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+        margin: 24px 0;
+      }
+      .g3 {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 16px;
+        margin: 24px 0;
+      }
+      .c {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 26px 28px;
+        transition: border-color 0.2s;
+      }
+      .c:hover {
+        border-color: var(--border2);
+      }
+      .c .ct {
+        font-size: 15px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        color: var(--text);
+      }
+      .c p {
+        font-size: 14px;
+        color: var(--text2);
+        line-height: 1.68;
+        margin: 0;
+      }
+      .c .big {
+        font-family: var(--mono);
+        font-size: 28px;
+        font-weight: 600;
+        color: var(--accent);
+        display: block;
+        margin-bottom: 6px;
+      }
+
+      /* BIG CALLOUT — statement-style */
+      .callout {
+        background: linear-gradient(
+          135deg,
+          var(--accentLt),
+          rgba(188, 140, 255, 0.1)
+        );
+        border: 1px solid rgba(56, 139, 253, 0.3);
+        border-radius: 14px;
+        padding: 36px 40px;
+        margin: 28px 0;
+        text-align: center;
+      }
+      .callout .q {
+        font-size: 26px;
+        font-weight: 700;
+        color: var(--text);
+        letter-spacing: -0.5px;
+        line-height: 1.3;
+        margin-bottom: 10px;
+      }
+      .callout .a {
+        font-size: 16px;
+        color: var(--text2);
+      }
+
+      /* PROBLEM/SOLUTION split */
+      .ps {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        margin: 24px 0;
+      }
+      .ps-box {
+        padding: 28px 32px;
+        border-radius: 12px;
+        border: 1px solid;
+      }
+      .ps-problem {
+        background: var(--coralLt);
+        border-color: rgba(255, 123, 114, 0.3);
+      }
+      .ps-solution {
+        background: var(--tealLt);
+        border-color: rgba(63, 185, 80, 0.3);
+      }
+      .ps-box h4 {
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        margin-bottom: 14px;
+        font-weight: 600;
+      }
+      .ps-problem h4 {
+        color: var(--coral);
+      }
+      .ps-solution h4 {
+        color: var(--teal);
+      }
+      .ps-box ul {
+        padding-left: 18px;
+        margin: 0;
+      }
+      .ps-box li {
+        font-size: 14px;
+        margin-bottom: 10px;
+        color: var(--text2);
+        line-height: 1.55;
+      }
+      .ps-box li strong {
+        color: var(--text);
+      }
+
+      /* FLOW — vertical list with trigger commands */
+      .flow {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 28px;
+        margin: 24px 0;
+      }
+      .flow-label {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text3);
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        font-weight: 600;
+        margin: 22px 0 10px;
+      }
+      .flow-label:first-child {
+        margin-top: 0;
+      }
+      .flow-row {
+        display: grid;
+        grid-template-columns: 150px 150px 1fr;
+        gap: 18px;
+        align-items: start;
+        padding: 16px 20px 16px 16px;
+        background: var(--surface);
+        border-radius: 0 8px 8px 0;
+        border-left: 3px solid;
+        margin-bottom: 10px;
+      }
+      .flow-row:last-child {
+        margin-bottom: 0;
+      }
+      .flow-row.fr-setup {
+        border-left-color: var(--purple);
+      }
+      .flow-row.fr-c1 {
+        border-left-color: var(--coral);
+      }
+      .flow-row.fr-c2 {
+        border-left-color: var(--teal);
+      }
+      .flow-row.fr-c3 {
+        border-left-color: var(--amber);
+      }
+      .flow-row.fr-c4 {
+        border-left-color: var(--green);
+      }
+      .flow-row.fr-c5 {
+        border-left-color: var(--blue);
+      }
+      .flow-row .fr-num {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--text3);
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+      }
+      .flow-row .fr-label {
+        font-size: 17px;
+        font-weight: 700;
+        color: var(--text);
+        letter-spacing: -0.2px;
+      }
+      .flow-row .fr-agent {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--accent);
+        padding-top: 16px;
+      }
+      .flow-row .fr-agent-sub {
+        font-family: var(--sans);
+        font-size: 11px;
+        color: var(--text3);
+        margin-top: 2px;
+      }
+      .flow-row .fr-trigger {
+        font-family: var(--mono);
+        font-size: 12px;
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        padding: 6px 10px;
+        border-radius: 4px;
+        display: inline-block;
+        margin-bottom: 8px;
+        color: var(--accent2);
+      }
+      .flow-row .fr-desc {
+        font-size: 13px;
+        color: var(--text2);
+        line-height: 1.58;
+      }
+      .flow-row .fr-gate {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--amber);
+        margin-top: 6px;
+        display: inline-block;
+      }
+      .flow-row .fr-example {
+        font-size: 12.5px;
+        color: var(--text2);
+        line-height: 1.55;
+        margin-top: 10px;
+        padding: 8px 12px;
+        background: var(--bg2);
+        border-left: 3px solid var(--accent);
+        border-radius: 3px;
+      }
+      .flow-row .fr-example .when {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--accent2);
+        margin-bottom: 4px;
+        display: block;
+      }
+      .flow-row .fr-example em {
+        color: var(--text);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+        font-size: 13px;
+      }
+      th {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        padding: 12px 16px;
+        text-align: left;
+        font-weight: 600;
+        color: var(--accent);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-family: var(--mono);
+      }
+      td {
+        border: 1px solid var(--border);
+        padding: 12px 16px;
+        color: var(--text2);
+        vertical-align: top;
+      }
+      td strong {
+        color: var(--text);
+      }
+
+      .note {
+        padding: 20px 26px;
+        border-radius: 10px;
+        margin: 20px 0;
+        font-size: 15px;
+        line-height: 1.6;
+        border: 1px solid;
+      }
+      .n-blue {
+        background: var(--accentLt);
+        border-color: rgba(56, 139, 253, 0.4);
+        color: var(--accent2);
+      }
+      .n-amber {
+        background: var(--amberLt);
+        border-color: rgba(210, 153, 34, 0.4);
+        color: var(--amber);
+      }
+      .n-green {
+        background: var(--greenLt);
+        border-color: rgba(63, 185, 80, 0.4);
+        color: var(--green);
+      }
+
+      /* TIMELINE */
+      .timeline {
+        margin: 24px 0;
+        border-left: 2px solid var(--border);
+        padding-left: 0;
+      }
+      .tl-item {
+        position: relative;
+        padding: 16px 0 16px 36px;
+        margin-left: 14px;
+      }
+      .tl-item::before {
+        content: "";
+        position: absolute;
+        left: -7px;
+        top: 22px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+      .tl-item:last-child::before {
+        background: var(--teal);
+      }
+      .tl-item h4 {
+        font-size: 17px;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 4px;
+      }
+      .tl-item .when {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--accent);
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+      .tl-item p {
+        font-size: 14px;
+        color: var(--text2);
+        line-height: 1.6;
+      }
+
+      .foot {
+        text-align: center;
+        padding: 40px 0;
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text3);
+      }
+      .foot a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      @media (max-width: 768px) {
+        .hero h1 {
+          font-size: 36px;
+        }
+        .hero .desc {
+          font-size: 16px;
+        }
+        .s h2 {
+          font-size: 26px;
+        }
+        .s .lead {
+          font-size: 15px;
+        }
+        .kpi-row,
+        .g2,
+        .g3,
+        .ps {
+          grid-template-columns: 1fr;
+        }
+        .flow-row {
+          grid-template-columns: 1fr;
+          gap: 8px;
+        }
+        .flow-row .fr-agent {
+          padding-top: 0;
+        }
+        .page {
+          padding: 0 20px;
+        }
+        nav .inner {
+          padding: 10px 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <div class="inner">
+        <span class="brand">Management Overview</span>
+        <a href="#problem">Problem</a>
+        <a href="#solution">Solution</a>
+        <a href="#flow">How it works</a>
+        <a href="#context">Context</a>
+        <a href="#cost-benefits">Cost benefits</a>
+        <a href="#outcomes">Outcomes</a>
+        <a href="#flexible">Flexibility</a>
+        <a href="#team">Team</a>
+        <a href="#rollout">Rollout</a>
+        <a href="#ask">Ask</a>
+      </div>
+    </nav>
+
+    <div class="page">
+      <div class="hero">
+        <div class="chip">Executive briefing</div>
+        <h1>
+          From JIRA ticket to pull request — <em>in six approved steps</em>
+        </h1>
+        <p class="desc">
+          An AI-agent SDLC pipeline that encodes our project standards into
+          reusable components, runs story work through a developer-gated flow,
+          and produces an auditable record at every step. Works with the tools
+          the team already uses — Cursor and Claude Code.
+        </p>
+        <div class="kpi-row">
+          <div class="kpi"><b>7+2</b><span>Agents + subagents</span></div>
+          <div class="kpi"><b>~99%</b><span>Build-output savings</span></div>
+          <div class="kpi"><b>4×</b><span>Cheaper amendments</span></div>
+          <div class="kpi"><b>Day-2</b><span>Resume · free</span></div>
+        </div>
+      </div>
+
+      <!-- PROBLEM -->
+      <div class="s" id="problem">
+        <div class="s-tag">The problem</div>
+        <h2>
+          Shipping a single story takes <em>hours of context-switching</em>
+        </h2>
+        <p class="lead">
+          Each story pulls a developer through the same motions: read the
+          ticket, hunt through the codebase for similar work, decide what to
+          reuse, write code, run builds, review diffs, raise the PR. Much of
+          that is repeatable. Almost none of it is reused.
+        </p>
+
+        <div class="ps">
+          <div class="ps-box ps-problem">
+            <h4>What costs us time today</h4>
+            <ul>
+              <li>
+                <strong>Context rebuilt from scratch every ticket.</strong>
+                Project knowledge (shared components, endpoints, conventions)
+                lives only in senior heads.
+              </li>
+              <li>
+                <strong>Similar stories diverge in implementation.</strong> Two
+                developers fix parallel tickets in incompatible ways; code
+                review catches some, not all.
+              </li>
+              <li>
+                <strong
+                  >AI coding tools are either too autonomous or too
+                  generic.</strong
+                >
+                They either ship without review or they don't know our stack's
+                conventions.
+              </li>
+              <li>
+                <strong>No audit trail.</strong> "Why was this built this way?"
+                has no answer beyond a 2-line commit message.
+              </li>
+              <li>
+                <strong>Build output floods the chat.</strong> When a developer
+                pairs with an AI, every build run burns thousands of tokens and
+                slows the next interaction.
+              </li>
+            </ul>
+          </div>
+          <div class="ps-box ps-solution">
+            <h4>What we want instead</h4>
+            <ul>
+              <li>
+                <strong>Project knowledge captured once</strong>, applied
+                consistently across every story by every developer.
+              </li>
+              <li>
+                <strong>The developer controls every step.</strong> AI does the
+                repeatable work; human approves at every gate.
+              </li>
+              <li>
+                <strong>A written record at every stage</strong> — design,
+                exploration, implementation, review — committed alongside the
+                code.
+              </li>
+              <li>
+                <strong>Tight cost control.</strong> Agents read only what they
+                need; build output stays on disk, not in the conversation.
+              </li>
+              <li>
+                <strong>Stack-portable.</strong> Works on our Java project
+                today, can be swapped to a new stack tomorrow without rewriting
+                the engine.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- SOLUTION -->
+      <div class="s" id="solution">
+        <div class="s-tag">The solution</div>
+        <h2>
+          A <em>gated agent pipeline</em> — one command starts, six gates
+          deliver a PR
+        </h2>
+        <p class="lead">
+          Seven AI agents collaborate through a staged pipeline. Each agent has
+          one job, reads the previous agent's output from disk, produces its own
+          artifact, and hands off through a user-approval gate. No agent
+          proceeds without explicit human authorization.
+        </p>
+
+        <div class="g3">
+          <div class="c">
+            <div class="ct" style="color: var(--coral)">Specialization</div>
+            <p>
+              Each agent has a narrow role — planning, exploring, implementing,
+              verifying, reviewing, shipping. Narrow roles stay focused; no one
+              agent tries to do everything.
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--teal)">Developer-gated</div>
+            <p>
+              Six approval gates, one per stage. The developer reviews each
+              artifact and types the next command — nothing runs autonomously
+              for hours.
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--amber)">Artifact-driven</div>
+            <p>
+              Every stage writes its output to a file committed with the code.
+              Day-2 resume is free — the next agent reads the file, not a chat
+              history.
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--green)">Project-aware</div>
+            <p>
+              Project Analyzer scans the codebase once; the resulting catalog
+              informs every downstream agent — on every ticket, for every
+              developer, consistently.
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--blue)">Auditable</div>
+            <p>
+              Every decision — the LLD, exploration notes, code manifest, review
+              verdict, build reports — is a file in the PR. Reviewable,
+              searchable, historically accurate.
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--purple)">
+              Dual-host - Inprogress
+            </div>
+            <p>
+              The same pipeline runs in Cursor and Claude Code. Developers
+              choose their tool; the pipeline doesn't lock us into one vendor.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- HOW IT WORKS -->
+      <div class="s" id="flow">
+        <div class="s-tag">How it works</div>
+        <h2>Each stage has a <em>named agent</em> and a clear trigger</h2>
+        <p class="lead">
+          One setup stage (run once per project, by the tech lead) plus five
+          story stages (per ticket, by the developer). Each stage is a
+          specialized agent, invoked by typing the trigger shown below.
+        </p>
+
+        <div class="flow">
+          <div class="flow-label">Stage 0 · one-time setup (tech lead)</div>
+
+          <div class="flow-row fr-setup">
+            <div>
+              <div class="fr-num">Setup</div>
+              <div class="fr-label">Analyze</div>
+            </div>
+            <div class="fr-agent">
+              project-analyzer
+              <div class="fr-agent-sub">setup agent</div>
+            </div>
+            <div>
+              <div class="fr-trigger">@project-analyzer.md Analyze project</div>
+              <div class="fr-desc">
+                Scans the codebase once. Produces
+                <code>contexts/project-map.md</code> — the project catalog (tech
+                stack, shared components, REST endpoints, build commands).
+                Committed to the repo so the whole team reuses it.
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-label">Stages 1–5 · per ticket (developer)</div>
+
+          <div class="flow-row fr-c1">
+            <div>
+              <div class="fr-num">Stage 1 / 5</div>
+              <div class="fr-label">Plan</div>
+            </div>
+            <div class="fr-agent">
+              orchestrator
+              <div class="fr-agent-sub">plan agent</div>
+            </div>
+            <div>
+              <div class="fr-trigger">@orchestrator.md Work on PROJ-1234</div>
+              <div class="fr-desc">
+                Reads the JIRA ticket. Writes the Low-Level Design, task list,
+                and test plan. Presents a summary and pauses.
+              </div>
+              <div class="fr-gate">
+                ⏸ gate · developer replies: Go / Amend: &lt;text&gt; / Cancel
+              </div>
+              <div class="fr-example">
+                <span class="when"
+                  >Walkthrough · 00:00 → 00:10 · PROJ-1234 "Add entitlement
+                  filter to certification list"</span
+                >
+                Developer types <code>Work on PROJ-1234</code> with a Figma
+                design attached. Orchestrator reads the JIRA ticket, fetches the
+                Confluence HLD, extracts the Figma design, writes a 4-part LLD,
+                presents a summary.
+                <em>Developer reviews, types <strong>Go</strong>.</em>
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-row fr-c2">
+            <div>
+              <div class="fr-num">Stage 2 / 5</div>
+              <div class="fr-label">Explore</div>
+            </div>
+            <div class="fr-agent">
+              explorer
+              <div class="fr-agent-sub">explore agent</div>
+            </div>
+            <div>
+              <div class="fr-trigger">@explorer.md Run the explorer</div>
+              <div class="fr-desc">
+                Finds existing code worth reusing. Names the exact insertion
+                points for each task. Prevents duplicate components.
+              </div>
+              <div class="fr-gate">⏸ gate · developer reviews and approves</div>
+              <div class="fr-example">
+                <span class="when">Walkthrough · 00:10 → 00:20</span>
+                Explorer syncs the epic codebase map. Finds an existing
+                <code>sp-date-picker</code> directive a prior story created —
+                flags the matching task as "modify existing" rather than "create
+                new." Saves an hour of redundant work.
+                <em>Developer reviews, approves.</em>
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-row fr-c3">
+            <div>
+              <div class="fr-num">Stage 3 / 5</div>
+              <div class="fr-label">Implement</div>
+            </div>
+            <div class="fr-agent">
+              surgeon
+              <div class="fr-agent-sub">implement agent</div>
+            </div>
+            <div>
+              <div class="fr-trigger">@surgeon.md Run the surgeon</div>
+              <div class="fr-desc">
+                Writes code one task at a time. Lint + unit tests per task. One
+                full build at the end. Never commits — that's Ship's job.
+              </div>
+              <div class="fr-gate">⏸ gate · developer reviews and approves</div>
+              <div class="fr-example">
+                <span class="when">Walkthrough · 00:20 → 01:10</span>
+                Nine tasks done in dependency order. Lint + unit tests per task.
+                Final full build passes.
+                <em>Developer reviews the change manifest, approves.</em>
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-row fr-c4">
+            <div>
+              <div class="fr-num">Stage 4 / 5</div>
+              <div class="fr-label">Review</div>
+            </div>
+            <div class="fr-agent">
+              review
+              <div class="fr-agent-sub">review agent</div>
+            </div>
+            <div>
+              <div class="fr-trigger">@review.md Run the review</div>
+              <div class="fr-desc">
+                Runs the full build and per-layer test suites. Checks AC
+                compliance and blast radius. Produces a ship-ready verdict.
+              </div>
+              <div class="fr-gate">⏸ gate · developer reviews and approves</div>
+              <div class="fr-example">
+                <span class="when">Walkthrough · 01:10 → 01:20</span>
+                Reuses Surgeon's build verdict. Runs per-layer test suites. All
+                5 ACs pass. Blast radius LOW. Flags one "weak test" —
+                <em
+                  >developer types <strong>Fix</strong>, then
+                  <strong>Ship it</strong>.</em
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-row fr-c5">
+            <div>
+              <div class="fr-num">Stage 5 / 5</div>
+              <div class="fr-label">Ship</div>
+            </div>
+            <div class="fr-agent">
+              ship
+              <div class="fr-agent-sub">ship agent</div>
+            </div>
+            <div>
+              <div class="fr-trigger">@ship.md Ship it</div>
+              <div class="fr-desc">
+                Verifies every build verdict. Commits. Opens the PR with build
+                verdicts attached. Transitions the JIRA ticket. Done.
+              </div>
+              <div class="fr-example">
+                <span class="when">Walkthrough · 01:20 → 01:25</span>
+                Ship reviews all build verdicts (all PASS).
+                <em>Developer picks commit strategy + confirms push.</em> PR
+                opens with the build-verdict table, AC compliance, and blast
+                radius. JIRA transitions In Progress → In Review. Done.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="callout">
+          <div class="q">
+            One command to start it. Everything after is short approvals.
+          </div>
+          <div class="a">
+            The developer types
+            <strong>@orchestrator.md Work on PROJ-1234</strong> — then types a
+            short approval at each gate (<strong>Go</strong>,
+            <strong>Proceed</strong>, <strong>Fix</strong>,
+            <strong>Ship it</strong>), or <strong>Amend: &lt;text&gt;</strong>
+            when something needs a change. No other complex commands required.
+          </div>
+        </div>
+
+        <div class="note n-blue" style="margin-top: 16px">
+          <strong
+            >Total time from kick-off to PR on the PROJ-1234 walkthrough above:
+            ~90 minutes.</strong
+          >
+          The developer spent this time reviewing and approving — not writing
+          code, not searching the codebase, not running builds. The same story
+          without the pipeline typically takes 3–6 hours of active work plus
+          context-switching. Quality becomes consistent across developers
+          because every ticket goes through the same gated flow.
+        </div>
+      </div>
+      <!-- CONTEXT MANAGEMENT -->
+      <div class="s" id="context">
+        <div class="s-tag">How context scales across an epic</div>
+        <h2>
+          One epic, many stories — <em>context stays compact automatically</em>
+        </h2>
+        <p class="lead">
+          A 15-story epic doesn't mean every story pays for 15 stories' worth of
+          reading. The pipeline keeps an <strong>epic-context.md</strong> file
+          per epic — a compact running ledger of what every prior story built,
+          decided, and discovered. Each new story reads one small file instead
+          of hunting across 15 JIRA tickets, 15 Confluence pages, and the whole
+          codebase. Token cost stays flat; insight grows linearly.
+        </p>
+
+        <div class="kpi-row" style="margin-top: 18px; margin-bottom: 24px">
+          <div class="kpi">
+            <b>~300</b
+            ><span
+              >Tokens per shipped story (compact summary in epic-context)</span
+            >
+          </div>
+          <div class="kpi">
+            <b>~92%</b
+            ><span>Savings vs re-reading every sibling's full LLD</span>
+          </div>
+          <div class="kpi">
+            <b>~60</b
+            ><span
+              >Token coverage header — tells you at a glance what's
+              covered</span
+            >
+          </div>
+          <div class="kpi">
+            <b>~5K</b
+            ><span>Story 15's steady-state read (full 14-sibling context)</span>
+          </div>
+        </div>
+
+        <h3>The three context sources for every story</h3>
+        <p style="font-size: 14px; color: var(--text2); margin-bottom: 14px">
+          When a developer types <code>Work on PROJ-1234</code>, the
+          Orchestrator pulls context from three places — but only the parts that
+          actually matter for this story. Nothing is re-fetched that already
+          lives in local files.
+        </p>
+
+        <div class="g3">
+          <div class="c">
+            <div class="ct" style="color: var(--accent)">
+              📁 epic-context.md <em>— the ledger</em>
+            </div>
+            <p>
+              One file per epic. Contains a coverage header (<em
+                >"9 of 13 stories · 1 HLD · 2 spike docs · drift in sync"</em
+              >) plus a compact row for every sibling with
+              <strong
+                >Files created / modified · pattern used · decisions · what's
+                reusable</strong
+              >. Every row is capped at ~300 tokens — the pipeline writes it,
+              the pipeline reads it back.<br /><br />
+              <em
+                >Read cost for story 15: ~5K tokens total (all 14 siblings).</em
+              >
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--accent)">
+              📐 project-context.md <em>— the standards</em>
+            </div>
+            <p>
+              Stack, shared components, conventions, build commands — the
+              one-time answer to "how does this project work?" Loaded on every
+              run; refreshed by a separate analyzer agent when the codebase
+              changes materially. <br /><br />
+              <em>Read cost: ~2-3K tokens, stable across all stories.</em>
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--accent)">
+              🎯 This story's ticket <em>— the ask</em>
+            </div>
+            <p>
+              JIRA ticket description + acceptance criteria, Confluence HLD
+              (linked once), Figma design (if attached). The only content
+              fetched fresh per story — everything else is reused from local
+              files.<br /><br />
+              <em>Read cost: ~3-5K tokens, varies by ticket size.</em>
+            </p>
+          </div>
+        </div>
+
+        <h3 style="margin-top: 28px">
+          How sibling-story context gets pulled in
+        </h3>
+        <p style="font-size: 14px; color: var(--text2); margin-bottom: 14px">
+          When a sibling story isn't in epic-context (it shipped via a regular
+          PR, or was started outside the pipeline), a lightweight
+          <strong>drift check</strong> catches it. The pipeline doesn't read
+          every sibling's full design doc — it sorts siblings by JIRA status and
+          applies different strategies per bucket.
+          <em
+            >"Is the content stable enough to read, or is it still
+            churning?"</em
+          >
+          is the question that decides.
+        </p>
+
+        <table>
+          <tr>
+            <th>Sibling's JIRA status</th>
+            <th>Pipeline behavior</th>
+            <th>Token cost</th>
+          </tr>
+          <tr>
+            <td>
+              <strong>In review / Ready for testing</strong><br />
+              <em style="font-size: 12px; color: var(--text2)"
+                >design locked, code stable</em
+              >
+            </td>
+            <td>
+              Pull the Confluence LLD, compress to a ~300-token summary, append
+              to epic-context.md with a <code>Source:</code> marker. Explorer
+              also checks the open PR branch for file-level overlap with this
+              story's tasks.
+            </td>
+            <td>
+              ~1K one-time, then ~300 tokens cached in epic-context for future
+              stories
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <strong>In development / In progress</strong><br />
+              <em style="font-size: 12px; color: var(--text2)"
+                >still churning</em
+              >
+            </td>
+            <td>
+              Flag it in the drift warning (<em
+                >"coordinate with author — may conflict"</em
+              >) but <strong>don't read the LLD</strong>. Content is volatile;
+              reading it would pollute epic-context with a half-written design.
+              Explorer counts the branch but skips the diff.
+            </td>
+            <td>~0 — just a warning line</td>
+          </tr>
+          <tr>
+            <td>
+              <strong>Done / Merged</strong><br />
+              <em style="font-size: 12px; color: var(--text2)">shipped</em>
+            </td>
+            <td>
+              Pull the LLD if Confluence has one — compact summary into
+              epic-context. If no LLD exists (regular PR, no design doc),
+              surface it in a separate "<em>shipped — no LLD available</em>"
+              section so the developer knows to inspect commits or reference the
+              ticket explicitly. Code is already in the repo —
+              <code>git pull</code>
+              picks it up.
+            </td>
+            <td>~1K if LLD exists · free if it doesn't (relies on git)</td>
+          </tr>
+          <tr>
+            <td>
+              <strong>Backlog / grooming / rejected</strong><br />
+              <em style="font-size: 12px; color: var(--text2)"
+                >planning or cancelled</em
+              >
+            </td>
+            <td>
+              <strong>Skipped entirely.</strong> Not a real sibling — no read,
+              no scan, no warning. Keeps the drift warning signal-to-noise high.
+            </td>
+            <td>~0</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- COST BENEFITS -->
+      <div class="s" id="cost-benefits">
+        <div class="s-tag">Cost benefits</div>
+        <h2>
+          Traditional AI vs the pipeline —
+          <em>cost per story, across the epic</em>
+        </h2>
+        <p class="lead">
+          Traditional chat-based AI re-pastes HLD + sibling LLDs + code into
+          every turn, so cost grows story after story. The pipeline carries
+          context in files, so cost stays flat. Same 15 stories, same work, very
+          different bills — the table below shows the divergence. Numbers at
+          Claude Sonnet API pricing, medium story throughout.
+        </p>
+
+        <!-- Side-by-side characterization -->
+        <div class="g2" style="margin-top: 20px">
+          <div class="c" style="border-left: 3px solid var(--coral)">
+            <div class="ct" style="color: var(--coral)">
+              💬 Traditional AI usage
+            </div>
+            <p
+              style="font-size: 13px; color: var(--text2); margin: 6px 0 10px 0"
+            >
+              Developer chats with AI. No memory between sessions.
+            </p>
+            <ul
+              style="
+                font-size: 12.5px;
+                color: var(--text2);
+                margin: 0;
+                padding-left: 18px;
+                line-height: 1.6;
+              "
+            >
+              <li>Re-pastes ticket + HLD + siblings into every chat</li>
+              <li>Each turn re-sends the bloated context again</li>
+              <li>Story 10 burns ~500K tokens in a single chat</li>
+              <li>Story 15 bursts past 1M on retries</li>
+            </ul>
+          </div>
+          <div class="c" style="border-left: 3px solid var(--accent)">
+            <div class="ct" style="color: var(--accent)">
+              📁 Pipeline (artifact-driven)
+            </div>
+            <p
+              style="font-size: 13px; color: var(--text2); margin: 6px 0 10px 0"
+            >
+              Agents write to files; next agent reads only its slice.
+            </p>
+            <ul
+              style="
+                font-size: 12.5px;
+                color: var(--text2);
+                margin: 0;
+                padding-left: 18px;
+                line-height: 1.6;
+              "
+            >
+              <li>
+                Epic-context.md holds every sibling as a ~300-token summary
+              </li>
+              <li>No re-pasting — pipeline reads what it wrote before</li>
+              <li>Cost stays flat at ~80K tokens per story</li>
+              <li>No context burst, no missed siblings, no HLD drift</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Where the savings come from: epic-context.md per agent -->
+        <h3 style="margin-top: 28px">
+          How epic-context.md saves tokens — per agent, per story
+        </h3>
+        <p style="font-size: 13px; color: var(--text2); margin: 6px 0 14px 0">
+          The savings aren't magic — each pipeline agent reads the
+          <strong>epic-context.md</strong> ledger instead of re-loading the HLD,
+          sibling LLDs, and the codebase from scratch. Here's what each agent
+          skips on every story after the first.
+        </p>
+
+        <div class="g3" style="margin-top: 6px">
+          <div class="c" style="border-left: 3px solid var(--accent2)">
+            <div class="ct" style="color: var(--accent2)">🧭 Orchestrator</div>
+            <p
+              style="
+                font-size: 12.5px;
+                color: var(--text2);
+                margin: 6px 0 8px 0;
+              "
+            >
+              <em
+                >Caches HLD + every shipped sibling as 300-token summaries.</em
+              >
+            </p>
+            <ul
+              style="
+                font-size: 12.5px;
+                color: var(--text2);
+                margin: 0;
+                padding-left: 18px;
+                line-height: 1.6;
+              "
+            >
+              <li>
+                Without it: re-reads HLD (~15K) + every sibling LLD (~3K each)
+                every story
+              </li>
+              <li>
+                With epic-context: ~3K cached read, regardless of how many
+                siblings shipped
+              </li>
+              <li>
+                <strong style="color: var(--accent)"
+                  >Saves ~25K on story 2 → ~470K on story 15</strong
+                >
+              </li>
+            </ul>
+          </div>
+          <div class="c" style="border-left: 3px solid var(--accent2)">
+            <div class="ct" style="color: var(--accent2)">🔍 Explorer</div>
+            <p
+              style="
+                font-size: 12.5px;
+                color: var(--text2);
+                margin: 6px 0 8px 0;
+              "
+            >
+              <em
+                >Caches the epic codebase map — components, hooks, directives
+                already created.</em
+              >
+            </p>
+            <ul
+              style="
+                font-size: 12.5px;
+                color: var(--text2);
+                margin: 0;
+                padding-left: 18px;
+                line-height: 1.6;
+              "
+            >
+              <li>Without it: full repo scan (~50K) every single story</li>
+              <li>
+                With cache: incremental delta only (~8K) — just what changed
+                since last story
+              </li>
+              <li>
+                <strong style="color: var(--accent)"
+                  >Saves ~40K flat per story · ~560K across the epic</strong
+                >
+              </li>
+            </ul>
+          </div>
+          <div class="c" style="border-left: 3px solid var(--accent2)">
+            <div class="ct" style="color: var(--accent2)">✅ Review</div>
+            <p
+              style="
+                font-size: 12.5px;
+                color: var(--text2);
+                margin: 6px 0 8px 0;
+              "
+            >
+              <em
+                >Reuses prior verdicts, AC compliance map, and blast-radius
+                baseline.</em
+              >
+            </p>
+            <ul
+              style="
+                font-size: 12.5px;
+                color: var(--text2);
+                margin: 0;
+                padding-left: 18px;
+                line-height: 1.6;
+              "
+            >
+              <li>
+                Without it: re-runs cross-story regression check against every
+                sibling
+              </li>
+              <li>
+                With epic-context: pulls the diff slice + cached test results —
+                verifies, doesn't re-derive
+              </li>
+              <li>
+                <strong style="color: var(--accent)"
+                  >Saves ~5K on story 2 → ~230K on story 15</strong
+                >
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <p style="font-size: 11.5px; color: var(--text3); margin-top: 8px">
+          Surgeon and Ship are task-scoped (one slice in, one PR out) — they
+          don't accumulate epic context, so their per-story cost is already
+          flat. The savings below come from the three agents above.
+        </p>
+
+        <!-- Actual charges per story -->
+        <h3 style="margin-top: 28px">
+          Actual charges per story — what gets billed
+        </h3>
+        <p style="font-size: 12.5px; color: var(--text2); margin: 4px 0 10px 0">
+          Real numbers at Claude Sonnet API pricing (~$4 per 1M tokens). Left
+          side: what a traditional chat-based flow burns when it re-pastes HLD +
+          siblings each story. Right side: what the pipeline actually charges
+          because epic-context.md replaces the re-paste.
+        </p>
+        <table style="font-size: 12.5px">
+          <tr>
+            <th rowspan="2">Story</th>
+            <th
+              colspan="2"
+              style="text-align: center; border-left: 1px solid var(--border)"
+            >
+              Without epic-context
+            </th>
+            <th
+              colspan="2"
+              style="text-align: center; border-left: 1px solid var(--border)"
+            >
+              With epic-context
+            </th>
+            <th
+              colspan="2"
+              style="text-align: center; border-left: 1px solid var(--border)"
+            >
+              You save
+            </th>
+          </tr>
+          <tr>
+            <th style="border-left: 1px solid var(--border)">Tokens</th>
+            <th>Charged</th>
+            <th style="border-left: 1px solid var(--border)">Tokens</th>
+            <th>Charged</th>
+            <th style="border-left: 1px solid var(--border)">Tokens</th>
+            <th>$</th>
+          </tr>
+          <tr>
+            <td>
+              <strong>1</strong>
+              <em style="font-size: 11px; color: var(--text3)"
+                >(epic starts)</em
+              >
+            </td>
+            <td>~100K</td>
+            <td>~$0.40</td>
+            <td>~100K</td>
+            <td>~$0.40</td>
+            <td>—</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td><strong>2</strong></td>
+            <td>~130K</td>
+            <td>~$0.52</td>
+            <td>~80K</td>
+            <td>~$0.32</td>
+            <td>~50K</td>
+            <td>~$0.20</td>
+          </tr>
+          <tr>
+            <td><strong>3</strong></td>
+            <td>~160K</td>
+            <td>~$0.64</td>
+            <td>~80K</td>
+            <td>~$0.32</td>
+            <td>~80K</td>
+            <td>~$0.32</td>
+          </tr>
+          <tr>
+            <td><strong>4</strong></td>
+            <td>~200K</td>
+            <td>~$0.80</td>
+            <td>~80K</td>
+            <td>~$0.32</td>
+            <td>~120K</td>
+            <td>~$0.48</td>
+          </tr>
+          <tr>
+            <td><strong>5</strong></td>
+            <td>~250K</td>
+            <td>~$1.00</td>
+            <td>~80K</td>
+            <td>~$0.32</td>
+            <td>~170K</td>
+            <td>~$0.68</td>
+          </tr>
+          <tr>
+            <td><strong>6</strong></td>
+            <td>~300K</td>
+            <td>~$1.20</td>
+            <td>~80K</td>
+            <td>~$0.32</td>
+            <td>~220K</td>
+            <td>~$0.88</td>
+          </tr>
+          <tr>
+            <td><strong>7</strong></td>
+            <td>~350K</td>
+            <td>~$1.40</td>
+            <td>~80K</td>
+            <td>~$0.32</td>
+            <td>~270K</td>
+            <td>~$1.08</td>
+          </tr>
+          <tr>
+            <td><strong>8</strong></td>
+            <td>~400K</td>
+            <td>~$1.60</td>
+            <td>~80K</td>
+            <td>~$0.32</td>
+            <td>~320K</td>
+            <td>~$1.28</td>
+          </tr>
+          <tr>
+            <td><strong>9</strong></td>
+            <td>~450K</td>
+            <td>~$1.80</td>
+            <td>~80K</td>
+            <td>~$0.32</td>
+            <td>~370K</td>
+            <td>~$1.48</td>
+          </tr>
+          <tr>
+            <td>
+              <strong>10</strong>
+              <em style="font-size: 11px; color: var(--text3)"
+                >(bloat starts)</em
+              >
+            </td>
+            <td>~500K</td>
+            <td>~$2.00</td>
+            <td>~80K</td>
+            <td>~$0.32</td>
+            <td>~420K</td>
+            <td>~$1.68</td>
+          </tr>
+          <tr>
+            <td><strong>11</strong></td>
+            <td>~600K</td>
+            <td>~$2.40</td>
+            <td>~80K</td>
+            <td>~$0.32</td>
+            <td>~520K</td>
+            <td>~$2.08</td>
+          </tr>
+          <tr>
+            <td><strong>12</strong></td>
+            <td>~700K</td>
+            <td>~$2.80</td>
+            <td>~80K</td>
+            <td>~$0.32</td>
+            <td>~620K</td>
+            <td>~$2.48</td>
+          </tr>
+          <tr>
+            <td><strong>13</strong></td>
+            <td>~800K</td>
+            <td>~$3.20</td>
+            <td>~80K</td>
+            <td>~$0.32</td>
+            <td>~720K</td>
+            <td>~$2.88</td>
+          </tr>
+          <tr>
+            <td><strong>14</strong></td>
+            <td>~900K</td>
+            <td>~$3.60</td>
+            <td>~80K</td>
+            <td>~$0.32</td>
+            <td>~820K</td>
+            <td>~$3.28</td>
+          </tr>
+          <tr>
+            <td>
+              <strong>15</strong>
+              <em style="font-size: 11px; color: var(--text3)">(worst case)</em>
+            </td>
+            <td>~1.0M</td>
+            <td>~$4.00</td>
+            <td>~80K</td>
+            <td>~$0.32</td>
+            <td>~920K</td>
+            <td><strong style="color: var(--accent)">~$3.68</strong></td>
+          </tr>
+          <tr
+            style="background: var(--bg2); border-top: 2px solid var(--border)"
+          >
+            <td><strong>Epic total</strong></td>
+            <td><strong>~6.8M</strong></td>
+            <td><strong>~$27.30</strong></td>
+            <td><strong>~1.2M</strong></td>
+            <td><strong>~$4.90</strong></td>
+            <td><strong>~5.6M</strong></td>
+            <td><strong style="color: var(--accent)">~$22.70</strong></td>
+          </tr>
+        </table>
+        <p style="font-size: 11px; color: var(--text3); margin-top: 4px">
+          A 15-story epic that would have cost <strong>~$27</strong> in
+          traditional flow runs for under <strong>~$5</strong> on the pipeline —
+          the bill itself is the proof, not just a savings claim.
+        </p>
+
+        <!-- Headline KPIs -->
+        <div class="kpi-row" style="margin-top: 22px">
+          <div class="kpi">
+            <b>~83%</b><span>Tokens saved across 15 stories</span>
+          </div>
+          <div class="kpi"><b>~$23</b><span>USD saved per epic</span></div>
+          <div class="kpi"><b>13×</b><span>Cheaper on story 15</span></div>
+          <div class="kpi"><b>Flat</b><span>Pipeline cost per story</span></div>
+        </div>
+
+        <!-- Risks eliminated -->
+        <h3 style="margin-top: 28px">
+          Risks eliminated — not just token savings
+        </h3>
+        <div class="g3">
+          <div class="c">
+            <div class="ct" style="color: var(--accent2)">No context burst</div>
+            <p>
+              Each agent runs in a fresh context with only the files it needs.
+              No silent dropping of older content when a chat hits its limit.
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--accent2)">
+              No missed siblings or HLD
+            </div>
+            <p>
+              Drift check catches 100% of JIRA siblings automatically. HLD is
+              auto-fetched and cached in epic-context — no human memory needed.
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--accent2)">
+              No cross-story divergence
+            </div>
+            <p>
+              Every shipped story's pattern + decisions live in epic-context.md.
+              Story 8 sees story 7's choices before any code is written.
+            </p>
+          </div>
+        </div>
+
+        <div class="note n-amber" style="margin-top: 20px">
+          <strong>The business case is time, not tokens.</strong> $12–20 per
+          developer per month is roughly one engineering hour of saved time per
+          week. Saving 30 minutes per story across a 40-story month =
+          <strong>10×+ ROI</strong>. API cost is the small line item; time
+          savings and eliminated risks are the real win.
+        </div>
+      </div>
+
+      <!-- OUTCOMES -->
+      <div class="s" id="outcomes">
+        <div class="s-tag">Outcomes</div>
+        <h2>What we gain — <em>with numbers</em></h2>
+        <p class="lead">
+          The pipeline's design was chosen for measurable efficiency and
+          consistency gains. Headline gain first — a story historically
+          estimated at ~13 story points (roughly a developer-week) can be
+          delivered with ~1 story point of active developer effort. The AI
+          handles the repeatable work between gates; the developer reviews and
+          approves.
+        </p>
+
+        <div class="callout" style="margin: 20px 0 30px">
+          <div class="q">13 SP story → ~1 SP of developer effort</div>
+          <div class="a">
+            Typical example: a medium story estimated at 13 story points (UI +
+            backend + tests) flows trigger-to-PR in ~90 minutes of reviewing and
+            approving — vs 3–6 hours of active coding without the pipeline, plus
+            a day of context-switching.
+          </div>
+        </div>
+
+        <div class="g3">
+          <div class="c">
+            <span class="big">13 → 1</span>
+            <div class="ct">Story-point multiplier</div>
+            <p>
+              Stories sized at ~13 SP deliver in ~1 SP of developer time. AI
+              does the repeatable work between gates; developer reviews +
+              approves. Representative example, not a universal guarantee —
+              actual gain depends on story shape.
+            </p>
+          </div>
+          <div class="c">
+            <span class="big">~90 min</span>
+            <div class="ct">Typical cycle time (medium story)</div>
+            <p>
+              Trigger to PR opened: ~90 minutes for a medium story (5–9 tasks).
+              The same story without the pipeline typically takes 3–6 hours of
+              focused work plus a day of context-switching.
+            </p>
+          </div>
+          <div class="c">
+            <span class="big">~99%</span>
+            <div class="ct">Build-output reduction</div>
+            <p>
+              Per-task full builds eliminated; remaining builds go through a
+              runner wrapper that keeps only a one-line verdict in context. A
+              story that used to burn ~300K tokens on build output now burns
+              ~150.
+            </p>
+          </div>
+          <div class="c">
+            <span class="big">4×</span>
+            <div class="ct">Cheaper amendments</div>
+            <p>
+              When a developer wants to change the plan mid-stream, the Amender
+              subagent makes targeted section edits instead of re-running the
+              full planner — ~4–6× token savings per amendment.
+            </p>
+          </div>
+          <div class="c">
+            <span class="big">Free</span>
+            <div class="ct">Day-2 resume</div>
+            <p>
+              Power cuts, laptop sleeps, multi-day stories — the pipeline
+              doesn't care. State lives in files, not in long-running chat
+              sessions. Resume with zero re-work.
+            </p>
+          </div>
+          <div class="c">
+            <span class="big">~10–15K</span>
+            <div class="ct">Tokens saved on stories 2+ in an epic</div>
+            <p>
+              Stories after the first in an epic inherit the epic context +
+              codebase map from earlier stories — less scanning, more reuse,
+              less cost.
+            </p>
+          </div>
+        </div>
+
+        <h3>Qualitative benefits — why teams adopt it</h3>
+        <table>
+          <tr>
+            <th>Benefit</th>
+            <th>What it means for the team</th>
+          </tr>
+          <tr>
+            <td><strong>Higher throughput</strong></td>
+            <td>
+              Same team, more stories shipped per sprint. Developer time is
+              spent on judgment (reviewing AI output) instead of mechanical work
+              (finding files, writing boilerplate, running builds).
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Consistent standards across the team</strong></td>
+            <td>
+              Naming, placement, imports, accessibility — applied the same way
+              on every ticket, by every developer, because the pack encodes them
+              as always-on rules.
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Reduced duplicate components</strong></td>
+            <td>
+              Explorer's reuse discovery flags existing components before the
+              implementation agent creates a new one. Fewer orphan directives,
+              fewer competing implementations of the same thing.
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Faster code review</strong></td>
+            <td>
+              AC compliance, blast radius, build verdicts, test coverage — all
+              pre-computed and attached to the PR. The human reviewer walks into
+              a clean report, not a cold diff.
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Faster onboarding for new hires</strong></td>
+            <td>
+              The project catalog (<code>project-map.md</code>) captures tribal
+              knowledge that usually takes weeks to absorb. New developers run
+              their first real ticket on day 2, and their code follows team
+              conventions from the first PR.
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Complete audit trail</strong></td>
+            <td>
+              LLD, exploration notes, change manifest, review verdict, build
+              reports — all files in the PR, searchable forever. Post-mortems
+              and retrospectives get primary-source material, not reconstructed
+              memory.
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Lower risk of regressions</strong></td>
+            <td>
+              Full build + per-layer test suites gate every PR. A failed build
+              halts Ship automatically — no PRs with broken code reach
+              reviewers.
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Resilient to interruptions</strong></td>
+            <td>
+              Sick day, laptop failure, multi-day story — work resumes from
+              files on disk. No reconstruction from chat history; no re-work
+              from a crashed session.
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Centrally enforced guardrails</strong></td>
+            <td>
+              Forbidden patterns (<code>*deploy*</code>, database drops, force
+              pushes, secrets) declared once, blocked in every agent run
+              automatically. Security and compliance become default behavior.
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Stack-portable</strong></td>
+            <td>
+              Swap packs to run the pipeline on a different stack (Python, Go,
+              Kotlin, etc.) without rewriting agents. Supports our multi-stack
+              future.
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Privacy-friendly</strong></td>
+            <td>
+              <code>--offline</code> mode runs fully local — no MCP calls to
+              JIRA / Confluence / GitHub / Figma. For sensitive tickets or
+              air-gapped environments, the pipeline still works with the same
+              agents, just reading from local files.
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- FLEXIBLE USAGE -->
+      <div class="s" id="flexible">
+        <div class="s-tag">Flexible usage</div>
+        <h2>
+          Beyond the main pipeline —
+          <em>standalone fixes, MCP integrations, offline mode</em>
+        </h2>
+        <p class="lead">
+          Not every change needs the full 5-stage flow, and the pipeline plugs
+          into the tools the team already uses. Three modes of flexibility:
+          single-agent standalone runs, MCP integrations for JIRA / GitHub /
+          Figma, and selective or full offline operation for sensitive work.
+        </p>
+
+        <h3>Standalone mode — one agent, no ticket</h3>
+        <p style="font-size: 14px; color: var(--text2); margin-bottom: 14px">
+          For quick fixes and research that don't need a JIRA ticket or the full
+          pipeline. Same agents, single-stage invocation.
+        </p>
+        <div class="g3">
+          <div class="c">
+            <div class="ct" style="color: var(--teal)">Research</div>
+            <p>
+              <code>@explorer.md Research: &lt;question&gt;</code><br />
+              Codebase research on a specific question. No code written —
+              produces a scoped exploration report.
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--amber)">Small fix</div>
+            <p>
+              <code>@surgeon.md Apply: &lt;spec&gt; in &lt;files&gt;</code
+              ><br />
+              Targeted change, capped at ≤5 files / ≤150 lines. Over-cap halts
+              with "use pipeline instead".
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--amber)">AC-driven fix</div>
+            <p>
+              <code>@surgeon.md Implement:</code> + bullet ACs<br />
+              Implements from a bullet list of acceptance criteria (≤5 ACs). No
+              ticket required.
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--green)">Quick review</div>
+            <p>
+              <code>@review.md Review changes</code><br />
+              Spot-check the current git diff for code quality — no ticket
+              context, no AC compliance, just a diff review.
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--green)">Ticket review</div>
+            <p>
+              <code>@review.md Review PROJ-1234</code><br />
+              AC coverage review against an existing ticket — useful when
+              someone else wrote the code and you want a compliance check.
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--purple)">Browser demo</div>
+            <p>
+              <code>@ac-e2e-check.md Demo &lt;URL&gt;</code><br />
+              Ad-hoc browser walkthrough of a page. Captures screenshots and
+              behavior notes without a formal AC list.
+            </p>
+          </div>
+        </div>
+
+        <h3>MCP integrations — connect to the tools you already use</h3>
+        <p style="font-size: 14px; color: var(--text2); margin-bottom: 14px">
+          Fully customizable — <strong>any number of MCPs</strong> can be
+          declared in the pack config and wired to specific agents. The three
+          below are the starter integrations the reference pack ships; teams add
+          more as their workflow demands (internal service MCPs, custom data
+          sources, deployment tooling, observability, etc.). Each developer sets
+          them up once in their personal Cursor / Claude Code MCP config — the
+          installer ships a starter template generated from whatever the pack
+          declared.
+        </p>
+        <div class="g3">
+          <div class="c">
+            <div class="ct" style="color: var(--accent)">
+              📋 Atlassian — JIRA + Confluence
+            </div>
+            <p>
+              Orchestrator auto-fetches the JIRA ticket (description, ACs,
+              attachments), reads the Confluence HLD, discovers sibling stories
+              and reference tickets. Ship transitions the ticket on PR open.<br /><br />
+              <em>OAuth browser flow · personal per developer.</em>
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--accent)">
+              🔗 GitHub — code + PRs
+            </div>
+            <p>
+              Ship creates the PR with the build-verdict table, AC compliance
+              summary, and blast radius. Review fetches reference tickets'
+              merged PRs for pattern comparison. Explorer can span multiple
+              repositories.<br /><br />
+              <em>Personal access token (repo scope).</em>
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--accent)">
+              🎨 Figma — designs
+            </div>
+            <p>
+              Orchestrator fetches structured frame data from Figma URLs in the
+              ticket description (component tree, spacing, states, copy).
+              Image-analysis subagent converts it to a compact visual spec used
+              by the LLD.<br /><br />
+              <em
+                >Personal access token · optional, falls back to drag-drop
+                images.</em
+              >
+            </p>
+          </div>
+          <div class="c" style="border-style: dashed; background: transparent">
+            <div class="ct" style="color: var(--purple)">
+              ➕ Add your own — unlimited
+            </div>
+            <p>
+              Any MCP server can be declared in the pack config and wired to
+              specific agents. Examples teams have added: internal service MCPs,
+              deployment orchestration, observability / metrics, security
+              scanning, internal wikis, custom data sources.<br /><br />
+              <em
+                >Declare in <code>pipeline.&lt;pack&gt;.yaml</code> → installer
+                regenerates the starter MCP template automatically.</em
+              >
+            </p>
+          </div>
+        </div>
+
+        <div class="note n-blue" style="margin-top: 20px">
+          <strong>Connection is per-developer, not team-wide.</strong> Each
+          developer copies the starter MCP config from
+          <code>contexts/config/mcp.sample.json</code> into their personal
+          Cursor or Claude Code config and completes the OAuth / token steps
+          once. The pack itself declares which MCPs exist (and which agents use
+          them); credentials stay personal.
+        </div>
+
+        <h3>Skip / offline — privacy and resilience</h3>
+        <p style="font-size: 14px; color: var(--text2); margin-bottom: 14px">
+          Any MCP can be bypassed per-run. Use when content is sensitive, when
+          an MCP is flaking, or when you're simply offline.
+        </p>
+        <div class="g3">
+          <div class="c">
+            <div class="ct" style="color: var(--purple)">
+              <code>--offline</code>
+            </div>
+            <p>
+              Skip ALL MCPs. Fully local — no network calls to any external
+              service. Provide ticket content via
+              <code>contexts/ticket-input.md</code> + drag-drop images.
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--purple)">
+              <code>--skip atlassian</code>
+            </div>
+            <p>
+              Skip JIRA / Confluence only. Keep GitHub + Figma. Useful when the
+              JIRA ticket is sensitive or Atlassian is down. Provide ticket
+              content locally.
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--purple)">
+              <code>--skip figma</code>
+            </div>
+            <p>
+              Skip Figma only. Keep Atlassian + GitHub. Useful when designs are
+              on your desktop or Figma is unavailable — drag-drop images into
+              chat instead.
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--purple)">
+              <code>--only github</code>
+            </div>
+            <p>
+              Use ONLY GitHub — skip Atlassian and Figma. Useful for tickets
+              where the primary reference is a prior PR and nothing else
+              matters.
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--amber)">
+              Inline <code>Context:</code>
+            </div>
+            <p>
+              Paste ticket content directly into the trigger message. No file
+              edit needed. Useful for quick one-off runs.
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--amber)">
+              Runtime recovery gate
+            </div>
+            <p>
+              If an MCP fails mid-run (token expired, timeout), Orchestrator
+              opens an inline gate:
+              <code>retry / inline / file / skip / cancel</code>. Handle it in
+              the same conversation — no abort + re-trigger.
+            </p>
+          </div>
+        </div>
+
+        <div class="note n-green" style="margin-top: 20px">
+          <strong>Zero-MCP mode still works.</strong> The pipeline was designed
+          so every MCP is optional. With <code>--offline</code> and a local
+          <code>ticket-input.md</code>, every agent in the pipeline still runs —
+          just reading from local files instead of remote services. Sensitive
+          projects and air-gapped environments are supported out of the box.
+        </div>
+      </div>
+
+      <!-- TEAM IMPACT -->
+      <div class="s" id="team">
+        <div class="s-tag">Team impact</div>
+        <h2>What changes for the team</h2>
+
+        <div class="g3">
+          <div class="c">
+            <div class="ct" style="color: var(--coral)">Tech leads</div>
+            <p>
+              <strong>Set up once, maintain occasionally.</strong> Install takes
+              an hour. Running Project Analyzer takes 15 minutes. Extending the
+              pack (adding a new coding standard, a new subagent) is a 3-step
+              recipe. No daily involvement required.
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--teal)">Developers</div>
+            <p>
+              <strong>Less repetitive work, more judgment calls.</strong>
+              Developers spend less time hunting for existing code and more time
+              reviewing proposed approaches. The gate-driven flow means they
+              stay in control — AI doesn't ship anything without approval.
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--amber)">Reviewers</div>
+            <p>
+              <strong>Walk into a cleaner PR.</strong> AC compliance, blast
+              radius, build verdicts, test coverage — all pre-computed. Review
+              becomes a judgment exercise on the changes, not a forensic
+              exercise on whether things were done correctly.
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--green)">New hires</div>
+            <p>
+              <strong>Ramp up faster.</strong> The project catalog captures the
+              tribal knowledge that usually takes weeks to absorb. New
+              developers run their first ticket through the pipeline on day 2 —
+              and the code follows team conventions from the first PR.
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--blue)">Managers</div>
+            <p>
+              <strong>Better visibility.</strong> Every ticket leaves a trail:
+              design rationale, exploration notes, build verdicts. Estimating,
+              retrospecting, and incident post-mortems all get better
+              primary-source material.
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--purple)">
+              Security / compliance
+            </div>
+            <p>
+              <strong>Forbidden-patterns list is centrally enforced.</strong>
+              Rules like "never push to main", "no deploy commands from agents",
+              "block secrets patterns" are declared once and applied to every
+              agent run, automatically.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="foot">
+      Management overview · for the full technical story see
+      <a href="Agent%20Team.html">Agent Team — Architecture</a>,
+      <a href="Agent%20Team%20-%20Output.html">Output</a>,
+      <a href="Agent%20Team%20-%20Pack%20%26%20Install.html"
+        >Packs &amp; Install</a
+      >, <a href="Agent%20Team%20-%20How%20To.html">How To</a>
+    </div>
+  </body>
+</html>

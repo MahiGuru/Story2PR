@@ -1,0 +1,2701 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agent Pipeline — Business Case</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      :root {
+        --bg: #0d1117;
+        --bg2: #161b22;
+        --bg3: #1c2333;
+        --surface: #1c2333;
+        --surface2: #21283b;
+        --border: #30363d;
+        --border2: #484f58;
+        --text: #e6edf3;
+        --text2: #8b949e;
+        --text3: #6e7681;
+        --accent: #58a6ff;
+        --accent2: #79c0ff;
+        --accentLt: rgba(56, 139, 253, 0.15);
+        --coral: #ff7b72;
+        --coralLt: rgba(255, 123, 114, 0.15);
+        --teal: #3fb950;
+        --tealLt: rgba(63, 185, 80, 0.15);
+        --amber: #d29922;
+        --amberLt: rgba(210, 153, 34, 0.15);
+        --green: #3fb950;
+        --greenLt: rgba(63, 185, 80, 0.15);
+        --blue: #58a6ff;
+        --blueLt: rgba(56, 139, 253, 0.15);
+        --purple: #bc8cff;
+        --purpleLt: rgba(188, 140, 255, 0.15);
+        --mono: "IBM Plex Mono", monospace;
+        --sans: "DM Sans", system-ui, sans-serif;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        font-size: 16px;
+        line-height: 1.75;
+      }
+      .page {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 0 40px;
+      }
+
+      nav {
+        position: sticky;
+        top: 0;
+        z-index: 99;
+        background: rgba(13, 17, 23, 0.92);
+        backdrop-filter: blur(14px);
+        border-bottom: 1px solid var(--border);
+      }
+      nav .inner {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 10px 40px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        overflow-x: auto;
+      }
+      nav .brand {
+        font-family: var(--mono);
+        font-weight: 600;
+        font-size: 12px;
+        color: var(--accent);
+        white-space: nowrap;
+        letter-spacing: -0.3px;
+        flex-shrink: 0;
+      }
+      nav a {
+        font-size: 12px;
+        color: var(--text2);
+        text-decoration: none;
+        white-space: nowrap;
+        transition: color 0.15s;
+      }
+      nav a:hover {
+        color: var(--accent2);
+      }
+
+      .hero {
+        padding: 110px 0 80px;
+        border-bottom: 2px solid var(--border);
+      }
+      .chip {
+        display: inline-block;
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--accent);
+        background: var(--accentLt);
+        padding: 6px 14px;
+        border-radius: 100px;
+        margin-bottom: 24px;
+      }
+      .hero h1 {
+        font-size: 56px;
+        font-weight: 800;
+        letter-spacing: -2.4px;
+        line-height: 1.04;
+        margin-bottom: 20px;
+        color: var(--text);
+      }
+      .hero h1 em {
+        font-style: normal;
+        color: var(--accent2);
+      }
+      .hero .desc {
+        font-size: 19px;
+        color: var(--text2);
+        font-weight: 400;
+        max-width: 760px;
+        line-height: 1.55;
+      }
+
+      .s {
+        padding: 80px 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .s:last-child {
+        border-bottom: none;
+      }
+      .s-tag {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--accent);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+        font-weight: 600;
+      }
+      .s h2 {
+        font-size: 38px;
+        font-weight: 700;
+        letter-spacing: -1px;
+        margin-bottom: 12px;
+        color: var(--text);
+        line-height: 1.15;
+      }
+      .s h2 em {
+        font-style: normal;
+        color: var(--accent2);
+      }
+      .s .lead {
+        color: var(--text2);
+        font-size: 18px;
+        margin-bottom: 32px;
+        max-width: 760px;
+        line-height: 1.6;
+      }
+      .s h3 {
+        font-size: 19px;
+        font-weight: 700;
+        margin: 28px 0 12px;
+        color: var(--text);
+      }
+
+      .kpi-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin: 40px 0 0;
+      }
+      .kpi {
+        text-align: center;
+        padding: 26px 14px;
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+      }
+      .kpi b {
+        font-family: var(--mono);
+        font-size: 30px;
+        font-weight: 600;
+        color: var(--accent);
+        display: block;
+        line-height: 1.1;
+      }
+      .kpi span {
+        font-size: 11px;
+        color: var(--text3);
+        text-transform: uppercase;
+        letter-spacing: 1.4px;
+        margin-top: 6px;
+        display: block;
+      }
+
+      .g2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+        margin: 24px 0;
+      }
+      .g3 {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 16px;
+        margin: 24px 0;
+      }
+      .c {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 26px 28px;
+        transition: border-color 0.2s;
+      }
+      .c:hover {
+        border-color: var(--border2);
+      }
+      .c .ct {
+        font-size: 15px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        color: var(--text);
+      }
+      .c p {
+        font-size: 14px;
+        color: var(--text2);
+        line-height: 1.68;
+        margin: 0;
+      }
+      .c .big {
+        font-family: var(--mono);
+        font-size: 28px;
+        font-weight: 600;
+        color: var(--accent);
+        display: block;
+        margin-bottom: 6px;
+      }
+
+      .callout {
+        background: linear-gradient(
+          135deg,
+          var(--accentLt),
+          rgba(188, 140, 255, 0.1)
+        );
+        border: 1px solid rgba(56, 139, 253, 0.3);
+        border-radius: 14px;
+        padding: 36px 40px;
+        margin: 28px 0;
+        text-align: center;
+      }
+      .callout .q {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--text);
+        letter-spacing: -0.5px;
+        line-height: 1.3;
+        margin-bottom: 10px;
+      }
+      .callout .a {
+        font-size: 16px;
+        color: var(--text2);
+      }
+
+      .ps {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        margin: 24px 0;
+      }
+      .ps-box {
+        padding: 28px 32px;
+        border-radius: 12px;
+        border: 1px solid;
+      }
+      .ps-problem {
+        background: var(--coralLt);
+        border-color: rgba(255, 123, 114, 0.3);
+      }
+      .ps-solution {
+        background: var(--tealLt);
+        border-color: rgba(63, 185, 80, 0.3);
+      }
+      .ps-box h4 {
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        margin-bottom: 14px;
+        font-weight: 600;
+      }
+      .ps-problem h4 {
+        color: var(--coral);
+      }
+      .ps-solution h4 {
+        color: var(--teal);
+      }
+      .ps-box ul {
+        padding-left: 18px;
+        margin: 0;
+      }
+      .ps-box li {
+        font-size: 14px;
+        margin-bottom: 10px;
+        color: var(--text2);
+        line-height: 1.55;
+      }
+      .ps-box li strong {
+        color: var(--text);
+      }
+
+      /* Savings — big % focus */
+      .savings-hero {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        gap: 24px;
+        margin: 24px 0 36px;
+        align-items: stretch;
+      }
+      .savings-headline {
+        background: linear-gradient(135deg, var(--tealLt), var(--accentLt));
+        border: 1px solid rgba(63, 185, 80, 0.3);
+        border-radius: 14px;
+        padding: 40px 36px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+      .savings-headline .pct {
+        font-family: var(--mono);
+        font-size: 96px;
+        font-weight: 600;
+        color: var(--teal);
+        line-height: 1;
+        margin-bottom: 8px;
+        letter-spacing: -3px;
+      }
+      .savings-headline .pct-label {
+        font-size: 18px;
+        color: var(--text);
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+      .savings-headline .pct-sub {
+        font-size: 13.5px;
+        color: var(--text2);
+        line-height: 1.6;
+      }
+      .savings-side {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .savings-mini {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 18px 22px;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+      }
+      .savings-mini .num {
+        font-family: var(--mono);
+        font-size: 28px;
+        font-weight: 600;
+        color: var(--accent);
+        flex-shrink: 0;
+        min-width: 90px;
+      }
+      .savings-mini .lbl {
+        font-size: 13px;
+        color: var(--text2);
+        line-height: 1.5;
+      }
+      .savings-mini .lbl strong {
+        color: var(--text);
+        display: block;
+        font-size: 14px;
+        margin-bottom: 2px;
+      }
+
+      /* Two-column split for dev/mgmt benefits */
+      .audience {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 22px;
+        margin: 28px 0;
+      }
+      .audience .col {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 30px 32px;
+      }
+      .audience .col.dev {
+        border-top: 4px solid var(--teal);
+      }
+      .audience .col.mgmt {
+        border-top: 4px solid var(--accent);
+      }
+      .audience h3 {
+        font-size: 22px;
+        margin-top: 0;
+        margin-bottom: 16px;
+        color: var(--text);
+      }
+      .audience .col.dev h3::before {
+        content: "👩‍💻 ";
+      }
+      .audience .col.mgmt h3::before {
+        content: "📊 ";
+      }
+      .audience ul {
+        padding-left: 18px;
+      }
+      .audience li {
+        font-size: 14px;
+        color: var(--text2);
+        margin-bottom: 12px;
+        line-height: 1.6;
+      }
+      .audience li strong {
+        color: var(--text);
+        display: block;
+        margin-bottom: 2px;
+        font-size: 15px;
+      }
+
+      /* How to use — terminal-style */
+      .terminal {
+        background: #0a0e14;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 28px 32px;
+        margin: 24px 0;
+        font-family: var(--mono);
+        font-size: 14px;
+        line-height: 1.9;
+      }
+      .terminal .step {
+        color: var(--text3);
+        font-size: 11px;
+        letter-spacing: 1.4px;
+        text-transform: uppercase;
+        margin-top: 14px;
+        margin-bottom: 4px;
+      }
+      .terminal .step:first-child {
+        margin-top: 0;
+      }
+      .terminal .cmd {
+        color: var(--accent2);
+      }
+      .terminal .cmd::before {
+        content: "▸ ";
+        color: var(--text3);
+      }
+      .terminal .out {
+        color: var(--text2);
+        padding-left: 16px;
+        font-size: 13px;
+      }
+      .terminal .approve {
+        color: var(--teal);
+      }
+      .terminal .approve::before {
+        content: "▸ ";
+        color: var(--text3);
+      }
+      .terminal .gate {
+        color: var(--amber);
+        padding-left: 16px;
+        font-size: 12.5px;
+      }
+
+      /* Project-agnostic — pack diagram */
+      .agnostic {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 16px;
+        margin: 28px 0;
+      }
+      .agnostic .pack {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 22px;
+        text-align: center;
+        position: relative;
+      }
+      .agnostic .pack .pname {
+        font-family: var(--mono);
+        font-size: 13px;
+        color: var(--accent2);
+        margin-bottom: 10px;
+        font-weight: 600;
+      }
+      .agnostic .pack .pdesc {
+        font-size: 12.5px;
+        color: var(--text2);
+        line-height: 1.5;
+      }
+      .agnostic .pack.live {
+        border-color: var(--teal);
+        background: var(--tealLt);
+      }
+      .agnostic .pack.live .pname {
+        color: var(--teal);
+      }
+      .agnostic .pack .badge {
+        position: absolute;
+        top: 8px;
+        right: 10px;
+        font-family: var(--mono);
+        font-size: 9px;
+        color: var(--teal);
+        letter-spacing: 1px;
+      }
+      .agnostic-flow {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 28px;
+        margin: 24px 0;
+        text-align: center;
+      }
+      .agnostic-flow .core {
+        display: inline-block;
+        padding: 14px 32px;
+        background: var(--accentLt);
+        border: 1px solid rgba(56, 139, 253, 0.4);
+        border-radius: 8px;
+        font-family: var(--mono);
+        font-size: 13px;
+        color: var(--accent2);
+        font-weight: 600;
+      }
+      .agnostic-flow .arrow {
+        font-size: 22px;
+        color: var(--text3);
+        margin: 12px 0;
+      }
+      .agnostic-flow .plus {
+        font-family: var(--mono);
+        font-size: 22px;
+        color: var(--text2);
+        margin: 4px 0 8px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+        font-size: 13.5px;
+      }
+      th {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        padding: 12px 16px;
+        text-align: left;
+        font-weight: 600;
+        color: var(--accent);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-family: var(--mono);
+      }
+      td {
+        border: 1px solid var(--border);
+        padding: 12px 16px;
+        color: var(--text2);
+        vertical-align: top;
+      }
+      td strong {
+        color: var(--text);
+      }
+
+      .flow {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 24px;
+        margin: 24px 0;
+      }
+      .flow-row {
+        display: grid;
+        grid-template-columns: 110px 1fr;
+        gap: 16px;
+        align-items: start;
+        padding: 14px 18px 14px 14px;
+        background: var(--surface);
+        border-radius: 0 8px 8px 0;
+        border-left: 3px solid;
+        margin-bottom: 8px;
+      }
+      .flow-row:last-child {
+        margin-bottom: 0;
+      }
+      .flow-row.fr-c1 {
+        border-left-color: var(--coral);
+      }
+      .flow-row.fr-c2 {
+        border-left-color: var(--teal);
+      }
+      .flow-row.fr-c3 {
+        border-left-color: var(--amber);
+      }
+      .flow-row.fr-c4 {
+        border-left-color: var(--green);
+      }
+      .flow-row.fr-c5 {
+        border-left-color: var(--blue);
+      }
+      .flow-row .fr-num {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--text3);
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+      }
+      .flow-row .fr-label {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text);
+        letter-spacing: -0.2px;
+      }
+      .flow-row .fr-desc {
+        font-size: 13px;
+        color: var(--text2);
+        line-height: 1.6;
+        margin-top: 4px;
+      }
+
+      .note {
+        padding: 18px 24px;
+        border-radius: 10px;
+        margin: 20px 0;
+        font-size: 14px;
+        line-height: 1.6;
+        border: 1px solid;
+      }
+      .n-blue {
+        background: var(--accentLt);
+        border-color: rgba(56, 139, 253, 0.4);
+        color: var(--accent2);
+      }
+      .n-amber {
+        background: var(--amberLt);
+        border-color: rgba(210, 153, 34, 0.4);
+        color: var(--amber);
+      }
+      .n-green {
+        background: var(--greenLt);
+        border-color: rgba(63, 185, 80, 0.4);
+        color: var(--green);
+      }
+      .note strong {
+        color: var(--text);
+      }
+      .note.n-amber strong {
+        color: var(--amber);
+      }
+      .note.n-blue strong {
+        color: var(--accent2);
+      }
+
+      .timeline {
+        margin: 24px 0;
+        border-left: 2px solid var(--border);
+        padding-left: 0;
+      }
+      .tl-item {
+        position: relative;
+        padding: 14px 0 14px 36px;
+        margin-left: 14px;
+      }
+      .tl-item::before {
+        content: "";
+        position: absolute;
+        left: -7px;
+        top: 22px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+      .tl-item:last-child::before {
+        background: var(--teal);
+      }
+      .tl-item h4 {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 4px;
+      }
+      .tl-item .when {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--accent);
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+      }
+      .tl-item p {
+        font-size: 13.5px;
+        color: var(--text2);
+        line-height: 1.6;
+      }
+
+      .ask-box {
+        background: linear-gradient(
+          135deg,
+          var(--accentLt),
+          rgba(63, 185, 80, 0.08)
+        );
+        border: 1px solid rgba(56, 139, 253, 0.4);
+        border-radius: 14px;
+        padding: 36px 40px;
+        margin: 24px 0;
+      }
+      .ask-box h3 {
+        font-size: 20px;
+        margin-bottom: 16px;
+        color: var(--text);
+      }
+      .ask-box ul {
+        padding-left: 22px;
+        margin: 0;
+      }
+      .ask-box li {
+        font-size: 15px;
+        color: var(--text2);
+        margin-bottom: 10px;
+        line-height: 1.55;
+      }
+      .ask-box li strong {
+        color: var(--text);
+      }
+
+      .foot {
+        text-align: center;
+        padding: 40px 0;
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text3);
+      }
+
+      @media (max-width: 768px) {
+        .hero h1 {
+          font-size: 34px;
+        }
+        .hero .desc {
+          font-size: 16px;
+        }
+        .s h2 {
+          font-size: 26px;
+        }
+        .s .lead {
+          font-size: 15px;
+        }
+        .kpi-row,
+        .g2,
+        .g3,
+        .ps,
+        .audience,
+        .savings-hero,
+        .agnostic {
+          grid-template-columns: 1fr;
+        }
+        .savings-headline .pct {
+          font-size: 72px;
+        }
+        .flow-row {
+          grid-template-columns: 1fr;
+          gap: 6px;
+        }
+        .page {
+          padding: 0 20px;
+        }
+        nav .inner {
+          padding: 10px 20px;
+        }
+      }
+
+      /* PDF / print — preserve dark theme, sane page breaks, internal links stay clickable */
+      @page {
+        size: Letter;
+        margin: 14mm 12mm;
+      }
+      @media print {
+        * {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        body {
+          font-size: 12.5px;
+        }
+        nav {
+          position: static;
+          box-shadow: none;
+        }
+        nav .inner {
+          padding: 10px 0;
+          flex-wrap: wrap;
+          gap: 12px;
+          overflow: visible;
+        }
+        nav a {
+          color: var(--accent2);
+        }
+        .page {
+          max-width: none;
+          padding: 0;
+        }
+
+        /* OVERRIDE the mobile breakpoint — print viewport sometimes triggers it */
+        .kpi-row {
+          grid-template-columns: repeat(4, 1fr) !important;
+          gap: 10px !important;
+        }
+        .g2,
+        .ps,
+        .audience,
+        .savings-hero,
+        .compare {
+          grid-template-columns: 1fr 1fr !important;
+          gap: 14px !important;
+        }
+        .g3,
+        .agnostic {
+          grid-template-columns: 1fr 1fr 1fr !important;
+          gap: 12px !important;
+        }
+
+        /* Hero — tighter for print */
+        .hero {
+          padding: 30px 0 24px;
+          page-break-after: avoid;
+          border-bottom: 2px solid var(--border);
+        }
+        .hero h1 {
+          font-size: 30px;
+          line-height: 1.1;
+          letter-spacing: -1.4px;
+        }
+        .hero .desc {
+          font-size: 14px;
+          max-width: none;
+        }
+
+        /* Sections — much tighter padding to reduce wasted whitespace */
+        .s {
+          padding: 26px 0;
+          border-bottom: 1px solid var(--border);
+        }
+        .s-tag {
+          page-break-after: avoid;
+          margin-bottom: 6px;
+        }
+        .s h2 {
+          font-size: 22px;
+          page-break-after: avoid;
+          line-height: 1.2;
+        }
+        .s h3 {
+          font-size: 16px;
+          page-break-after: avoid;
+          margin: 18px 0 8px;
+        }
+        .s .lead {
+          font-size: 14px;
+          max-width: none;
+          margin-bottom: 16px;
+        }
+        /* Allow paragraphs to break gracefully */
+        p {
+          orphans: 3;
+          widows: 3;
+        }
+
+        /* KPIs — compact */
+        .kpi {
+          padding: 14px 8px;
+        }
+        .kpi b {
+          font-size: 20px;
+        }
+        .kpi span {
+          font-size: 9px;
+          letter-spacing: 1.1px;
+        }
+
+        /* Cards — compact */
+        .c {
+          padding: 18px 20px;
+        }
+        .c .ct {
+          font-size: 14px;
+          margin-bottom: 6px;
+        }
+        .c p {
+          font-size: 12.5px;
+          line-height: 1.55;
+        }
+
+        /* Callouts and big highlights */
+        .callout {
+          padding: 24px 28px;
+          margin: 18px 0;
+        }
+        .callout .q {
+          font-size: 20px;
+        }
+        .callout .a {
+          font-size: 13.5px;
+        }
+        .savings-headline {
+          padding: 28px 26px;
+        }
+        .savings-headline .pct {
+          font-size: 64px;
+        }
+        .savings-mini {
+          padding: 12px 16px;
+        }
+        .savings-mini .num {
+          font-size: 22px;
+          min-width: 70px;
+        }
+
+        /* PS / audience / compare boxes */
+        .ps-box,
+        .audience .col,
+        .compare .col {
+          padding: 18px 22px;
+        }
+        .ps-box li,
+        .audience li {
+          font-size: 12.5px;
+          margin-bottom: 6px;
+        }
+
+        /* Timeline */
+        .timeline {
+          margin: 16px 0;
+        }
+        .tl-item {
+          padding: 10px 0 10px 32px;
+        }
+        .tl-item h4 {
+          font-size: 14px;
+        }
+        .tl-item p {
+          font-size: 12.5px;
+        }
+
+        /* Flow rows in How it works */
+        .flow {
+          padding: 18px;
+        }
+        .flow-row {
+          padding: 12px 16px;
+          gap: 14px;
+          grid-template-columns: 110px 1fr !important;
+        }
+        .flow-row .fr-label {
+          font-size: 14px;
+        }
+        .flow-row .fr-desc {
+          font-size: 12.5px;
+        }
+
+        /* Ask box */
+        .ask-box {
+          padding: 24px 28px;
+        }
+        .ask-box li {
+          font-size: 13px;
+        }
+
+        /* Notes */
+        .note {
+          padding: 14px 20px;
+          font-size: 12.5px;
+        }
+
+        /* Terminal */
+        .terminal {
+          padding: 20px 24px;
+          font-size: 12px;
+          line-height: 1.7;
+        }
+
+        /* Keep ONLY very small atomic visual blocks together. Anything that
+           contains a list / multiple paragraphs is allowed to break — keeping
+           them together caused half-empty pages. */
+        .note,
+        .kpi,
+        .flow-row,
+        .savings-mini,
+        .tl-item {
+          page-break-inside: avoid;
+        }
+        /* Behind-the-scenes stage blocks (inline-styled colored borders) — small enough to keep */
+        div[style*="border-left: 3px solid"] {
+          page-break-inside: avoid;
+        }
+        /* Everything else — let it flow naturally to fill pages */
+        .callout,
+        .terminal,
+        .savings-hero,
+        .ask-box,
+        .audience .col,
+        .agnostic,
+        .ps,
+        .ps-box,
+        .compare,
+        .compare .col,
+        .audience,
+        .g2,
+        .g3,
+        .timeline,
+        .c {
+          page-break-inside: auto;
+        }
+        /* Force major sections to start on a new page — slide-like feel */
+        #problem,
+        #solution,
+        #savings,
+        #how-to-use,
+        #developers,
+        #how-it-works,
+        #agnostic,
+        #decision {
+          page-break-before: always;
+        }
+
+        a {
+          color: var(--accent2);
+          text-decoration: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <div class="inner">
+        <span class="brand">Business Case</span>
+        <a href="#problem">Problem</a>
+        <a href="#solution">Solution</a>
+        <a href="#savings">Savings</a>
+        <a href="#how-to-use">How to use</a>
+        <a href="#developers">How it helps</a>
+        <a href="#how-it-works">How it works</a>
+        <a href="#agnostic">Project-agnostic</a>
+        <a href="#decision">Decision &amp; rollout</a>
+      </div>
+    </nav>
+
+    <main class="page">
+      <!-- HERO -->
+      <div class="hero">
+        <span class="chip">Agentic AI Pipeline · Predictable Delivery</span>
+        <h1>
+          Ship more stories per sprint, with <em>predictable cost</em> and
+          consistent quality
+        </h1>
+        <p class="desc">
+          A guided AI pipeline where the developer approves every stage and the
+          project's standards are enforced automatically. Works on the tools the
+          team already uses. Adapts to any project by swapping a configuration
+          "pack" — no code changes to the engine.
+        </p>
+        <div class="kpi-row">
+          <div class="kpi"><b>~83%</b><span>Cost reduction per epic</span></div>
+          <div class="kpi">
+            <b>~90 min</b><span>Active dev time / story</span>
+          </div>
+          <div class="kpi">
+            <b>5 gates</b><span>Developer approves each stage</span>
+          </div>
+          <div class="kpi">
+            <b>Any stack</b><span>Project-agnostic via packs</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- PROBLEM -->
+      <div class="s" id="problem">
+        <div class="s-tag">The problem</div>
+        <h2>Where developer time goes today</h2>
+        <p class="lead">
+          Each story pulls a developer through the same motions: read the
+          ticket, hunt the codebase, decide what to reuse, write code, run
+          builds, raise the PR. Most of it is repeatable. Almost none of it is
+          reused across stories or developers.
+        </p>
+
+        <div class="ps">
+          <div class="ps-box ps-problem">
+            <h4>What costs us today</h4>
+            <ul>
+              <li>
+                <strong>Project knowledge in senior heads.</strong> Each story
+                rebuilds context from scratch.
+              </li>
+              <li>
+                <strong>Similar stories diverge.</strong> Two developers solve
+                similar tickets in incompatible ways.
+              </li>
+              <li>
+                <strong>Generic AI tools don't know our stack.</strong>
+                Off-the-shelf AI either ships without review or ignores
+                conventions.
+              </li>
+              <li>
+                <strong>No audit trail.</strong> "Why was this built this way?"
+                gets a 2-line commit message.
+              </li>
+              <li>
+                <strong>Onboarding takes weeks.</strong> New hires spend 2–3
+                weeks learning before shipping their first ticket.
+              </li>
+            </ul>
+          </div>
+          <div class="ps-box ps-solution">
+            <h4>What we want instead</h4>
+            <ul>
+              <li>
+                <strong>Project knowledge captured once</strong>, applied
+                consistently to every story.
+              </li>
+              <li>
+                <strong>Developer controls every step.</strong> AI does the
+                repeatable work; human approves at every gate.
+              </li>
+              <li>
+                <strong>A written record at every stage</strong> — committed
+                alongside the code.
+              </li>
+              <li>
+                <strong>Predictable cost.</strong> Same agents, same context
+                slices, every time. No growth.
+              </li>
+              <li>
+                <strong>Fast onboarding.</strong> New hires productive in days,
+                not weeks.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- SOLUTION -->
+      <div class="s" id="solution">
+        <div class="s-tag">The solution</div>
+        <h2>A guided AI pipeline — <em>developer approves every stage</em></h2>
+        <p class="lead">
+          Five specialized AI agents collaborate through a staged flow. Each has
+          one job, reads the previous stage's output from a file, produces its
+          own artifact, and waits for the developer's approval before the next
+          stage runs.
+        </p>
+
+        <div class="g2">
+          <div class="c">
+            <div class="ct" style="color: var(--coral)">Specialized agents</div>
+            <p>
+              Five agents, one narrow role each —
+              <strong style="color: var(--text)">Orchestrator</strong> plans,
+              <strong style="color: var(--text)">Explorer</strong> scans the
+              codebase,
+              <strong style="color: var(--text)">Surgeon</strong> implements,
+              <strong style="color: var(--text)">Review</strong> verifies,
+              <strong style="color: var(--text)">Ship</strong> opens the PR.
+              Focused agents produce focused output, not generic AI guesses.
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--teal)">Developer-gated</div>
+            <p>
+              Five approval gates, one per stage. The developer reviews each
+              artifact and types a short approval. Nothing runs autonomously for
+              hours.
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--amber)">
+              Auditable by default
+            </div>
+            <p>
+              Every stage writes its work to a file committed in the PR. Full
+              audit trail for every story, searchable forever.
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--green)">Project-aware</div>
+            <p>
+              A one-time scan captures the project's components and conventions.
+              Every story benefits — the AI never sees the codebase as a
+              stranger.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SAVINGS — percentages only, single dollar mention -->
+      <div class="s" id="savings">
+        <div class="s-tag">The savings</div>
+        <h2>The headline number — <em>~83% lower cost per epic</em></h2>
+        <p class="lead">
+          Compared with a traditional chat-based AI flow on the same 15-story
+          epic, the pipeline delivers the same work for a fraction of the cost —
+          and the cost stays flat as the epic grows instead of ballooning.
+        </p>
+
+        <div class="savings-hero">
+          <div class="savings-headline">
+            <div class="pct">~83%</div>
+            <div class="pct-label">Cost reduction per 15-story epic</div>
+            <div class="pct-sub">
+              Traditional chat-based AI re-reads the design, siblings, and code
+              into every conversation, so cost grows story after story. The
+              pipeline carries context in files between stages, so cost stays
+              flat across the entire epic.
+            </div>
+          </div>
+          <div class="savings-side">
+            <div class="savings-mini">
+              <div class="num">~13×</div>
+              <div class="lbl">
+                <strong>Cheaper at story 15</strong>The cost gap widens as the
+                epic grows.
+              </div>
+            </div>
+            <div class="savings-mini">
+              <div class="num">Flat</div>
+              <div class="lbl">
+                <strong>Per-story cost</strong>Story 15 costs the same as story
+                2.
+              </div>
+            </div>
+            <div class="savings-mini">
+              <div class="num">~70%</div>
+              <div class="lbl">
+                <strong>Faster amendments</strong>When developer changes the
+                plan mid-stream.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <h3 style="margin-top: 36px">
+          Where the savings come from — <em>epic context</em>
+        </h3>
+        <p
+          style="
+            font-size: 15px;
+            color: var(--text2);
+            line-height: 1.65;
+            max-width: 760px;
+            margin-bottom: 18px;
+          "
+        >
+          One file does most of the work —
+          <code
+            style="
+              font-family: var(--mono);
+              color: var(--accent2);
+              font-size: 14px;
+            "
+            >epic-context.md</code
+          >. As stories ship, each one writes a compact ~300-token summary of
+          what it built, decided, and constrained. The next story's agent reads
+          that ledger instead of re-loading every prior story's full design.
+          Same knowledge, ~10× cheaper to access — and the savings compound the
+          longer the epic runs.
+        </p>
+
+        <div class="g2" style="margin-bottom: 20px">
+          <div class="c" style="border-left: 3px solid var(--coral)">
+            <div class="ct" style="color: var(--coral)">
+              Without epic context (chat-based AI)
+            </div>
+            <p>
+              Every story re-pastes the design doc, sibling story LLDs, and
+              acceptance criteria into the conversation. By story 10, the agent
+              is reading ~500K tokens of redundant history just to start work.
+              By story 15, it's burst past 1M.
+            </p>
+          </div>
+          <div class="c" style="border-left: 3px solid var(--teal)">
+            <div class="ct" style="color: var(--teal)">
+              With epic context (the pipeline)
+            </div>
+            <p>
+              The agent reads
+              <code
+                style="
+                  font-family: var(--mono);
+                  color: var(--accent2);
+                  font-size: 13px;
+                "
+                >epic-context.md</code
+              >
+              once — every prior story summarized in one compact ledger. Plus
+              the cached codebase map and the epic HLD reference. ~80K tokens
+              total, regardless of where in the epic you are.
+            </p>
+          </div>
+        </div>
+
+        <h3 style="margin-top: 26px">
+          Epic context — <em>helps the team, not just the AI</em>
+        </h3>
+        <div class="audience" style="margin-top: 14px">
+          <div class="col dev">
+            <h3 style="font-size: 18px">For the team</h3>
+            <ul>
+              <li>
+                <strong>Living memory of the epic.</strong> What every prior
+                story decided, built, and reused — captured in one file the team
+                can read.
+              </li>
+              <li>
+                <strong>New developer onboarding.</strong> Read epic-context to
+                understand the epic's history. No tribal-knowledge transfer
+                needed.
+              </li>
+              <li>
+                <strong>Fewer regressions.</strong> Story 8 sees story 7's
+                choices before any code is written — no accidental conflict with
+                prior work.
+              </li>
+              <li>
+                <strong>Audit trail by default.</strong> Post-mortems get
+                primary-source material — every story's design, every decision,
+                in one place.
+              </li>
+            </ul>
+          </div>
+          <div class="col mgmt">
+            <h3 style="font-size: 18px">For the AI agents</h3>
+            <ul>
+              <li>
+                <strong>Epic HLD auto-cached.</strong> The architecture
+                decisions for the epic are read once, then referenced — not
+                re-fetched per story.
+              </li>
+              <li>
+                <strong>Sibling stories as 300-token summaries.</strong>
+                Replaces re-reading 3K-token full LLDs. Cost flat instead of
+                growing.
+              </li>
+              <li>
+                <strong>Drift detection.</strong> If a sibling story shipped via
+                a regular PR (not the pipeline), the agent auto-fetches its
+                summary into epic-context.
+              </li>
+              <li>
+                <strong>Reuse confidence.</strong> Agent knows what already
+                exists in the codebase, so it picks reuse over recreation.
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="note n-blue" style="margin-top: 24px">
+          <strong>For grounding (the only money mention in this brief):</strong>
+          at typical 40-stories-per-developer-per-month workload, the pipeline
+          costs roughly the equivalent of one hour of senior developer salary
+          per developer per month. The time saved per developer is an order of
+          magnitude larger than the cost. Pricing based on Claude Sonnet API
+          rates as of this brief's date.
+        </div>
+      </div>
+
+      <!-- HOW TO USE — show all gates -->
+      <div class="s" id="how-to-use">
+        <div class="s-tag">How to use</div>
+        <h2>Story → PR in one command. <em>Every gate is yours.</em></h2>
+        <p class="lead">
+          Each stage runs a specialized agent and ends at an approval gate. The
+          developer reviews the artifact, types a short approval (or
+          <code
+            style="
+              color: var(--accent);
+              font-family: var(--mono);
+              font-size: 14px;
+            "
+            >Amend: &lt;change&gt;</code
+          >), and proceeds to the next stage. No agent runs without explicit
+          authorization.
+        </p>
+
+        <div
+          style="
+            background: linear-gradient(
+              135deg,
+              var(--accentLt),
+              rgba(63, 185, 80, 0.08)
+            );
+            border-left: 4px solid var(--accent);
+            border-radius: 0 10px 10px 0;
+            padding: 18px 24px;
+            margin: 0 0 32px 0;
+          "
+        >
+          <div style="font-size: 17px; color: var(--text); line-height: 1.55">
+            <strong style="color: var(--accent2)"
+              >One short command kicks off the entire pipeline.</strong
+            >
+            The developer types
+            <code
+              style="
+                display: inline-block;
+                font-family: var(--mono);
+                font-size: 16px;
+                color: var(--accent);
+                background: var(--bg);
+                padding: 4px 10px;
+                border-radius: 5px;
+                border: 1px solid var(--border);
+                font-weight: 600;
+                margin: 0 2px;
+              "
+              >Work on PROJ-1234</code
+            >
+            and the pipeline begins. From that point on, every action is just a
+            short approval at each gate — no other commands to memorize, no
+            flags to pass, no config to manage per story.
+          </div>
+        </div>
+
+        <div class="terminal">
+          <div class="step">Stage 1 · Plan + Design</div>
+          <div class="cmd">Work on PROJ-1234</div>
+          <div class="out">
+            → Pulls full epic context (full breakdown below). Produces
+            requirement summary + AC registry.
+          </div>
+          <div class="gate">
+            ⏸ Gate · review synthesis ·
+            <span style="color: var(--teal)">Go</span> |
+            <span style="color: var(--accent2)">Amend: &lt;change&gt;</span> |
+            <span style="color: var(--text3)">Cancel</span>
+          </div>
+          <div
+            style="
+              background: rgba(56, 139, 253, 0.06);
+              border-left: 2px solid var(--accent);
+              padding: 14px 18px;
+              margin: 6px 0 10px 16px;
+              font-size: 12.5px;
+              color: var(--text2);
+              line-height: 1.65;
+              border-radius: 0 6px 6px 0;
+            "
+          >
+            <span
+              style="
+                font-family: var(--mono);
+                font-size: 11px;
+                color: var(--accent);
+                letter-spacing: 1px;
+              "
+              >EXAMPLE — WHAT THE DEVELOPER SEES AT THIS GATE</span
+            ><br /><br />
+            <span style="color: var(--text)"
+              >## Synthesis ready — PROJ-1234</span
+            ><br />
+            <span style="color: var(--text)">STORY:</span> Add approval-rules
+            card to certification UI<br />
+            <span style="color: var(--text)">ROLE:</span> Admin →
+            <span style="color: var(--text)">GOAL:</span> configure
+            auto-approval →
+            <span style="color: var(--text)">BENEFIT:</span> faster cert
+            close<br /><br />
+            <span style="color: var(--text)">What To Build:</span><br />
+            ↳ 1. New "Approval Rules" card
+            <span style="color: var(--text3)">(CREATE)</span><br />
+            ↳ 2. Wire to existing CertificationService
+            <span style="color: var(--text3)"
+              >(REUSE — found in epic-context from PROJ-1230)</span
+            ><br />
+            ↳ 3. Update permission check
+            <span style="color: var(--text3)"
+              >(MODIFY — from epic HLD § 4.2)</span
+            ><br /><br />
+            <span style="color: var(--text)">AC Registry:</span> 7 ACs (5 from
+            JIRA + 2 derived from epic HLD)<br />
+            <span style="color: var(--text)">Reuse from prior stories:</span> 3
+            components flagged from epic-context.md<br />
+            <span style="color: var(--text)">Constraints inherited:</span>
+            auto-approval limit ≤24h (from PROJ-1228 decision)<br /><br />
+            <span style="color: var(--accent2)"
+              >▶ Type
+              <code style="font-family: var(--mono); color: var(--text)"
+                >Go</code
+              >
+              |
+              <code style="font-family: var(--mono); color: var(--text)"
+                >Amend: &lt;change&gt;</code
+              >
+              |
+              <code style="font-family: var(--mono); color: var(--text)"
+                >Cancel</code
+              ></span
+            >
+          </div>
+          <div class="approve">Go</div>
+          <div class="out">
+            → Generates LLD (design + tasks + test plan), drawing from epic HLD
+            + sibling LLDs.
+          </div>
+          <div class="gate">
+            ⏸ Gate · review LLD + choose branch ·
+            <span style="color: var(--teal)">Go</span> (from develop) |
+            <span style="color: var(--teal)">Go, stack</span> (on current
+            feature branch) |
+            <span style="color: var(--teal)">Go, from &lt;branch&gt;</span> |
+            <span style="color: var(--accent2)">Amend: &lt;change&gt;</span> |
+            <span style="color: var(--text3)">Cancel</span>
+          </div>
+          <div class="approve">Go</div>
+          <div class="out">
+            → Branch created. JIRA transitioned. Stage 1 done.
+          </div>
+
+          <div class="step">Stage 2 · Explore</div>
+          <div class="cmd">@explorer.md Run the explorer</div>
+          <div class="out">
+            → Scans codebase. Confirms reuse candidates and insertion points.
+          </div>
+          <div class="gate">
+            ⏸ Gate · review exploration ·
+            <span style="color: var(--teal)">Go</span> |
+            <span style="color: var(--accent2)">Amend</span> |
+            <span style="color: var(--text3)">Cancel</span>
+          </div>
+          <div class="approve">Go</div>
+
+          <div class="step">Stage 3 · Implement</div>
+          <div class="cmd">@surgeon.md Run the surgeon</div>
+          <div class="out">
+            → Implements task by task. Lint + unit tests after each. Full build
+            at end.
+          </div>
+          <div class="gate">
+            ⏸ (only if a build fails) ·
+            <span style="color: var(--teal)">retry</span> |
+            <span style="color: var(--accent2)">skip</span> |
+            <span style="color: var(--text3)">cancel</span>
+          </div>
+          <div class="gate">
+            ⏸ Gate · review change manifest ·
+            <span style="color: var(--teal)">Go</span> |
+            <span style="color: var(--accent2)">Fix</span> |
+            <span style="color: var(--text3)">Cancel</span>
+          </div>
+          <div class="approve">Go</div>
+
+          <div class="step">Stage 4 · Review</div>
+          <div class="cmd">@review.md Run the review</div>
+          <div class="out">
+            → Full build + per-layer test suites. AC compliance check. Blast
+            radius. Verdict.
+          </div>
+          <div class="gate">
+            ⏸ Gate · review verdict ·
+            <span style="color: var(--teal)">Ship it</span> |
+            <span style="color: var(--accent2)">Fix</span> |
+            <span style="color: var(--accent2)">Amend</span> |
+            <span style="color: var(--text3)">Cancel</span>
+          </div>
+          <div class="approve">Ship it</div>
+
+          <div class="step">Stage 5 · Ship</div>
+          <div class="cmd">@ship.md Ship it</div>
+          <div class="out">→ Verifies all build verdicts. Stages commit.</div>
+          <div class="gate">
+            ⏸ Gate · confirm commit ·
+            <span style="color: var(--teal)">Confirmed</span> |
+            <span style="color: var(--accent2)">Undo commits</span> |
+            <span style="color: var(--text3)">Cancel</span>
+          </div>
+          <div class="approve">Confirmed</div>
+          <div class="gate">
+            ⏸ Gate · confirm push · <span style="color: var(--teal)">Go</span> |
+            <span style="color: var(--text3)">Cancel</span>
+          </div>
+          <div class="approve">Go</div>
+          <div class="out">
+            → PR opened with design, manifest, build verdicts attached. JIRA
+            updated. Done.
+          </div>
+        </div>
+
+        <div class="g3" style="margin-top: 28px">
+          <div class="c">
+            <div class="ct" style="color: var(--accent2)">
+              Amend at any gate
+            </div>
+            <p>
+              Type
+              <code
+                style="
+                  color: var(--accent);
+                  font-family: var(--mono);
+                  font-size: 13px;
+                "
+                >Amend: &lt;your change&gt;</code
+              >
+              instead of
+              <code
+                style="
+                  color: var(--accent);
+                  font-family: var(--mono);
+                  font-size: 13px;
+                "
+                >Go</code
+              >. The agent revises that section only — it doesn't re-run the
+              entire stage. ~70% cheaper than re-running.
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--accent2)">
+              Branch flexibility (Stage 1)
+            </div>
+            <p>
+              <code
+                style="
+                  color: var(--accent);
+                  font-family: var(--mono);
+                  font-size: 13px;
+                "
+                >Go</code
+              >
+              creates from develop.
+              <code
+                style="
+                  color: var(--accent);
+                  font-family: var(--mono);
+                  font-size: 13px;
+                "
+                >Go, stack</code
+              >
+              stacks on your current feature branch.
+              <code
+                style="
+                  color: var(--accent);
+                  font-family: var(--mono);
+                  font-size: 13px;
+                "
+                >Go, from &lt;branch&gt;</code
+              >
+              uses any base. Choice surfaced automatically when stacking is
+              detected.
+            </p>
+          </div>
+          <div class="c">
+            <div class="ct" style="color: var(--accent2)">Resume tomorrow</div>
+            <p>
+              Type
+              <code
+                style="
+                  color: var(--accent);
+                  font-family: var(--mono);
+                  font-size: 13px;
+                "
+                >Cancel</code
+              >, close the laptop, come back any day. Re-run the next stage's
+              command — the pipeline picks up from the last approved gate. No
+              re-explaining.
+            </p>
+          </div>
+        </div>
+
+        <div class="note n-green">
+          <strong>Most gates are a single-word approval.</strong> Out of the
+          ~7–9 gates per story, most fire only when there's something to decide.
+          Build-failure gates only appear if a build fails. Stack-vs-base gates
+          only appear when the developer is on a feature branch. The "happy
+          path" is mostly typing
+          <code
+            style="
+              color: var(--accent);
+              font-family: var(--mono);
+              font-size: 13px;
+            "
+            >Go</code
+          >.
+        </div>
+
+        <div class="callout" style="text-align: left; margin-top: 32px">
+          <div
+            class="q"
+            style="font-size: 22px; text-align: center; margin-bottom: 8px"
+          >
+            Behind the scenes — what each agent reads and produces
+          </div>
+          <div
+            class="a"
+            style="
+              font-size: 14.5px;
+              line-height: 1.6;
+              text-align: center;
+              margin-bottom: 24px;
+            "
+          >
+            Each stage builds on the previous stage's output. File-based
+            handoffs between agents — no chat history rebuilds, no "where did we
+            leave off?" — every agent works from artifacts on disk.
+          </div>
+
+          <!-- Stage 1 · Plan -->
+          <div
+            style="
+              background: var(--surface);
+              border-left: 3px solid var(--coral);
+              border-radius: 0 8px 8px 0;
+              padding: 18px 22px;
+              margin-bottom: 12px;
+            "
+          >
+            <div style="margin-bottom: 12px">
+              <span
+                style="
+                  font-family: var(--mono);
+                  font-size: 11px;
+                  color: var(--text3);
+                  letter-spacing: 1.2px;
+                  text-transform: uppercase;
+                "
+                >Stage 1 · Plan</span
+              >
+              <span
+                style="
+                  font-size: 17px;
+                  font-weight: 700;
+                  color: var(--text);
+                  margin-left: 12px;
+                "
+                >Orchestrator</span
+              >
+            </div>
+            <div
+              style="font-size: 13.5px; color: var(--text2); line-height: 1.8"
+            >
+              <strong
+                style="
+                  color: var(--accent2);
+                  font-size: 12px;
+                  letter-spacing: 1px;
+                  text-transform: uppercase;
+                "
+                >Reads</strong
+              ><br />
+              ▸ JIRA ticket — description, ACs, comments, attachments
+              <span style="color: var(--text3)">[via Atlassian MCP]</span><br />
+              ▸ Epic HLD from Confluence
+              <span style="color: var(--text3)">[via Atlassian MCP]</span><br />
+              ▸
+              <code
+                style="
+                  font-family: var(--mono);
+                  color: var(--accent2);
+                  font-size: 13px;
+                "
+                >epic-context.md</code
+              >
+              — every prior story's summary
+              <span style="color: var(--text3)">[local file]</span><br />
+              ▸ Sibling story LLDs
+              <span style="color: var(--text3)"
+                >[local + auto-hydrated from Atlassian]</span
+              ><br />
+              ▸ Project codebase map
+              <span style="color: var(--text3)">[local]</span><br />
+              ▸ Figma design frames
+              <span style="color: var(--text3)"
+                >[via Figma MCP, when ticket has design]</span
+              ><br />
+              ▸ Inline
+              <code
+                style="
+                  font-family: var(--mono);
+                  color: var(--accent2);
+                  font-size: 13px;
+                "
+                >Context:</code
+              >
+              block in trigger or
+              <code
+                style="
+                  font-family: var(--mono);
+                  color: var(--accent2);
+                  font-size: 13px;
+                "
+                >contexts/ticket-input.md</code
+              >
+              <span style="color: var(--text3)"
+                >[offline fallback when JIRA unreachable]</span
+              ><br />
+              ▸ Reference ticket — pattern + merged-PR diff
+              <span style="color: var(--text3)"
+                >[via VCS MCP, when user adds
+                <code
+                  style="
+                    font-family: var(--mono);
+                    color: var(--text3);
+                    font-size: 12px;
+                  "
+                  >— reference: PROJ-100</code
+                >]</span
+              ><br />
+              ▸ Image attachments dropped at trigger time
+              <span style="color: var(--text3)"
+                >[analyzed by image-analysis subagent]</span
+              ><br />
+              <strong
+                style="
+                  color: var(--accent2);
+                  font-size: 12px;
+                  letter-spacing: 1px;
+                  text-transform: uppercase;
+                  margin-top: 6px;
+                  display: inline-block;
+                "
+                >Produces</strong
+              ><br />
+              ▸ Requirement Summary + AC Registry<br />
+              ▸ Low-level design (LLD) with task breakdown<br />
+              ▸ Test plan
+            </div>
+          </div>
+
+          <!-- Stage 2 · Explore -->
+          <div
+            style="
+              background: var(--surface);
+              border-left: 3px solid var(--teal);
+              border-radius: 0 8px 8px 0;
+              padding: 18px 22px;
+              margin-bottom: 12px;
+            "
+          >
+            <div style="margin-bottom: 12px">
+              <span
+                style="
+                  font-family: var(--mono);
+                  font-size: 11px;
+                  color: var(--text3);
+                  letter-spacing: 1.2px;
+                  text-transform: uppercase;
+                "
+                >Stage 2 · Explore</span
+              >
+              <span
+                style="
+                  font-size: 17px;
+                  font-weight: 700;
+                  color: var(--text);
+                  margin-left: 12px;
+                "
+                >Explorer</span
+              >
+            </div>
+            <div
+              style="font-size: 13.5px; color: var(--text2); line-height: 1.8"
+            >
+              <strong
+                style="
+                  color: var(--accent2);
+                  font-size: 12px;
+                  letter-spacing: 1px;
+                  text-transform: uppercase;
+                "
+                >Reads</strong
+              ><br />
+              ▸ Orchestrator's LLD — task list with file targets<br />
+              ▸ Project codebase map — components, services, conventions<br />
+              ▸ Latest Git diff
+              <span style="color: var(--text3)">[for incremental sync]</span
+              ><br />
+              ▸ Pack-specific layer maps + shared paths
+              <span style="color: var(--text3)"
+                >[routes each task to the correct rules and skills]</span
+              ><br />
+              <strong
+                style="
+                  color: var(--accent2);
+                  font-size: 12px;
+                  letter-spacing: 1px;
+                  text-transform: uppercase;
+                  margin-top: 6px;
+                  display: inline-block;
+                "
+                >Produces</strong
+              ><br />
+              ▸ Task Annotation Summary — exact file paths, line numbers, reuse
+              candidates flagged<br />
+              ▸ Updated codebase map
+              <span style="color: var(--text3)"
+                >[incremental — additions only]</span
+              ><br />
+              ▸ Duplicate-check findings — components that already exist, ready
+              for reuse instead of re-creation<br />
+              ▸ <span style="color: var(--text)">For Bug Mode:</span> root-cause
+              hypotheses + localized fix tasks
+              <span style="color: var(--text3)"
+                >[via bug-localization subagent]</span
+              >
+            </div>
+          </div>
+
+          <!-- Stage 3 · Implement -->
+          <div
+            style="
+              background: var(--surface);
+              border-left: 3px solid var(--amber);
+              border-radius: 0 8px 8px 0;
+              padding: 18px 22px;
+              margin-bottom: 12px;
+            "
+          >
+            <div style="margin-bottom: 12px">
+              <span
+                style="
+                  font-family: var(--mono);
+                  font-size: 11px;
+                  color: var(--text3);
+                  letter-spacing: 1.2px;
+                  text-transform: uppercase;
+                "
+                >Stage 3 · Implement</span
+              >
+              <span
+                style="
+                  font-size: 17px;
+                  font-weight: 700;
+                  color: var(--text);
+                  margin-left: 12px;
+                "
+                >Surgeon</span
+              >
+            </div>
+            <div
+              style="font-size: 13.5px; color: var(--text2); line-height: 1.8"
+            >
+              <strong
+                style="
+                  color: var(--accent2);
+                  font-size: 12px;
+                  letter-spacing: 1px;
+                  text-transform: uppercase;
+                "
+                >Reads</strong
+              ><br />
+              ▸ Explorer's Task Annotation Summary — where the code goes<br />
+              ▸ Orchestrator's LLD — what to build, ACs to satisfy<br />
+              ▸ Project pack rules — naming, placement, accessibility, security
+              <span style="color: var(--text3)">[Tier 1 · always-on]</span
+              ><br />
+              ▸
+              <code
+                style="
+                  font-family: var(--mono);
+                  color: var(--accent2);
+                  font-size: 13px;
+                "
+                >engineering-principles.mdc</code
+              >
+              — universal SOLID/KISS/DRY/YAGNI; greenfield vs legacy mode
+              <span style="color: var(--text3)">[Tier 1 · always-on]</span
+              ><br />
+              ▸ Tier 2 skill — language-specific patterns matching the task's
+              layer
+              <span style="color: var(--text3)"
+                >[loaded per task; released between tasks for context
+                efficiency]</span
+              ><br />
+              <strong
+                style="
+                  color: var(--accent2);
+                  font-size: 12px;
+                  letter-spacing: 1px;
+                  text-transform: uppercase;
+                  margin-top: 6px;
+                  display: inline-block;
+                "
+                >Produces</strong
+              ><br />
+              ▸ Code — written one task at a time, in dependency order<br />
+              ▸ Lint + unit test results per task<br />
+              ▸ Change Manifest — running log of created/modified files<br />
+              ▸ Final build verdict<br />
+              ▸ UI edge-case checklist verdict — null / empty / loading / error
+              / permission
+              <span style="color: var(--text3)"
+                >[frontend tasks only — framework-agnostic]</span
+              >
+            </div>
+          </div>
+
+          <!-- Stage 4 · Review -->
+          <div
+            style="
+              background: var(--surface);
+              border-left: 3px solid var(--green);
+              border-radius: 0 8px 8px 0;
+              padding: 18px 22px;
+              margin-bottom: 12px;
+            "
+          >
+            <div style="margin-bottom: 12px">
+              <span
+                style="
+                  font-family: var(--mono);
+                  font-size: 11px;
+                  color: var(--text3);
+                  letter-spacing: 1.2px;
+                  text-transform: uppercase;
+                "
+                >Stage 4 · Review</span
+              >
+              <span
+                style="
+                  font-size: 17px;
+                  font-weight: 700;
+                  color: var(--text);
+                  margin-left: 12px;
+                "
+                >Review</span
+              >
+            </div>
+            <div
+              style="font-size: 13.5px; color: var(--text2); line-height: 1.8"
+            >
+              <strong
+                style="
+                  color: var(--accent2);
+                  font-size: 12px;
+                  letter-spacing: 1px;
+                  text-transform: uppercase;
+                "
+                >Reads</strong
+              ><br />
+              ▸ Surgeon's Change Manifest — what changed<br />
+              ▸ Orchestrator's AC Registry — what to verify<br />
+              ▸ Explorer's Task Annotation Summary — was the plan followed?<br />
+              ▸ All prior build verdicts<br />
+              ▸ Reference ticket PR diff
+              <span style="color: var(--text3)"
+                >[via VCS MCP, when reference set — for pattern
+                comparison]</span
+              ><br />
+              <strong
+                style="
+                  color: var(--accent2);
+                  font-size: 12px;
+                  letter-spacing: 1px;
+                  text-transform: uppercase;
+                  margin-top: 6px;
+                  display: inline-block;
+                "
+                >Produces</strong
+              ><br />
+              ▸ Full build re-run + per-layer test suites — JS / Java / Angular
+              separately<br />
+              ▸ AC compliance check — per AC, evidence-backed<br />
+              ▸ Blast radius assessment<br />
+              ▸ Ship-or-Fix verdict file<br />
+              ▸
+              <strong style="color: var(--text)">epic-context.md UPDATE</strong>
+              — appends this story's summary so the NEXT story inherits it
+              <span style="color: var(--text3)"
+                >[the feedback loop that keeps cost flat across the epic]</span
+              >
+            </div>
+          </div>
+
+          <!-- Stage 5 · Ship -->
+          <div
+            style="
+              background: var(--surface);
+              border-left: 3px solid var(--blue);
+              border-radius: 0 8px 8px 0;
+              padding: 18px 22px;
+              margin-bottom: 0;
+            "
+          >
+            <div style="margin-bottom: 12px">
+              <span
+                style="
+                  font-family: var(--mono);
+                  font-size: 11px;
+                  color: var(--text3);
+                  letter-spacing: 1.2px;
+                  text-transform: uppercase;
+                "
+                >Stage 5 · Ship</span
+              >
+              <span
+                style="
+                  font-size: 17px;
+                  font-weight: 700;
+                  color: var(--text);
+                  margin-left: 12px;
+                "
+                >Ship</span
+              >
+            </div>
+            <div
+              style="font-size: 13.5px; color: var(--text2); line-height: 1.8"
+            >
+              <strong
+                style="
+                  color: var(--accent2);
+                  font-size: 12px;
+                  letter-spacing: 1px;
+                  text-transform: uppercase;
+                "
+                >Reads</strong
+              ><br />
+              ▸ All prior artifacts — LLD, manifest, build verdicts, review
+              verdict <span style="color: var(--text3)">[the audit trail]</span
+              ><br />
+              ▸ Review's Ship-or-Fix verdict — must be PASS to proceed<br />
+              <strong
+                style="
+                  color: var(--accent2);
+                  font-size: 12px;
+                  letter-spacing: 1px;
+                  text-transform: uppercase;
+                  margin-top: 6px;
+                  display: inline-block;
+                "
+                >Produces</strong
+              ><br />
+              ▸ Git commit — with all artifacts staged together<br />
+              ▸ Pull request — design + manifest + verdicts attached as PR body
+              <span style="color: var(--text3)"
+                >[via GitHub MCP, gated: push confirmation]</span
+              ><br />
+              ▸ JIRA ticket transition (In Progress → In Review)
+              <span style="color: var(--text3)">[via Atlassian MCP]</span><br />
+              ▸ <strong style="color: var(--text)">Optional:</strong> LLD draft
+              published to Confluence / Notion
+              <span style="color: var(--text3)"
+                >[when configured + user approves at publish gate; Ship never
+                auto-promotes draft → published]</span
+              >
+            </div>
+          </div>
+
+          <!-- Cross-cutting capabilities (apply across all stages) -->
+          <div
+            style="
+              background: var(--bg2);
+              border: 1px dashed var(--border2);
+              border-radius: 10px;
+              padding: 22px 26px;
+              margin-top: 24px;
+            "
+          >
+            <div
+              style="
+                font-size: 11px;
+                color: var(--text3);
+                letter-spacing: 1.4px;
+                text-transform: uppercase;
+                font-weight: 600;
+                margin-bottom: 14px;
+              "
+            >
+              Cross-cutting capabilities — apply across all stages
+            </div>
+            <div
+              style="font-size: 13.5px; color: var(--text2); line-height: 1.8"
+            >
+              ▸
+              <strong style="color: var(--text)">Amend at any gate.</strong>
+              Type
+              <code
+                style="
+                  font-family: var(--mono);
+                  color: var(--accent);
+                  font-size: 13px;
+                "
+                >Amend: &lt;change&gt;</code
+              >
+              instead of
+              <code
+                style="
+                  font-family: var(--mono);
+                  color: var(--accent);
+                  font-size: 13px;
+                "
+                >Go</code
+              >. The Amender subagent makes targeted section edits — ~70%
+              cheaper than re-running the full agent.<br />
+              ▸
+              <strong style="color: var(--text)"
+                >Inline context fallback.</strong
+              >
+              When MCP integrations are unreachable, agents fall back to local
+              files (<code
+                style="
+                  font-family: var(--mono);
+                  color: var(--accent2);
+                  font-size: 13px;
+                "
+                >contexts/ticket-input.md</code
+              >, inline
+              <code
+                style="
+                  font-family: var(--mono);
+                  color: var(--accent2);
+                  font-size: 13px;
+                "
+                >Context:</code
+              >
+              blocks in the trigger) and
+              <code
+                style="
+                  font-family: var(--mono);
+                  color: var(--accent);
+                  font-size: 13px;
+                "
+                >--offline</code
+              >
+              mode. Pipeline still runs end to end.<br />
+              ▸
+              <strong style="color: var(--text)">Resume from anywhere.</strong>
+              Every agent's output is a file.
+              <code
+                style="
+                  font-family: var(--mono);
+                  color: var(--accent);
+                  font-size: 13px;
+                "
+                >Cancel</code
+              >
+              any time, come back any day, re-run the next stage's command —
+              pipeline picks up from the last approved gate. No reconstructing
+              context from chat history.<br />
+              ▸ <strong style="color: var(--text)">Standalone mode.</strong>
+              Quick fixes that don't need a JIRA ticket can run a single agent
+              directly (no full pipeline). Same agents, single-stage invocation.
+            </div>
+          </div>
+
+          <div class="note n-blue" style="margin-top: 16px; margin-bottom: 0">
+            <strong>🔌 Powered by MCP integrations.</strong> All external-system
+            access — JIRA, Confluence, Figma, GitHub — flows through Model
+            Context Protocol configurations the team sets up once. Swap an MCP
+            to integrate with Linear / Notion / Bitbucket / GitLab — the agents
+            don't care which provider, they call the role (<code
+              style="
+                font-family: var(--mono);
+                color: var(--accent2);
+                font-size: 12px;
+              "
+              >story_source</code
+            >,
+            <code
+              style="
+                font-family: var(--mono);
+                color: var(--accent2);
+                font-size: 12px;
+              "
+              >design_source</code
+            >,
+            <code
+              style="
+                font-family: var(--mono);
+                color: var(--accent2);
+                font-size: 12px;
+              "
+              >vcs</code
+            >,
+            <code
+              style="
+                font-family: var(--mono);
+                color: var(--accent2);
+                font-size: 12px;
+              "
+              >docs_source</code
+            >). One config, every project — same agents.
+          </div>
+        </div>
+      </div>
+
+      <!-- FOR DEVELOPERS / MANAGEMENT -->
+      <div class="s" id="developers">
+        <div class="s-tag">How it helps</div>
+        <h2>How it helps — <em>developers and managers</em></h2>
+        <p class="lead">
+          The same system delivers different value to different audiences.
+          Developers gain time and clarity; managers gain consistency and
+          predictability.
+        </p>
+
+        <div class="audience">
+          <div class="col dev">
+            <h3>For developers</h3>
+            <ul>
+              <li>
+                <strong
+                  >~3–6 hours of coding becomes ~90 min of reviewing</strong
+                >
+                Active typing time on a medium story drops dramatically; the
+                developer reviews and approves instead of hunting and typing.
+              </li>
+              <li>
+                <strong>Less codebase hunting</strong>
+                The Explorer agent finds insertion points and reuse candidates
+                automatically. No more "where does this go?".
+              </li>
+              <li>
+                <strong>Standards applied automatically</strong>
+                Naming, file placement, accessibility, security — applied
+                without thinking, on every story.
+              </li>
+              <li>
+                <strong>Resilient to interruptions</strong>
+                Multi-day stories, sick days, laptop reboots — work resumes from
+                files. No reconstruction from chat history.
+              </li>
+              <li>
+                <strong>Onboarding in days, not weeks</strong>
+                The project catalog captures the tribal knowledge that usually
+                takes 2–3 weeks. New hires ship a real ticket on day 2.
+              </li>
+              <li>
+                <strong>Faster code reviews</strong>
+                Every PR arrives with the design, exploration, change manifest,
+                and verdict already attached. Reviewers focus on judgment, not
+                investigation.
+              </li>
+            </ul>
+          </div>
+          <div class="col mgmt">
+            <h3>For management</h3>
+            <ul>
+              <li>
+                <strong>Predictable cost per story</strong>
+                Cost stays flat as the epic grows. Forecasting is
+                straightforward; no surprise bills at quarter-end.
+              </li>
+              <li>
+                <strong>Consistent quality across the team</strong>
+                The same standards apply on every ticket by every developer.
+                Junior and senior developers ship code that looks the same.
+              </li>
+              <li>
+                <strong>Higher throughput, same headcount</strong>
+                More stories per sprint without adding people. Developer time
+                shifts from mechanical work to judgment.
+              </li>
+              <li>
+                <strong>Complete audit trail</strong>
+                Design, exploration, manifest, review verdict — all files in the
+                PR. Post-mortems get primary-source material.
+              </li>
+              <li>
+                <strong>Lower regression risk</strong>
+                Full build + test suite gate every PR. A failed verdict halts
+                shipping; broken code never reaches reviewers.
+              </li>
+              <li>
+                <strong>Vendor-neutral</strong>
+                Runs in Cursor or Claude Code — both subscription tools the team
+                already has. Zero lock-in to either vendor.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- HOW IT WORKS (compact 5-stage view) -->
+      <div class="s" id="how-it-works">
+        <div class="s-tag">What runs at each stage</div>
+        <h2>Five stages — <em>each agent has one job</em></h2>
+        <p class="lead">
+          Each stage produces a named artifact, a clear next step, and a short
+          approval prompt. The developer sees what the agent is about to do
+          before it does it.
+        </p>
+
+        <div class="flow">
+          <div class="flow-row fr-c1">
+            <div>
+              <div class="fr-num">Stage 1 · Plan</div>
+              <div class="fr-label">Orchestrator</div>
+            </div>
+            <div class="fr-desc">
+              Reads the ticket and the full epic context (HLD, sibling stories,
+              codebase map). Produces a requirement summary, AC registry, and
+              low-level design with a clear task breakdown. Identifies what to
+              reuse from existing code.
+            </div>
+          </div>
+          <div class="flow-row fr-c2">
+            <div>
+              <div class="fr-num">Stage 2 · Explore</div>
+              <div class="fr-label">Explorer</div>
+            </div>
+            <div class="fr-desc">
+              Scans the codebase for the exact insertion points named in the
+              design. Confirms reuse candidates with file paths and line
+              numbers. Flags duplicates before they're created.
+            </div>
+          </div>
+          <div class="flow-row fr-c3">
+            <div>
+              <div class="fr-num">Stage 3 · Implement</div>
+              <div class="fr-label">Surgeon</div>
+            </div>
+            <div class="fr-desc">
+              Writes code one task at a time. Runs lint and unit tests after
+              each task. Runs the full build at the end. Maintains a change
+              manifest.
+            </div>
+          </div>
+          <div class="flow-row fr-c4">
+            <div>
+              <div class="fr-num">Stage 4 · Review</div>
+              <div class="fr-label">Review</div>
+            </div>
+            <div class="fr-desc">
+              Runs the full test suite. Checks every acceptance criterion.
+              Calculates blast radius. Produces a ship-or-fix verdict with
+              evidence — committed alongside the code.
+            </div>
+          </div>
+          <div class="flow-row fr-c5">
+            <div>
+              <div class="fr-num">Stage 5 · Ship</div>
+              <div class="fr-label">Ship</div>
+            </div>
+            <div class="fr-desc">
+              Verifies all build verdicts are PASS. Commits the work. Opens the
+              PR with the design, manifest, and verdicts attached. Updates the
+              JIRA ticket.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PROJECT-AGNOSTIC -->
+      <div class="s" id="agnostic">
+        <div class="s-tag">Project-agnostic</div>
+        <h2>One pipeline. <em>Any project.</em> Just swap the pack.</h2>
+        <p class="lead">
+          The pipeline's brain — the five agents — is identical no matter which
+          project you run it on. The project's personality lives in a
+          configuration "pack" you swap in. Drop a different pack, get a
+          pipeline that knows a different stack.
+        </p>
+
+        <div class="agnostic-flow">
+          <div class="core">
+            Pipeline core (5 agents · unchanged across all projects)
+          </div>
+          <div class="plus">+</div>
+          <div
+            style="
+              font-family: var(--mono);
+              font-size: 13px;
+              color: var(--text2);
+              margin-bottom: 14px;
+            "
+          >
+            Project pack (everything project-specific)
+          </div>
+          <div class="arrow">↓</div>
+          <div style="font-size: 14px; color: var(--text); font-weight: 600">
+            Pipeline that knows your project
+          </div>
+        </div>
+
+        <h3>What lives in a pack</h3>
+        <table>
+          <tr>
+            <th style="width: 30%">Inside the pack</th>
+            <th>Example for our Java + Angular project</th>
+          </tr>
+          <tr>
+            <td><strong>Coding standards</strong></td>
+            <td>
+              Naming conventions, file placement, import rules, accessibility
+              requirements
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Build commands</strong></td>
+            <td>
+              How to lint, build, test — and which test suites apply to which
+              file types
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Project skills</strong></td>
+            <td>
+              Stack-specific patterns the team uses — REST conventions, security
+              checks, i18n rules
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Tool integrations</strong></td>
+            <td>
+              Which JIRA / Confluence / GitHub / Figma instance the project uses
+              (optional — works offline too)
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Forbidden patterns</strong></td>
+            <td>
+              Things the agents must never do — database drops, force pushes,
+              deploy targets, secrets in logs
+            </td>
+          </tr>
+        </table>
+
+        <h3>Today and tomorrow</h3>
+        <div class="agnostic">
+          <div class="pack live">
+            <div class="badge">LIVE</div>
+            <div class="pname">IIQ pack</div>
+            <div class="pdesc">
+              Java + Spring + Hibernate backend; Angular 18 + AngularJS
+              frontend; Ant + Gulp build. In production today.
+            </div>
+          </div>
+          <div class="pack">
+            <div class="pname">Python pack</div>
+            <div class="pdesc">
+              Python + FastAPI / Django backend; pytest test runner. Future —
+              same agents, new pack.
+            </div>
+          </div>
+          <div class="pack">
+            <div class="pname">Custom pack</div>
+            <div class="pdesc">
+              Any stack the team uses next. Build a pack once; the pipeline
+              supports it forever.
+            </div>
+          </div>
+        </div>
+
+        <div class="note n-blue">
+          <strong>Why this matters for management:</strong> the investment we're
+          making isn't tied to one stack. As the company adopts new languages or
+          frameworks, the same pipeline goes with us — only the pack changes. No
+          rewriting agents, no retraining the team on a new tool.
+        </div>
+      </div>
+
+      <!-- DECISION & ROLLOUT (combined) -->
+      <div class="s" id="decision">
+        <div class="s-tag">Decision &amp; rollout</div>
+        <h2>The decision — <em>three weeks to full adoption</em></h2>
+        <p class="lead">
+          We're asking for approval on a small, time-boxed pilot. The investment
+          is bounded; the risk is low; the upside is measurable within two
+          weeks. Below: what we're asking for, then the rollout plan if
+          approved.
+        </p>
+
+        <div class="ask-box">
+          <h3>What we're asking management to approve</h3>
+          <ul>
+            <li>
+              <strong>Pilot scope:</strong> 3 developers × 5 stories each over 2
+              weeks. Tracked in standard sprint cadence.
+            </li>
+            <li>
+              <strong>Tech-lead time:</strong> ~4 hours one-time to install and
+              run the project analyzer.
+            </li>
+            <li>
+              <strong>Pilot developer time:</strong> ~30 minutes onboarding
+              each. Their actual story work proceeds on the pilot.
+            </li>
+            <li>
+              <strong>Subscription cost:</strong> none — uses the same Cursor /
+              Claude Code subscriptions developers already have.
+            </li>
+            <li>
+              <strong>Success criteria:</strong> at the end of 2 weeks, we
+              measure (a) cycle time per story, (b) defect rate at PR review,
+              (c) developer satisfaction. Positive results → expand to full team
+              in week 3.
+            </li>
+            <li>
+              <strong>Rollback risk:</strong> low. Opt-in per developer and per
+              ticket. Any developer can step out at any time and continue with
+              their existing flow.
+            </li>
+          </ul>
+        </div>
+
+        <h3 style="margin-top: 32px">Rollout plan if approved</h3>
+        <p
+          style="
+            font-size: 14.5px;
+            color: var(--text2);
+            margin-bottom: 14px;
+            line-height: 1.6;
+          "
+        >
+          The pipeline is opt-in per developer and reversible at any stage. The
+          recommended rollout staggers risk — small pilot first, then team-wide.
+        </p>
+
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="when">Week 0 · Setup (one-time)</div>
+            <h4>Tech lead installs the pipeline + pack</h4>
+            <p>
+              ~1 hour of installation. The project analyzer runs once to
+              generate the project catalog. Catalog committed to the repo so
+              every developer inherits it.
+            </p>
+          </div>
+          <div class="tl-item">
+            <div class="when">Week 1 · Pilot</div>
+            <h4>Three developers, five stories each</h4>
+            <p>
+              Three volunteer developers run their next 5 stories through the
+              pipeline. Daily check-in on what's working. Cost is bounded and
+              small.
+            </p>
+          </div>
+          <div class="tl-item">
+            <div class="when">Week 2 · Review + adjust</div>
+            <h4>Pilot retrospective, pack refinements</h4>
+            <p>
+              Pilot team shares findings. Any pack rules that need tuning are
+              folded in. Re-tested on the next ticket — pack improves
+              continuously, agents stay the same.
+            </p>
+          </div>
+          <div class="tl-item">
+            <div class="when">Week 3 · Team-wide</div>
+            <h4>Pipeline becomes the default</h4>
+            <p>
+              Remaining developers onboarded. Each gets a 30-minute walkthrough
+              from a pilot developer. From this point forward, the pipeline is
+              the team's standard story-delivery flow.
+            </p>
+          </div>
+        </div>
+
+        <div class="callout">
+          <div class="q">
+            ~83% lower cost. ~3–6 hours saved per medium story. 0 PRs shipped
+            without human approval.
+          </div>
+          <div class="a">
+            If the pilot results match the projections, this becomes one of the
+            highest-ROI tooling investments we make this year — measured in
+            hours of senior developer time saved per week.
+          </div>
+        </div>
+
+        <div class="note n-amber">
+          <strong>Honest caveats.</strong> The numbers in this brief are modeled
+          on representative medium stories. Actual savings depend on story
+          shape, story count, and how consistently the team adopts the gates.
+          Expect 70–90% of the quoted savings in real-world use; the pilot
+          exists to validate.
+        </div>
+      </div>
+
+      <div class="foot">
+        Agent Pipeline · Business Case · Internal review document<br />
+        <span
+          style="color: var(--accent2); margin-top: 6px; display: inline-block"
+          >Authored by Mahipal Gurjala</span
+        >
+      </div>
+    </main>
+  </body>
+</html>
