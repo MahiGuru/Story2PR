@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Pipeline — How It Works (Technical Reference)</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#1c2333;
+  --surface:#1c2333;--border:#30363d;--border2:#484f58;
+  --text:#e6edf3;--text2:#8b949e;--text3:#6e7681;
+  --accent:#58a6ff;--accent2:#79c0ff;--accentLt:rgba(56,139,253,0.15);
+  --coral:#ff7b72;--coralLt:rgba(255,123,114,0.15);
+  --teal:#3fb950;--tealLt:rgba(63,185,80,0.15);
+  --amber:#d29922;--amberLt:rgba(210,153,34,0.15);
+  --green:#3fb950;--greenLt:rgba(63,185,80,0.15);
+  --blue:#58a6ff;--blueLt:rgba(56,139,253,0.15);
+  --purple:#bc8cff;--purpleLt:rgba(188,140,255,0.15);
+  --mono:'IBM Plex Mono',monospace;--sans:'DM Sans',system-ui,sans-serif
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.72}
+.page{max-width:860px;margin:0 auto;padding:0 36px}
+
+nav{position:sticky;top:0;z-index:99;background:rgba(13,17,23,0.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
+nav .inner{max-width:860px;margin:0 auto;padding:10px 36px;display:flex;align-items:center;gap:18px;overflow-x:auto}
+nav .brand{font-family:var(--mono);font-weight:600;font-size:12px;color:var(--accent);white-space:nowrap;flex-shrink:0}
+nav a{font-size:12px;color:var(--text2);text-decoration:none;white-space:nowrap;transition:color .15s}
+nav a:hover{color:var(--accent2)}
+
+.hero{padding:60px 0 36px;border-bottom:2px solid var(--border)}
+.chip{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);background:var(--accentLt);padding:4px 12px;border-radius:100px;margin-bottom:16px}
+.hero h1{font-size:40px;font-weight:800;letter-spacing:-1.6px;line-height:1.08;margin-bottom:14px}
+.hero h1 em{font-style:normal;color:var(--accent2)}
+.hero .desc{font-size:16px;color:var(--text2);max-width:640px;line-height:1.7}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:30px 0 0}
+.kpi{text-align:center;padding:16px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:10px}
+.kpi b{font-family:var(--mono);font-size:20px;font-weight:600;color:var(--accent);display:block}
+.kpi span{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1.2px}
+
+.s{padding:48px 0;border-bottom:1px solid var(--border)}.s:last-child{border-bottom:none}
+.s-tag{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:1.8px;text-transform:uppercase;margin-bottom:6px}
+.s h2{font-size:25px;font-weight:700;letter-spacing:-.5px;margin-bottom:4px}
+.s .lead{color:var(--text2);font-size:14px;margin-bottom:22px;max-width:680px}
+h3{font-size:15px;font-weight:700;margin:22px 0 8px}
+
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12px}
+th{background:var(--bg2);border:1px solid var(--border);padding:8px 12px;text-align:left;font-weight:600;color:var(--accent);font-size:10px;text-transform:uppercase;letter-spacing:.8px;font-family:var(--mono)}
+td{border:1px solid var(--border);padding:8px 12px;color:var(--text2);vertical-align:top}
+td strong{color:var(--text)}
+pre{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 18px;font-family:var(--mono);font-size:11px;line-height:1.7;overflow-x:auto;margin:12px 0;color:var(--text2)}
+code{font-family:var(--mono);font-size:11px;background:var(--bg2);border:1px solid var(--border);padding:0 4px;border-radius:3px;color:var(--accent)}
+pre code{background:none;border:none;padding:0;color:inherit}
+
+.note{padding:13px 18px;border-radius:8px;margin:14px 0;font-size:12.5px;line-height:1.6;border:1px solid}
+.n-blue{background:var(--accentLt);border-color:rgba(56,139,253,0.4);color:var(--accent2)}
+.n-green{background:var(--greenLt);border-color:rgba(63,185,80,0.4);color:var(--green)}
+.n-amber{background:var(--amberLt);border-color:rgba(210,153,34,0.4);color:var(--amber)}
+.n-coral{background:var(--coralLt);border-color:rgba(255,123,114,0.4);color:var(--coral)}
+.note strong{color:inherit}
+ul{padding-left:16px;margin:8px 0}li{margin-bottom:4px;font-size:12.5px;color:var(--text2)}li strong{color:var(--text)}
+
+/* collapsible accordion */
+details.acc{border:1px solid var(--border);border-radius:10px;margin:9px 0;background:var(--bg2);overflow:hidden}
+details.acc>summary{cursor:pointer;padding:13px 16px;list-style:none;display:flex;align-items:center;gap:10px}
+details.acc>summary::-webkit-details-marker{display:none}
+details.acc>summary::before{content:"▸";color:var(--accent);font-size:11px;transition:transform .15s;flex-shrink:0}
+details.acc[open]>summary::before{transform:rotate(90deg)}
+details.acc>summary:hover{background:var(--surface)}
+details.acc>summary .nm{font-weight:700;font-size:14px;color:var(--text)}
+details.acc>summary .one{font-size:12px;color:var(--text3);margin-left:auto;text-align:right}
+details.acc>summary .step{font-family:var(--mono);font-size:9px;font-weight:600;padding:2px 7px;border-radius:100px;flex-shrink:0}
+.acc .body{padding:6px 18px 18px;border-top:1px solid var(--border)}
+.spec{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:12px 0;font-size:12px}
+.spec dt{font-family:var(--mono);font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;padding-top:2px}
+.spec dd{color:var(--text2)}
+.spec dd strong{color:var(--text)}
+.ex{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:6px;padding:10px 14px;margin:12px 0;font-size:12px;color:var(--text2)}
+.ex b{color:var(--accent2);font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:5px}
+
+.zone{display:grid;grid-template-columns:auto 1fr;gap:10px 14px;align-items:start;margin:10px 0}
+.zdot{width:11px;height:11px;border-radius:50%;margin-top:4px}
+.foot{text-align:center;padding:34px 0;font-family:var(--mono);font-size:11px;color:var(--text3)}
+@media(max-width:768px){.hero h1{font-size:26px}.kpi-row{grid-template-columns:1fr 1fr}.page{padding:0 16px}nav .inner{padding:10px 16px}.spec{grid-template-columns:1fr}.spec dt{padding-top:8px}details.acc>summary .one{display:none}}
+</style>
+</head>
+<body>
+
+<nav><div class="inner">
+<span class="brand">Agent Pipeline · How It Works</span>
+<a href="#model">Mental model</a>
+<a href="#agents">Agents</a>
+<a href="#subagents">Subagents</a>
+<a href="#rules">Rules</a>
+<a href="#skills">Skills</a>
+<a href="#config">Pipeline config</a>
+<a href="#context">Context in files</a>
+<a href="#harness">Harness & loop</a>
+</div></nav>
+
+<div class="page">
+
+<div class="hero">
+<div class="chip">Technical reference · under the hood</div>
+<h1>How the pipeline actually works <em>— agents, rules, skills, context</em></h1>
+<p class="desc">A deep dive into the machinery: what each agent and subagent does, when rules and skills fire, and how state is engineered to live in files instead of chat history. Every section is collapsible — open what you need. Verified against the agent prompts, <code>agent-flow.mdc</code>, and <code>pipeline.your-project.yaml</code>.</p>
+<div class="kpi-row">
+<div class="kpi"><b>7</b><span>Agents</span></div>
+<div class="kpi"><b>2</b><span>Subagents</span></div>
+<div class="kpi"><b>3</b><span>Rule tiers</span></div>
+<div class="kpi"><b>4</b><span>Pressure zones</span></div>
+</div>
+</div>
+
+<!-- MENTAL MODEL -->
+<div class="s" id="model">
+<div class="s-tag">The big idea</div>
+<h2>One principle: state lives in files, not chat</h2>
+<p class="lead">Everything else follows from this. Each agent runs in its own short-lived conversation, reads its inputs from disk, writes its outputs to disk, and exits. The next agent reads <em>only the files</em> — never the previous chat. That is what makes gates, hand-offs, and day-2 resume work.</p>
+
+<div class="note n-blue"><strong>Three consequences to keep in mind while reading:</strong>
+<ul style="margin-top:6px">
+<li><strong>You are the scheduler.</strong> Typing the next agent IS the gate. No agent runs another agent.</li>
+<li><strong>Context is a budget.</strong> Every file read costs tokens, so agents load only the slice they need — this is why the LLD is split into 3 files and skills load on demand.</li>
+<li><strong>Rules always apply; skills apply on demand; subagents are invoked.</strong> That's the three-tier system below.</li>
+</ul></div>
+
+<h3>The three tiers at a glance</h3>
+<table>
+<tr><th>Tier</th><th>What</th><th>How it loads</th><th>When it applies</th></tr>
+<tr><td><strong>Tier 1 · Rules</strong></td><td><code>agent-flow.mdc</code>, <code>engineering-principles.mdc</code>, pack scope rule</td><td><code>alwaysApply: true</code> — the host injects them into <em>every</em> agent run</td><td>Always, every run</td></tr>
+<tr><td><strong>Tier 2 · Skills</strong></td><td>Layer standards, LLD generator, AC templates</td><td>Referenced in YAML; catted in only when triggered</td><td>Per task (layer match) or per run (agent slot)</td></tr>
+<tr><td><strong>Tier 3 · Subagents</strong></td><td>2 kernel delegated workers</td><td><em>Invoked</em> via the Task tool at an extension point; return a compact result</td><td>At specific phases (enrichment, fan-out, blast radius)</td></tr>
+</table>
+
+<pre><code>Step 0  project-analyzer  → project-map.md            (one-time + rescans)
+Step 1  orchestrator      → 3-file LLD + branch       (⏸ Phase C gate)
+Step 2  explorer          → exploration + map sync    (⏸ review)
+Step 3  surgeon           → code + manifest           (per-task loop, ⏸ build)
+Step 3.5 ac-e2e-check     → browser AC verdicts       (OPTIONAL)
+Step 4  review            → review report + verdict   (⏸ ship-ready)
+Step 5  ship              → commit + PR + JIRA         (⏸ Confirmed)</code></pre>
+</div>
+
+<!-- AGENTS -->
+<div class="s" id="agents">
+<div class="s-tag">The 7 agents</div>
+<h2>What each agent does</h2>
+<p class="lead">Each agent is a prompt file. Its first pre-flight step is always <code>detect_invocation_mode (0)</code> (pipeline vs standalone), and its last step before the gate always appends to the tool-usage ledger. Open any agent for its phases, files, gates, and a worked example.</p>
+
+<details class="acc"><summary><span class="step" style="background:var(--purpleLt);color:var(--purple)">STEP 0</span><span class="nm">project-analyzer</span><span class="one">scans repo → project-map.md</span></summary>
+<div class="body">
+<p style="font-size:13px;color:var(--text2)">Runs once at onboarding (and on-demand rescans). Scans the whole codebase to produce the project's DNA and auto-generate config blocks every other agent depends on.</p>
+<dl class="spec">
+<dt>Phases</dt><dd><code>preload_config (0)</code> → <code>discover_tech_stack (1)</code> → <code>map_folder_structure (2)</code> → <code>catalog_shared_components (3)</code> (6-signal evidence) → shared services (4) / REST endpoints (5) / templates (6) / config+build (7) → <code>write_pipeline_yaml (8)</code> → <code>emit_rescan_guidance (8.5)</code> → <code>propose_unconfigured_detections (8.6)</code> → data contracts (9) / consumer graph (10) / endpoint reusability (11)</dd>
+<dt>Reads</dt><dd>dependency manifests (pom.xml, package.json…), source across all layers, <code>alias-taxonomy.md</code> (~80 aliases), prior <code>project-map.md</code> (drift baseline)</dd>
+<dt>Writes</dt><dd><code>contexts/project-map.md</code> (12 sections) + routes config blocks to their owning split file: <code>shared_paths</code>→analyzer.yaml, <code>operation_patterns</code>/<code>i18n</code>→builds.yaml, <code>layer_map</code>→skills.yaml. Never overwrites user-edited sections.</dd>
+<dt>Gate</dt><dd>Main pre-write gate: <code>Go</code> / <code>Review LOW</code> / <code>Preview…</code> / <code>Show drift only</code> / <code>Cancel</code></dd>
+<dt>Subagents</dt><dd>None</dd>
+<dt>Skills</dt><dd><code>alias-taxonomy.md</code> (Phase 3)</dd>
+</dl>
+<div class="ex"><b>Example · 6-signal classification</b>It never emits a component alias on filename alone — it requires ≥2 signals to agree. A <code>ngx-datatable</code> wrapper with just one consumer is still catalogued SHARED via Signal 5 (sole wrapper of a known library); a <code>*-wrapper</code> file with a <code>@shared</code> JSDoc tag passes Signal 6.</div>
+</div></details>
+
+<details class="acc"><summary><span class="step" style="background:var(--coralLt);color:var(--coral)">STEP 1</span><span class="nm">orchestrator</span><span class="one">ticket → 3-file LLD + branch</span></summary>
+<div class="body">
+<p style="font-size:13px;color:var(--text2)">Parses every field of the ticket, researches the epic + siblings + any reference, synthesizes the 3-file LLD, and creates the branch after you approve at the Phase C gate.</p>
+<dl class="spec">
+<dt>Phases</dt><dd><code>load_context (A0)</code> → <code>resolve_mcp_roles (A0.5)</code> → <code>resolve_enrichments (A0.6)</code> → <code>freshness_check (A.0.5)</code> → <code>understand_ticket (A)</code> → <code>synthesize_lld (B)</code> (PART 1 design → PART 2 tasks → PART 3 test plan → PART 4 test tasks) → <code>gate_for_approval (C)</code></dd>
+<dt>Reads</dt><dd>trigger text, <code>pipeline.yaml</code> + <code>.skills.yaml</code>, ticket-schema + AC-template skills, JIRA ticket + linked issues + attachments, Confluence HLD, Figma frames, <code>project-map.md</code>, <code>epic-context.md</code></dd>
+<dt>Writes</dt><dd><code>$CONTEXTS_FILE</code> (summary + AC registry), <code>$LLD_FILE</code> (PART 1+2), <code>$TESTPLAN_FILE</code> (PART 3+4), branch, JIRA transition on Go. All three files share one <code>ticket:</code> metadata value — B.6 halts if any is missing.</dd>
+<dt>Gate</dt><dd><strong>Phase C:</strong> <code>Go</code> / <code>Go, branch {custom}</code> / <code>Amend: &lt;change&gt;</code> / <code>Cancel</code></dd>
+<dt>Subagents</dt><dd><code>image-analysis</code> (if ≥2 images) at A0.6; <code>amender</code> on <code>Amend:</code> at C. Epic + reference enrichment is fetched inline.</dd>
+<dt>Skills</dt><dd><code>lld_generator</code>, <code>ticket_schema_story</code>, <code>ac_templates_intent_aware</code> — all at A0</dd>
+</dl>
+<div class="ex"><b>Example · why 3 files not 1</b>A.5b writes the small entry-point <code>$CONTEXTS_FILE</code>; B.2/B.3 write <code>$LLD_FILE</code> (design + tasks); B.4/B.5 write <code>$TESTPLAN_FILE</code>. This lets Explorer read PART 2 without the design discussion (~15–20K saved) and lets Surgeon/Review each load only their slice. The <strong>W2 contract-confidence gate</strong> in B.3 tags every REST-endpoint task HIGH/MEDIUM/LOW/NONE — Explorer and Surgeon consume that tag downstream.</div>
+</div></details>
+
+<details class="acc"><summary><span class="step" style="background:var(--tealLt);color:var(--teal)">STEP 2</span><span class="nm">explorer</span><span class="one">sync map + annotate tasks</span></summary>
+<div class="body">
+<p style="font-size:13px;color:var(--text2)">Read/search only — never edits code. Syncs the epic codebase map with sibling changes, then prepares precise insertion points, reuse matches, and wiring templates so the Surgeon doesn't have to re-explore.</p>
+<dl class="spec">
+<dt>Phases</dt><dd>pre-flight → <code>load_project_map (1.5)</code> (layer-aware lazy load) → <code>check_codebase_map (2)</code> (Mode A full / Mode B incremental) → <code>sync_map (1.5)</code> → <strong>Story Exploration:</strong> <code>reuse_discovery (E.0)</code> (9-step, CREATE is last resort) → <code>build_scan_plan (E.1)</code> → <code>explore_each_task (E.2)</code> → <code>framework_aware_refs (E.3)</code></dd>
+<dt>Reads</dt><dd>Requirement Summary + PART 2 tasks; <code>project-map.md</code> (matching sections only); <code>epic-context.md</code>; <code>codebase-map.md</code>. PART 1 only on-demand. Does <em>not</em> read testplan content.</dd>
+<dt>Writes</dt><dd>Fills PART 2 §23b + PART 4 §30b placeholders in-place (<code>Insertion Point:</code>, <code>Reuse Match:</code>, <code>Explorer Notes:</code>); creates/syncs <code>codebase-map.md</code>; writes slim <code>$EXPLORATION_FILE</code> (Task Annotation Summary table)</dd>
+<dt>Gate</dt><dd>Non-blocking: <code>Run the surgeon</code> / <code>Show full report</code> / <code>Explore deeper: {task}</code></dd>
+<dt>Subagents</dt><dd>None — explores tasks inline (E.2), one at a time</dd>
+<dt>Skills</dt><dd>None in story mode; bug-router skills in bug mode</dd>
+</dl>
+<div class="ex"><b>Example · complete wiring template (E.2d)</b>For a ♻️ REUSE task, Explorer synthesizes exact copy-position-configure code from three sources — the component's declaration/props, a real existing consumer's usage (strongest signal), and the AC's needs — handing Surgeon the <code>$inject</code> positions and gotchas so Surgeon never opens the component file.</div>
+</div></details>
+
+<details class="acc"><summary><span class="step" style="background:var(--amberLt);color:var(--amber)">STEP 3</span><span class="nm">surgeon</span><span class="one">per-task loop → code + manifest</span></summary>
+<div class="body">
+<p style="font-size:13px;color:var(--text2)">Implements every LLD task in dependency order with per-task verification. Writes minimal code satisfying the contract. Never commits — Ship owns git.</p>
+<dl class="spec">
+<dt>Per-task loop</dt><dd><code>reuse_verification (0a)</code> → <code>load_coding_standards (0b)</code> (layer skill) → <code>pre_implementation_check (0c)</code> (greenfield vs legacy) → <code>complexity_circuit_breaker (1)</code> → <code>implement (2)</code> → <code>post_verification (3)</code> (lint + unit test) → <code>ui_edge_case_checklist (3a)</code> → <code>principles_self_check (3a-bis)</code> → <code>track_changes (4, NO COMMIT)</code> → <code>task_report (5)</code></dd>
+<dt>Reads</dt><dd>PART 2 §23b (primary per-task ref), PART 4 §30b, exploration summary, layer skills per task, <code>$MANIFEST_FILE</code> on resume, target source files</dd>
+<dt>Writes</dt><dd>source code; <code>$MANIFEST_FILE</code> (Change Manifest — completed/pending tasks, per-task verify result, edge cases Q1–Q5, principles line, <code>lld_version_at_checkpoint</code> for drift); <code>$SURGEON_BUILD_REPORT</code>. No <code>git add/commit</code>.</dd>
+<dt>Gate</dt><dd>Build-failure gate after 5-attempt auto-fix: <code>retry</code>/<code>skip</code>/<code>cancel</code>. Also reuse-missed, i18n, resume-drift, complexity halts.</dd>
+<dt>Subagents</dt><dd>Optional <code>surgeon_pre_task</code>/<code>surgeon_post_task</code> hooks (empty by default)</dd>
+<dt>Skills</dt><dd>Layer skills per task via <code>layer_map</code> (Strategy A ∪ B) + <code>extra_triggers</code>; previous task's skill released before next</dd>
+</dl>
+<div class="ex"><b>Example · per-task lint vs one final build</b>The full compile/build is <strong>skipped per task</strong> (it was the biggest context-bloat source). Each task runs only lint + unit tests + static checks. The full <code>ant clean build</code> runs <em>once</em> at <code>final_build_check (Step 4)</code>, wrapped by the build runner so raw output goes to a log file, not the transcript. A task edits build config? It opts into a per-task build, noted in the manifest.</div>
+</div></details>
+
+<details class="acc"><summary><span class="step" style="background:var(--purpleLt);color:var(--purple)">STEP 3.5</span><span class="nm">ac-e2e-check</span><span class="one">optional · gap analysis + browser</span></summary>
+<div class="body">
+<p style="font-size:13px;color:var(--text2)">Optional, between Surgeon and Review. Two jobs: a static three-way gap analysis (Requirement × AC × Task) that routes new tasks back to Surgeon, and a browser walk of each AC against the live app.</p>
+<dl class="spec">
+<dt>Phases</dt><dd>pre-flight + <code>load_demo_config (1)</code> → <code>static_gap_analysis (Phase 0)</code> (three-way trace + intent-aware priority) → e2e spec gen → login → <code>walkthrough_plan (2)</code> → <code>execute_each_ac (3)</code> → <code>browser_failure_surgeon_loop (5)</code> → <code>complete_picture_report (6)</code></dd>
+<dt>Reads</dt><dd>Requirement Summary + AC Registry, PART 2 task list, <code>pipeline.{PACK}.e2e.test.yaml</code> (<code>demo</code> block: base_url, auth, routes), live app</dd>
+<dt>Writes</dt><dd>DEMO-ADDED tasks appended to PART 2, AC Registry <code>covered_by</code> updates, demo report + screenshots, <code>$DEMO_BUILD_REPORT</code></dd>
+<dt>Gate</dt><dd>Coverage matrix: <code>Add missing tasks</code> / <code>Fix all</code> / <code>Go browser</code>. Browser failure: <code>Fix in surgeon</code> / <code>Accept and continue</code></dd>
+<dt>Subagents</dt><dd>None — routes back to Surgeon (resumes from manifest)</dd>
+<dt>Skills</dt><dd>None (loads the <code>demo</code> config block)</dd>
+</dl>
+<div class="ex"><b>Example · three-way cross-reference</b>Requirement→AC (missing = 🔴 orchestrator gap), AC→Task (missing = 🔴 surgeon gap), Task→Requirement (extra = 🟡 scope creep). Gaps are then ranked by <strong>button intent</strong>: a destructive-confirm or bulk-action button is 🛑 verified first; a navigation toggle is 🟢 low priority. DEMO-ADDED tasks (T8, T9…) go back to Surgeon, which re-runs <em>only</em> the new tasks — never T1–T7.</div>
+</div></details>
+
+<details class="acc"><summary><span class="step" style="background:var(--greenLt);color:var(--green)">STEP 4</span><span class="nm">review</span><span class="one">build + tests + AC compliance → verdict</span></summary>
+<div class="body">
+<p style="font-size:13px;color:var(--text2)">Full clean build + test suite, per-task code review vs the LLD, blast radius, AC compliance, and epic-context/project-map updates. Two modes: default (all 6 parts) and <code>--slim</code> (~40% cheaper, never ship-ready).</p>
+<dl class="spec">
+<dt>Parts</dt><dd><code>PART 1 full_verification</code> (build + tests) → <code>PART 2 code_review</code> (inline, file-by-file) → <code>PART 3 blast_radius</code> (inline grep) → <code>PART 3.5 enrichment_fidelity</code> (pattern + visual) → <code>PART 4 test_plan_validation</code> → <code>PART 5 epic_context_update</code> + <code>5b project_map_update</code> + <code>5c epic_e2e_plan_preview</code></dd>
+<dt>Reads</dt><dd>uncommitted diff + <code>$MANIFEST_FILE</code>, AC Registry, PART 2, PARTs 3+4, <code>$SURGEON_BUILD_REPORT</code>, reference ticket's local files (if any), <code>project-map.md</code>, <code>epic-context.md</code></dd>
+<dt>Writes</dt><dd><code>$REVIEW_FILE</code> (per-task verdicts, blast radius, fidelity, Issues Tracker, <code>Ship-ready: YES/NO</code>, E2E preview), <code>$REVIEW_BUILD_REPORT</code>, appends story entry to <code>epic-context.md</code>, updates <code>project-map.md</code></dd>
+<dt>Gate</dt><dd>Build-failure gate; slim gate (<code>Run full review</code>/<code>Accept as-is</code>); end gate → <code>Ship it</code> when P0/P1 clear</dd>
+<dt>Subagents</dt><dd>None — code review, blast radius, and fidelity run inline. Optional <code>review_post_check</code> hook (empty by default).</dd>
+<dt>Skills</dt><dd>Per-layer standards (default mode only); pack <code>*-postverify.mdc</code> rules per layer</dd>
+</dl>
+<div class="ex"><b>Example · reusing Surgeon's build (1a)</b>Before running <code>review_gate</code>, Review parses <code>$SURGEON_BUILD_REPORT</code> front-matter. If <code>verdict == PASS</code> AND <code>started_at &gt; manifest_mtime</code> AND the command matches <code>builds.review_gate</code>, it <strong>skips the rebuild</strong> and records "Build: PASS (reused)". <code>--fresh</code> bypasses this. Slim mode goes further — it trusts the manifest's <code>build_result</code>/<code>verify_by_result</code>/<code>edge_cases_handled</code> fields and halts if any are missing.</div>
+</div></details>
+
+<details class="acc"><summary><span class="step" style="background:var(--blueLt);color:var(--blue)">STEP 5</span><span class="nm">ship</span><span class="one">commit + PR + JIRA · git owner</span></summary>
+<div class="body">
+<p style="font-size:13px;color:var(--text2)">The only agent that touches git. Commits, double-gated push, PR with a build-verdict table, JIRA transition, map updates. Never runs standalone, never auto — requires <code>Ship-ready: YES</code> in the review file.</p>
+<dl class="spec">
+<dt>Steps</dt><dd><code>check_prerequisites</code> (verdict = YES) → <strong>v15 marker integrity check</strong> → <code>show_state (1)</code> → <code>ask_commit_strategy (2)</code> → <code>execute_commits (3)</code> → <code>pre_push_checklist (4, double-gated)</code> → <code>push_and_pr (5)</code> → <code>jira_status_comment (5b)</code> → <code>update_codebase_map (6)</code></dd>
+<dt>Reads</dt><dd>uncommitted diff + manifest, <code>$REVIEW_FILE</code>, all 3 LLD files (for PR body), build reports, <code>jira.*</code> config</dd>
+<dt>Writes</dt><dd>git commits + push, GitHub PR (<code>gh pr create</code>) with build-verdicts table, JIRA transition + comment, increments <code>stories_completed</code> + <code>STORY_SHIPPED</code> in the codebase map</dd>
+<dt>Gate</dt><dd><code>ask_commit_strategy</code>: <code>Single</code>/<code>Per-task</code>/<code>Custom</code>. <code>pre_push_checklist</code>: <code>Confirmed</code>/<code>Undo commits</code>/<code>Show diff</code> — never auto-pushes.</dd>
+<dt>Subagents</dt><dd>None</dd>
+<dt>Skills</dt><dd>None (Tier 1 rules only)</dd>
+</dl>
+<div class="ex"><b>Example · marker integrity halts before git</b>Before any git call, Ship verifies every REST task's <code>contract_confidence:</code> and every button task's <code>button_intent:</code> marker is still valid, and that Review's project-map edits didn't corrupt rows. If a marker is broken it <strong>halts before committing</strong> — so corrupted machine-readable markers never enter history.</div>
+</div></details>
+</div>
+
+<!-- SUBAGENTS -->
+<div class="s" id="subagents">
+<div class="s-tag">The 2 subagents</div>
+<h2>Delegated workers &amp; the invocation contract</h2>
+<p class="lead">A subagent runs in its own context window, takes one YAML input block, and returns one compact YAML result. Its value is <em>context isolation</em> — heavy data (raw JSON, image bytes, grep output) stays in the subagent's transcript, and only the summary crosses back to the parent.</p>
+
+<div class="note n-blue"><strong>The contract (5 conventions):</strong>
+<ul style="margin-top:6px">
+<li><strong>Single YAML output</strong> — one fenced block starting with <code>status: ok | error | partial</code> + <code>schema_version</code>. No prose.</li>
+<li><strong>Input as one YAML block</strong> in the invocation prompt — the subagent reads only that, no free-form instructions.</li>
+<li><strong>Deterministic cache</strong> at <code>contexts/&lt;epic&gt;/_cache/&lt;subagent&gt;-&lt;key&gt;.yaml</code> — the key includes an external version id (e.g. PR head SHA) so stale caches invalidate naturally.</li>
+<li><strong>Never gates the user</strong> — only the parent owns interaction. On <code>error</code> the parent surfaces the reason at its next gate and takes a degraded path.</li>
+<li><strong>Emits its own tool-usage log</strong> to <code>contexts/&lt;epic&gt;/_subagents/</code>.</li>
+</ul></div>
+
+<h3>Two invocation shapes</h3>
+<table>
+<tr><th>Shape</th><th>Pattern</th><th>Used by</th></tr>
+<tr><td><strong>A · single-shot</strong></td><td>Parent fires ONE subagent, gets ONE result, proceeds</td><td><strong>Both shipped kernel subagents</strong> — image-analysis, amender</td></tr>
+<tr><td><strong>B · parallel fan-out</strong></td><td>Parent fires N in parallel (one per list item), aggregates by <code>task_id</code>. Cost floor: only wins at N≥4 with ≥2K tokens each; else falls back to inline</td><td>Defined in the contract for pack-supplied fan-out subagents; none shipped in the kernel today</td></tr>
+</table>
+
+<details class="acc"><summary><span class="step" style="background:var(--coralLt);color:var(--coral)">A0.6</span><span class="nm">image-analysis</span><span class="one">Figma/screenshots → visual_spec</span></summary>
+<div class="body">
+<dl class="spec">
+<dt>Invoked by</dt><dd>Orchestrator <code>resolve_enrichments (A0.6)</code> when <strong>≥2 images</strong> are available (1 image is cheaper inline). Consumed at A.5 + B.3.</dd>
+<dt>Input</dt><dd><code>ticket_id, mcp_status, sources {trigger_attachments, jira_attachments, figma_urls}, max_images (3), design_folder, scope</code></dd>
+<dt>Returns</dt><dd><code>visual_spec</code> (≤2500 tokens): layout_summary, per-image elements[] + layout_tree, matches to <code>shared_paths</code>, divergences[]. Raw bytes never returned.</dd>
+<dt>Cache</dt><dd>None (persists images to disk, no result cache)</dd>
+<dt>Why</dt><dd>Raw image bytes are 15–25K tokens each. Keeps them + intermediate extraction out of Orchestrator's transcript.</dd>
+</dl>
+<div class="ex"><b>Example</b>A trigger upload (authoritative) + a Figma frame → classifies upload as <code>ui_mockup HIGH</code>, extracts <code>elements[e1..e5]</code> + a layout tree, matches e1→<code>sp-button</code>, flags e5 as <code>⚠ novel</code>, and emits a divergence: the Figma "Reviewer" dropdown is <code>missing_from_authoritative</code>.</div>
+</div></details>
+
+<details class="acc"><summary><span class="step" style="background:var(--coralLt);color:var(--coral)">Phase C</span><span class="nm">amender</span><span class="one">Amend: → targeted LLD edits</span></summary>
+<div class="body">
+<dl class="spec">
+<dt>Invoked by</dt><dd>Orchestrator at the <code>gate_for_approval (C)</code> gate when the user types <code>Amend: &lt;text&gt;</code>. Returns control to the same gate. <strong>Refuses once Explorer has run.</strong></dd>
+<dt>Input</dt><dd>Free-form amendment text + the three LLD files + current state (must be pre-Explorer)</dd>
+<dt>Returns</dt><dd>Status message <code>AMENDMENT_APPLIED v{N+1}</code> (sections changed) or <code>AMENDMENT_FAILED</code>. Internally builds a Section Impact Map (ADD/MODIFY/DELETE per heading) you approve first.</dd>
+<dt>Cache</dt><dd>None. Amendments are strictly sequential, never batched.</dd>
+<dt>Why</dt><dd>~6× cheaper than re-running Orchestrator (which would re-fetch JIRA + Confluence + Figma + re-render everything).</dd>
+</dl>
+<div class="ex"><b>Example</b><code>Amend: add AC5 — export respects active filters</code> → classifies as "AC addition", builds an impact map (ADD UC4, MODIFY T4 signature, ADD T7, add AC-Matrix row AC5→T4,T7, add TC5), gates on the plan, applies targeted edits, bumps <code>version: v{N+1}</code>, appends the Amendment Log, returns <code>AMENDMENT_APPLIED</code>.</div>
+</div></details>
+
+<div class="note n-amber" style="margin-top:16px"><strong>Room to grow:</strong> the subagent invocation contract also defines Shape&nbsp;B (parallel fan-out) and extension points for pack-supplied workers — e.g. a per-task explorer, a per-task reviewer, or a blast-radius grep tool. None ship in the kernel today; a pack can add them under <code>subagents:</code> in <code>pipeline.&lt;pack&gt;.yaml</code> when a phase clears the cost floor (N ≥ 4 items, ≥2K tokens each).</div>
+</div>
+
+<!-- RULES -->
+<div class="s" id="rules">
+<div class="s-tag">Tier 1 · Rules</div>
+<h2>Rules — always on, every run</h2>
+<p class="lead">A rule is a <code>.mdc</code> file with <code>alwaysApply: true</code> in its frontmatter. The host tool (Cursor / Claude Code) injects it into <em>every</em> agent run's system context automatically — the agent doesn't choose to load it. That is the entire Tier-1 mechanism.</p>
+
+<h3>The three kernel rule files</h3>
+<table>
+<tr><th>Rule file</th><th>Enforces</th></tr>
+<tr><td><code>agent-flow.mdc</code></td><td>Pipeline orchestration, agent invocation, path resolution, and all harness mechanics (pressure zones, build reports, tool ledger, deeplinks)</td></tr>
+<tr><td><code>engineering-principles.mdc</code></td><td>Tech-agnostic SOLID / KISS / DRY / YAGNI / POLA + cross-cutting concerns. Two modes (greenfield vs legacy). Surgeon self-checks per task.</td></tr>
+<tr><td><code>{pack}-project-scope.mdc</code></td><td>Pack-specific repo boundary + build/forbidden targets (data lives in <code>builds.*</code> of the pack YAML)</td></tr>
+</table>
+
+<details class="acc"><summary><span class="nm">Shared rules — the "when / where" of each</span><span class="one">from agent-flow.mdc</span></summary>
+<div class="body">
+<table>
+<tr><th>Rule</th><th>Applies WHEN</th></tr>
+<tr><td><strong>Pre-flight pattern</strong></td><td>Before starting, every agent — verifies correct branch + inputs exist + reads them fully</td></tr>
+<tr><td><strong>No hallucinated paths</strong></td><td>Any time a path is referenced — <code>ls</code>-verify first</td></tr>
+<tr><td><strong>Error escalation</strong></td><td>On any error — try 3–5 fixes → present options → never skip silently</td></tr>
+<tr><td><strong>Build safety</strong></td><td>Before any build target — never run destructive targets (<code>builds.forbidden</code>: <code>git push --force*</code>, <code>rm -rf*</code>, <code>mvn deploy*</code>, DB drops)</td></tr>
+<tr><td><strong>Branch safety</strong></td><td>All work — never commit to <code>base_branch</code></td></tr>
+<tr><td><strong>Git commit ownership</strong></td><td>Commit/push — ONLY Ship runs <code>git add/commit/push</code>; Surgeon keeps a Change Manifest instead</td></tr>
+<tr><td><strong>Parallel tool calls (mandatory)</strong></td><td>Any step with independent Reads/Greps — must batch into one turn (cache-cost lever, ~10–20% saving)</td></tr>
+<tr><td><strong>Token awareness</strong></td><td>Continuously — surfaced at gates via Context Pressure Detection</td></tr>
+<tr><td><strong>Token usage tracking</strong></td><td>End of every run — append a block to <code>$TOOL_USAGE_FILE</code></td></tr>
+</table>
+</div></details>
+
+<details class="acc"><summary><span class="nm">engineering-principles — greenfield vs legacy mode</span><span class="one">applies at Surgeon task time</span></summary>
+<div class="body">
+<p style="font-size:12.5px;color:var(--text2)">Loads every run but <em>applies</em> to every task that writes code. The mode is chosen per task from the LLD PART 2 status field — no separate detection:</p>
+<ul>
+<li>🆕 <strong>NEW / IMPLEMENT → Greenfield</strong> — all 25 principles apply fully.</li>
+<li>🟡 EXTEND / 🔧 <strong>MODIFY → Legacy</strong> — apply only to added/changed lines; match surrounding style; do NOT refactor. <strong>Principle #0 "Match the neighborhood" overrides everything.</strong></li>
+<li>✅ ALREADY DONE → no-op.</li>
+</ul>
+<div class="note n-coral"><strong>Anti-principles (explicit rejections):</strong> the Boy Scout Rule is REJECTED — no opportunistic refactor. Discomfort about legacy code goes into the manifest's <em>Legacy observations</em> section, never the diff. Self-check runs at <code>post_verification</code> step 3; each task's manifest carries a line <code>T{N}: principles · Mode: {greenfield|legacy} · exceptions: {N}</code>.</div>
+<p style="font-size:12.5px;color:var(--text2)"><strong>Conflict order (most-specific wins):</strong> task's LLD contract → local file conventions → pack rules → engineering-principles → the agent's own preferences.</p>
+</div></details>
+
+<div class="note n-amber"><strong>Tier 3 note:</strong> pack subagents wire at four extension points — <code>orchestrator_amend_request</code> (kernel ships Amender), <code>surgeon_pre_task</code>, <code>surgeon_post_task</code>, <code>review_post_check</code>. Unlike rules (always injected) and skills (catted in as reference), subagents are <em>invoked</em> — the parent hands over control and acts on the structured return. The <code>your-project</code> pack ships none, inheriting the kernel defaults.</div>
+</div>
+
+<!-- SKILLS -->
+<div class="s" id="skills">
+<div class="s-tag">Tier 2 · Skills</div>
+<h2>Skills — loaded only when triggered</h2>
+<p class="lead">Skills are <code>.md</code> reference files catted into an agent's context on demand. This is the whole reason a pack can ship seven layer-standard skills without bloating every run. They trigger two ways: <strong>per task</strong> (Surgeon) and <strong>per run</strong> (agent slots).</p>
+
+<details class="acc" open><summary><span class="nm">Per-task loading — Surgeon's layer_map (2 strategies, union)</span><span class="one">Surgeon Step 0a</span></summary>
+<div class="body">
+<p style="font-size:12.5px;color:var(--text2)">For EACH task, Surgeon resolves skills two ways and takes the <strong>union</strong>:</p>
+<ul>
+<li><strong>Strategy A — path_glob:</strong> match the task's <code>Files</code> against each <code>layer_map</code> entry's glob. A task touching <code>frontend/src/app/user.component.ts</code> matches <code>Frontend/Angular18</code>'s glob → loads <code>angular18-standards.md</code>.</li>
+<li><strong>Strategy B — Layer string:</strong> normalize <code>task.Layer</code> and match against each entry's key + <code>aliases</code>. <code>task.Layer = "React"</code> matches <code>Frontend/React</code> aliases.</li>
+</ul>
+<p style="font-size:12.5px;color:var(--text2)">The skill body is catted in <strong>only when a task triggers it</strong>, and the previous task's skill is released before the next loads. A <code>layer_map</code> entry looks like:</p>
+<pre><code>"Frontend/Angular18":
+  skills: [your-project-angular18-standards.md]   # catted on match
+  path_glob: "frontend/src/**/*.{ts,html}"        # Strategy A
+  build: ui_dev                                    # → builds.commands.ui_dev
+  desc: "Angular 18 — NgModule, RxJS, reactive forms"
+  aliases: ["Angular18", "Angular 18", "ng18"]     # Strategy B</code></pre>
+<p style="font-size:12.5px;color:var(--text2)">Shipped keys: <code>Frontend/Angular18</code>, <code>/Angular19</code>, <code>/React</code>, <code>/Vue</code>, <code>JavaScript</code>, <code>TypeScript</code>, <code>Backend/Java</code>, <code>Test</code> (no path_glob — tests live anywhere, so Strategy B only). <code>extra_triggers</code> fire additively on top (e.g. add a11y or security standards when a natural-language condition matches).</p>
+</div></details>
+
+<details class="acc"><summary><span class="nm">Per-run loading — agent slots (once at startup)</span><span class="one">no triggers</span></summary>
+<div class="body">
+<p style="font-size:12.5px;color:var(--text2)">Some skills load <strong>once per invocation</strong>, unconditionally, because they apply to the whole run:</p>
+<ul>
+<li><code>orchestrator.lld_generator</code> — the LLD generator (Story mode); also <code>ticket_schema_story</code>, <code>ac_templates_intent_aware</code></li>
+<li><code>explorer.bug_router</code> / <code>bug_frontend</code> / <code>bug_backend</code> — bug-localization sub-skills (Bug mode)</li>
+</ul>
+<p style="font-size:12.5px;color:var(--text2)">In <code>your-project</code> these slots are unset, so Orchestrator/Explorer fall back to kernel defaults (<code>ticket-schema-template.md</code>, <code>ac-templates-intent-aware-generic.md</code>).</p>
+<p style="font-size:12.5px;color:var(--text2)"><strong>The difference that matters:</strong> per-run slots load once at startup regardless of the work; <code>layer_map</code> skills load per task, only on a match — which is the token-saving lever.</p>
+</div></details>
+
+<details class="acc"><summary><span class="nm">Kernel skills that ship</span><span class="one">agent-pipeline/skills/</span></summary>
+<div class="body">
+<table>
+<tr><th>Skill</th><th>Used by</th></tr>
+<tr><td><code>SKILL.md</code></td><td>Kernel index — the tier + extension-point map</td></tr>
+<tr><td><code>ac-templates-intent-aware-generic.md</code></td><td>Orchestrator A.5 (generic 7-intent AC fallback)</td></tr>
+<tr><td><code>alias-taxonomy.md</code></td><td>project-analyzer Phase 3 (~80-alias component dictionary)</td></tr>
+<tr><td><code>ticket-schema-template.md</code></td><td>Orchestrator default ticket schema</td></tr>
+<tr><td><code>epic-context-strategy.md</code></td><td>How epic knowledge flows between stories</td></tr>
+<tr><td><code>bundle-lld-generator.md</code> / <code>bundle-task-allocator.md</code></td><td>bundle-orchestrator / bundle-surgeon (multi-story)</td></tr>
+<tr><td><code>epic-e2e-plan-template.md</code></td><td>Ship + AC-E2E-Check (living E2E plan)</td></tr>
+</table>
+</div></details>
+</div>
+
+<!-- PIPELINE CONFIG -->
+<div class="s" id="config">
+<div class="s-tag">Pipeline config</div>
+<h2>The config — the trigger map every agent reads</h2>
+<p class="lead">The config is the pipeline's wiring diagram: which skill loads for which layer, what builds run, which MCPs back which roles, how tickets route. The <strong>kernel is pack-agnostic</strong> — the agent prompts never hardcode a project; they read all project specifics from the config. That's why the same prompts work for any pack.</p>
+
+<div class="note n-blue"><strong>One seed → five split files.</strong> A pack ships one monolithic seed at <code>packs/&lt;pack&gt;/pipeline.&lt;pack&gt;.yaml</code>. The installer <strong>splits it at install time</strong> into five files under <code>contexts/config/</code> so each agent loads only the slice it needs (~10K tokens saved per agent). The seed itself is not copied into the project — agents read the splits.</div>
+
+<details class="acc" open><summary><span class="nm">The 5 split files — who reads what</span><span class="one">contexts/config/pipeline.&lt;pack&gt;.*.yaml</span></summary>
+<div class="body">
+<table>
+<tr><th>File</th><th>Holds</th><th>Read by</th></tr>
+<tr><td><code>pipeline.&lt;pack&gt;.yaml</code> <em>(core)</em></td><td><code>meta.pack</code>, <code>runtime.*</code> (branching, layout, pressure), <code>jira.*</code>, <code>mcp_servers</code> + <code>mcp_roles</code>, <code>subagents</code>, <code>intent_classification</code></td><td>Every agent (pack resolution + roles)</td></tr>
+<tr><td><code>pipeline.&lt;pack&gt;.skills.yaml</code></td><td><code>skills.layer_map</code>, per-agent skill slots, <code>extra_triggers</code></td><td>Orchestrator, Explorer, Surgeon, Review</td></tr>
+<tr><td><code>pipeline.&lt;pack&gt;.builds.yaml</code></td><td><code>builds.commands</code>, <code>builds.forbidden</code>, <code>component_structure</code>, <code>operation_patterns</code>, <code>i18n</code></td><td>Surgeon, Review</td></tr>
+<tr><td><code>pipeline.&lt;pack&gt;.analyzer.yaml</code></td><td><code>shared_paths</code>, <code>component_naming</code>, <code>explorer_paths</code>, <code>scan_exclusions</code></td><td>Explorer, project-analyzer</td></tr>
+<tr><td><code>pipeline.&lt;pack&gt;.e2e.test.yaml</code></td><td><code>demo.*</code> (base_url, auth, routes) — optional</td><td>AC-E2E-Check</td></tr>
+</table>
+<p style="font-size:12.5px;color:var(--text2)"><code>node contexts/tools/validate.mjs</code> auto-discovers and merges the splits, then checks every reference (e.g. a skill named in <code>layer_map</code> must exist on disk). It's the reason a config typo fails loudly instead of at runtime.</p>
+</div></details>
+
+<details class="acc"><summary><span class="nm">Pack resolution — how {PACK} is discovered</span><span class="one">once, at pre-flight</span></summary>
+<div class="body">
+<p style="font-size:12.5px;color:var(--text2)">Kernel prompts reference config as <code>pipeline.{PACK}.&lt;role&gt;.yaml</code>. At pre-flight each agent resolves <code>{PACK}</code> once and reuses it:</p>
+<pre><code>glob  contexts/config/pipeline.*.yaml
+keep  the single-dot "core" stem   # pipeline.&lt;pack&gt;.yaml, not .skills/.builds/…
+read  meta.pack  from that core file
+→ substitute that value for {PACK} everywhere</code></pre>
+<p style="font-size:12.5px;color:var(--text2)">Zero core YAMLs → halt <code>Pack not installed</code>. Multiple → halt <code>Ambiguous install</code>. <code>meta.pack</code> ≠ filename stem → halt. This is the mechanism that lets one kernel serve <code>your-project</code> or any custom pack with no prompt changes.</p>
+</div></details>
+
+<details class="acc" open><summary><span class="nm">How project-analyzer fills it</span><span class="one">Phase 8 · write_pipeline_yaml</span></summary>
+<div class="body">
+<p style="font-size:12.5px;color:var(--text2)">The tech lead sets a handful of keys by hand; <strong>project-analyzer auto-writes the rest</strong> by scanning the repo. Each generated block is <em>routed to the file that owns it</em> — deliberately, so the Orchestrator can skip <code>builds.yaml</code> entirely:</p>
+<table>
+<tr><th>Analyzer writes…</th><th>Into file</th><th>From</th></tr>
+<tr><td><code>shared_paths</code>, <code>component_naming</code>, <code>explorer_paths</code></td><td>analyzer.yaml</td><td>Phase 3–6 component/service/endpoint catalog (6-signal evidence)</td></tr>
+<tr><td><code>operation_patterns</code>, <code>i18n</code></td><td>builds.yaml</td><td>Phase 8b/8c</td></tr>
+<tr><td><code>layer_map</code> additions</td><td>skills.yaml</td><td>detected frameworks (Phase 8.6)</td></tr>
+<tr><td><code>intent_classification.verb_synonyms</code></td><td>core yaml</td><td>button/action verb detection</td></tr>
+</table>
+<div class="note n-green"><strong>It never clobbers your edits.</strong> <code>--merge-config</code> preserves analyzer-written and user-authored sections separately. The tech lead owns <code>layer_map</code> skill lists, <code>builds.commands</code>, <code>jira</code>, <code>branching</code>, and <code>mcp</code>; the analyzer owns the scanned blocks above.</div>
+<p style="font-size:12.5px;color:var(--text2)">It also writes <code>contexts/project-map.md</code> (12 sections — the project's DNA), and read-only <strong>recommendations</strong>: 🆕 unmapped file extensions (Phase 8.5) and 💡 skill-authoring suggestions for configured-but-empty layers (Phase 8.6h). Recommendations never auto-create files — you author the skill, then re-install.</p>
+<div class="ex"><b>Example · the analyze → run loop</b><code>@project-analyzer.md Analyze project</code> catalogs <code>sp-button</code> as a shared component (2+ signals) → writes it into <code>shared_paths</code> in analyzer.yaml. Next ticket, Explorer's reuse discovery (E.0) greps <code>shared_paths</code>, finds <code>sp-button</code>, and downgrades a "create button" task to REUSE — no duplicate component.</div>
+</div></details>
+
+<details class="acc"><summary><span class="nm">How each agent consumes the config</span><span class="one">what reads what, and why</span></summary>
+<div class="body">
+<table>
+<tr><th>Agent</th><th>Reads</th><th>Uses it for</th></tr>
+<tr><td><strong>Orchestrator</strong></td><td>core + skills.yaml</td><td><code>jira</code> (fetch + transitions), <code>mcp_roles</code> (which MCP per role), ticket-schema + lld_generator skills, <code>subagents</code> (which hook fires). Skips builds/analyzer/e2e.</td></tr>
+<tr><td><strong>Explorer</strong></td><td>core + skills.yaml + analyzer.yaml</td><td><code>shared_paths</code> for reuse discovery (E.0), <code>layer_map</code> for layer detection, <code>project-map</code> sections (layer-aware lazy load)</td></tr>
+<tr><td><strong>Surgeon</strong></td><td>core + skills.yaml + builds.yaml</td><td><code>layer_map</code> to load the right skill per task (Strategy A path_glob ∪ B layer-string), <code>builds.commands</code> for lint/build, <code>builds.forbidden</code> for safety</td></tr>
+<tr><td><strong>Review</strong></td><td>core + skills.yaml + builds.yaml</td><td><code>builds.review_gate</code> (the clean build), per-layer standards, <code>shared_paths</code> registry for blast radius</td></tr>
+<tr><td><strong>Ship</strong></td><td>core</td><td><code>jira.*</code> (status_map, transitions, labels), <code>runtime.branching</code> (branch prefix)</td></tr>
+<tr><td><strong>AC-E2E-Check</strong></td><td>core + e2e.test.yaml</td><td>the <code>demo</code> block — base_url, auth, routes, verify_mode</td></tr>
+</table>
+<p style="font-size:12.5px;color:var(--text2)"><strong>The role abstraction:</strong> agents never hardcode an MCP name. They consult <code>mcp_roles</code> (<code>story_source</code>, <code>design_source</code>, <code>vcs</code>, <code>docs_source</code>) and resolve it per run through a ladder — config opt-out → flags (<code>--offline</code>/<code>--skip</code>) → walk the fallback list → probe → local fallback. Swap GitHub for GitLab by editing one config line, not seven prompts.</p>
+</div></details>
+</div>
+
+<!-- CONTEXT -->
+<div class="s" id="context">
+<div class="s-tag">Context engineering</div>
+<h2>How state is saved in files</h2>
+<p class="lead">Because the next agent reads only the files (never the prior chat), every artifact is a durable, resumable checkpoint. Here's what gets written where, and why it's split the way it is.</p>
+
+<details class="acc" open><summary><span class="nm">The 3-file LLD split</span><span class="one">load only the PART you need</span></summary>
+<div class="body">
+<table>
+<tr><th>File</th><th>Holds</th><th>Read by</th></tr>
+<tr><td><code>$CONTEXTS_FILE</code><br><code>{T}.md</code></td><td>Requirement Summary + Enriched AC Registry + Companion index</td><td>Explorer/Surgeon (intent), Review/AC-E2E (coverage)</td></tr>
+<tr><td><code>$LLD_FILE</code><br><code>{T}-lld.md</code></td><td>PART 1 Design + PART 2 Tasks (§23b filled by Explorer)</td><td>Explorer/Surgeon (PART 2), Review</td></tr>
+<tr><td><code>$TESTPLAN_FILE</code><br><code>{T}-testplan.md</code></td><td>PART 3 Test Plan + PART 4 Test Tasks</td><td>Surgeon (PART 4), Review</td></tr>
+</table>
+<p style="font-size:12.5px;color:var(--text2)">Orchestrator is the only agent that needs all three. Surgeon reads PART 2 + PART 4 and never the design discussion — loading only the needed file saves ~10–20K per agent. Bug mode reuses the same shape (PART 3 becomes "Root Cause Hypotheses"), so downstream agents stay mode-agnostic.</p>
+</div></details>
+
+<details class="acc"><summary><span class="nm">codebase-map.md — the Explorer↔Ship contract</span><span class="one">synced every story</span></summary>
+<div class="body">
+<p style="font-size:12.5px;color:var(--text2)">An epic-level knowledge base shared across all stories. <strong>Explorer owns content; Ship owns metadata</strong> (<code>stories_completed</code>, <code>story_log</code>). On story 2+, Explorer syncs it every run (Phase 1.5):</p>
+<pre><code>read last_synced_at
+git log --after=last_synced_at {base}   # merged sibling PRs
+git log {base}..HEAD                     # current branch
+comm -12 → stale files  (update in-place)
+comm -23 → new files    (scan + append)
+bump last_synced_at</code></pre>
+<p style="font-size:12.5px;color:var(--text2)">Two mutations only — update-in-place and append. Entries are never removed. <code>last_synced_at</code> is the single source of truth for new-vs-known.</p>
+</div></details>
+
+<details class="acc"><summary><span class="nm">epic-context.md — cheap knowledge inheritance</span><span class="one">Review appends, next story inherits</span></summary>
+<div class="body">
+<p style="font-size:12.5px;color:var(--text2)">A compact companion to the codebase map that replaces expensive sibling-LLD lookups. Orchestrator creates it on story 1; Review appends a per-story entry (CREATED/MODIFIED/CONFIG files) each run — <strong>written before Ship</strong>, so the next story has context even if you defer shipping. This is why story 2+ of an epic needs no Confluence call: the architecture is already local.</p>
+</div></details>
+
+<details class="acc"><summary><span class="nm">Build reports — keeping build output out of context</span><span class="one">structured YAML, tail_30 only</span></summary>
+<div class="body">
+<p style="font-size:12.5px;color:var(--text2)">Every build through the runner writes a structured YAML-frontmatter report alongside the raw log:</p>
+<pre><code>agent: surgeon
+phase: final_build_check
+command: 'ant clean build'
+status: 0
+verdict: PASS          # derived from status
+duration_s: 47
+log_path: ...          # full log stays on disk
+tail_30: |             # last 30 lines only</code></pre>
+<p style="font-size:12.5px;color:var(--text2)"><strong>Reading discipline:</strong> on PASS read only the frontmatter (verdict/duration) — not <code>tail_30</code>; on FAIL read the full report incl. <code>tail_30</code>, escalating to <code>log_path</code> only if needed. This is the mechanism by which no agent carries raw build output in its transcript. Ship commits the reports to git so the PR's build-verdict table is auditable.</p>
+</div></details>
+
+<details class="acc"><summary><span class="nm">Day-2 resume &amp; the nested layout</span><span class="one">new chat = fresh context</span></summary>
+<div class="body">
+<p style="font-size:12.5px;color:var(--text2)">To resume in a new conversation, an agent: (1) re-reads its own prompt automatically, (2) re-reads saved artifacts (LLD, exploration, manifest), (3) skips completed tasks (checks the Change Manifest / task reports), (4) continues from the pending task. Trigger: <code>Resume {agent} for {TICKET} from task T{N}</code>.</p>
+<p style="font-size:12.5px;color:var(--text2)"><strong>Layout</strong> (<code>runtime.contexts_layout.nested_by_epic: true</code>): artifacts nest under <code>contexts/&lt;epic&gt;/</code> with a per-epic <code>codebase-map.md</code>. Downstream agents glob-discover the context file — <code>glob "contexts/**/{TICKET}.md"</code> (matching <code>{T}.md</code> exactly, so the <code>-lld</code>/<code>-testplan</code> companions don't shadow it). 0 matches → halt; 2+ → halt (ambiguous). Flat mode and nested mode coexist safely because discovery is glob-based, not path-hardcoded.</p>
+</div></details>
+</div>
+
+<!-- HARNESS -->
+<div class="s" id="harness">
+<div class="s-tag">Harness &amp; loop engineering</div>
+<h2>The machinery that keeps runs safe and cheap</h2>
+<p class="lead">These are the cross-cutting mechanics in <code>agent-flow.mdc</code> that every agent inherits — how the pipeline simulates a context window it can't query, resumes long loops, and keeps prompt caches warm across hand-offs.</p>
+
+<details class="acc" open><summary><span class="nm">Context Pressure Detection — 4 zones</span><span class="one">the LLM can't query its own window, so it counts</span></summary>
+<div class="body">
+<p style="font-size:12.5px;color:var(--text2)">Each agent keeps a running token counter: seed = <code>ceil(chars(system + prompt + skills + rules) / 4)</code>, then <code>+= ceil(chars / 4)</code> on every Read, Bash output, Grep result, and assistant turn. At every gate it computes <code>ratio = counter / estimated_window (200K)</code> and resolves a zone:</p>
+<div class="zone"><span class="zdot" style="background:var(--green)"></span><div><strong>GREEN &lt;60%</strong> — gate shown verbatim, no annotation.</div></div>
+<div class="zone"><span class="zdot" style="background:var(--amber)"></span><div><strong>YELLOW ≥60%</strong> — banner prepended, recommends a fresh-chat handoff; continuing allowed.</div></div>
+<div class="zone"><span class="zdot" style="background:#d2691e"></span><div><strong>ORANGE ≥80%</strong> — <em>replaces</em> the gate; you must pick <code>Resume in fresh chat</code> (deeplink) / <code>Continue anyway</code> / <code>Pause</code>.</div></div>
+<div class="zone"><span class="zdot" style="background:var(--coral)"></span><div><strong>RED ≥90%</strong> — replaces the gate AND halts immediately, refusing input until you type verbatim <code>Override pressure halt — I accept the risk</code>. State is flushed to disk first.</div></div>
+<p style="font-size:12.5px;color:var(--text2);margin-top:8px">The pre-flight Active-context block always shows <code>Context pressure: ▒▒▒▒▒░░░░░ N% · {zone}</code>. Every gate is a checkpoint; some agents also check mid-step (e.g. Surgeon between reuse Reads and implement).</p>
+</div></details>
+
+<details class="acc"><summary><span class="nm">The per-task loop &amp; token-aware resume</span><span class="one">save manifest, resume in fresh chat</span></summary>
+<div class="body">
+<p style="font-size:12.5px;color:var(--text2)">On low context mid-loop, Surgeon STOPs, saves completed work to the Change Manifest, and prints resume instructions (<code>Resume surgeon for {T} from task T{N}</code>) listing done / pending / files-to-read. Bundle mode formalizes this in <code>_bundle-state.yaml</code> with a resume cursor: <code>last_task</code> = highest complete index; next = <code>last_task+1</code>; the file is written atomically (<code>.tmp</code> then rename) at every checkpoint. A stage re-enters <code>in_progress</code> from <code>failed</code> only after you pick <code>Resume from T&lt;N&gt;</code>.</p>
+</div></details>
+
+<details class="acc"><summary><span class="nm">Deeplink / fresh-chat handoff</span><span class="one">why hand-offs start a new tab</span></summary>
+<div class="body">
+<p style="font-size:12.5px;color:var(--text2)">Every inter-agent gate offers a Cursor deeplink: <code>cursor://…/prompt?text={URL-encoded command}</code>. Clicking opens a <strong>new chat tab</strong> with the trigger pre-filled — so the prior agent's tool outputs don't bloat the next agent's context, and prompt caching on stable files (pipeline YAML, project-map, skills) stays warm. This is the direct implementation of "handoff via files, not chat."</p>
+<p style="font-size:12.5px;color:var(--text2)">Deeplinks are ONLY for inter-agent handoffs; in-chat options (<code>Amend:</code>, <code>Go</code>, <code>retry</code>) get none. Claude Code has no URL scheme, so the deeplink renders as plain text you copy into a new conversation. <strong>Mandatory:</strong> the last thing in every agent response is a <code>👉 Next action</code> block — a response without it is incomplete.</p>
+</div></details>
+
+<details class="acc"><summary><span class="nm">Tool-usage ledger</span><span class="one">what each run actually cost</span></summary>
+<div class="body">
+<p style="font-size:12.5px;color:var(--text2)">Every agent appends a block to <code>$TOOL_USAGE_FILE</code> before its final gate, regardless of verdict. It captures MCP calls, git ops, bash invocations, file reads/writes (bytes ≈ tokens×4), build invocations (exact durations from the report), and an estimated cost with per-model rates. Subagents write their own logs to <code>contexts/&lt;epic&gt;/_subagents/</code>. Roll up across stories with <code>node contexts/tools/aggregate-tool-usage.mjs</code>. Counts are exact; token/cost estimates are ±~30% (the agent doesn't see API billing).</p>
+</div></details>
+
+<details class="acc"><summary><span class="nm">Invocation modes, pack resolution &amp; MCP roles</span><span class="one">how an agent bootstraps</span></summary>
+<div class="body">
+<p style="font-size:12.5px;color:var(--text2)"><strong>Invocation mode</strong> — the first pre-flight step <code>detect_invocation_mode (0)</code> parses the trigger: pipeline (full chain) vs standalone (ad-hoc, reduced flow, output under <code>contexts/standalone/</code>). Ship rejects standalone as a safety rail.</p>
+<p style="font-size:12.5px;color:var(--text2)"><strong>Pack resolution</strong> — <code>{PACK}</code> is resolved once at pre-flight: glob <code>contexts/config/pipeline.*.yaml</code>, keep the single-dot core stem, read <code>meta.pack</code>. Zero or multiple cores → halt. This is why the same kernel agent prompt works for any pack.</p>
+<p style="font-size:12.5px;color:var(--text2)"><strong>MCP roles</strong> — agents never hardcode MCP names; they consult <code>mcp_roles</code> (<code>story_source</code>, <code>design_source</code>, <code>vcs</code>, <code>docs_source</code>). Resolution ladder per run: config opt-out → flag overrides (<code>--offline</code>/<code>--skip</code>) → walk the fallback list → probe host → else local fallback (<code>ticket-input.md</code>) or halt.</p>
+</div></details>
+
+<details class="acc"><summary><span class="nm">Post-execution verification</span><span class="one">fail-loud harness check</span></summary>
+<div class="body">
+<p style="font-size:12.5px;color:var(--text2)">After any trigger, the routing layer silently checks that expected outputs exist (per a per-trigger table — e.g. <code>Run the surgeon</code> → manifest exists + <code>git status</code> shows uncommitted changes in the named files; any run → a new block in the tool-usage ledger). If something's missing it emits a structured <code>⚠ Agent execution verification FAILED</code> diagnostic with likely causes and fix options (including the explicit <code>@&lt;agent&gt;.md</code> form). It's passive — never auto-retries. Force it anytime with <code>Verify last agent run</code>.</p>
+</div></details>
+</div>
+
+</div>
+<div class="foot">Agent Pipeline · How It Works (technical reference) · 7 agents + 2 subagents · 3 rule tiers · file-driven state<br>Verified against agent-pipeline/agents/ · agent-flow.mdc · engineering-principles.mdc · pipeline.your-project.yaml</div>
+</body>
+</html>

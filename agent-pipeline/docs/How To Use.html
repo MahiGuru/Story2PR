@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Pipeline — How To Use</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#1c2333;
+  --surface:#1c2333;--border:#30363d;--border2:#484f58;
+  --text:#e6edf3;--text2:#8b949e;--text3:#6e7681;
+  --accent:#58a6ff;--accent2:#79c0ff;--accentLt:rgba(56,139,253,0.15);
+  --coral:#ff7b72;--coralLt:rgba(255,123,114,0.15);
+  --teal:#3fb950;--tealLt:rgba(63,185,80,0.15);
+  --amber:#d29922;--amberLt:rgba(210,153,34,0.15);
+  --green:#3fb950;--greenLt:rgba(63,185,80,0.15);
+  --blue:#58a6ff;--blueLt:rgba(56,139,253,0.15);
+  --purple:#bc8cff;--purpleLt:rgba(188,140,255,0.15);
+  --mono:'IBM Plex Mono',monospace;--sans:'DM Sans',system-ui,sans-serif
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.75}
+.page{max-width:820px;margin:0 auto;padding:0 36px}
+
+nav{position:sticky;top:0;z-index:99;background:rgba(13,17,23,0.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
+nav .inner{max-width:820px;margin:0 auto;padding:10px 36px;display:flex;align-items:center;gap:20px;overflow-x:auto}
+nav .brand{font-family:var(--mono);font-weight:600;font-size:12px;color:var(--accent);white-space:nowrap;flex-shrink:0}
+nav a{font-size:12px;color:var(--text2);text-decoration:none;white-space:nowrap;transition:color .15s}
+nav a:hover{color:var(--accent2)}
+
+.hero{padding:64px 0 40px;border-bottom:2px solid var(--border)}
+.chip{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);background:var(--accentLt);padding:4px 12px;border-radius:100px;margin-bottom:16px}
+.hero h1{font-size:40px;font-weight:800;letter-spacing:-1.6px;line-height:1.08;margin-bottom:14px}
+.hero h1 em{font-style:normal;color:var(--accent2)}
+.hero .desc{font-size:16px;color:var(--text2);max-width:620px;line-height:1.7}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:32px 0 0}
+.kpi{text-align:center;padding:16px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:10px}
+.kpi b{font-family:var(--mono);font-size:22px;font-weight:600;color:var(--accent);display:block}
+.kpi span{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1.2px}
+
+.s{padding:52px 0;border-bottom:1px solid var(--border)}.s:last-child{border-bottom:none}
+.s-tag{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:1.8px;text-transform:uppercase;margin-bottom:6px}
+.s h2{font-size:25px;font-weight:700;letter-spacing:-.5px;margin-bottom:4px}
+.s .lead{color:var(--text2);font-size:14px;margin-bottom:24px;max-width:660px}
+h3{font-size:15px;font-weight:700;margin:22px 0 8px}
+
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:12px}
+th{background:var(--bg2);border:1px solid var(--border);padding:8px 12px;text-align:left;font-weight:600;color:var(--accent);font-size:10px;text-transform:uppercase;letter-spacing:.8px;font-family:var(--mono)}
+td{border:1px solid var(--border);padding:8px 12px;color:var(--text2);vertical-align:top}
+td strong{color:var(--text)}
+pre{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 18px;font-family:var(--mono);font-size:11px;line-height:1.7;overflow-x:auto;margin:12px 0;color:var(--text2)}
+code{font-family:var(--mono);font-size:11px;background:var(--bg2);border:1px solid var(--border);padding:0 4px;border-radius:3px;color:var(--accent)}
+pre code{background:none;border:none;padding:0;color:inherit}
+
+.note{padding:14px 18px;border-radius:8px;margin:16px 0;font-size:12.5px;line-height:1.6;border:1px solid}
+.n-blue{background:var(--accentLt);border-color:rgba(56,139,253,0.4);color:var(--accent2)}
+.n-green{background:var(--greenLt);border-color:rgba(63,185,80,0.4);color:var(--green)}
+.n-amber{background:var(--amberLt);border-color:rgba(210,153,34,0.4);color:var(--amber)}
+.note strong{color:inherit}
+ul{padding-left:16px;margin:8px 0}li{margin-bottom:4px;font-size:12.5px;color:var(--text2)}li strong{color:var(--text)}
+
+.gates{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:18px 0}
+.gate{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px 10px;text-align:center}
+.gate .n{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:1px}
+.gate .t{font-size:12px;font-weight:700;color:var(--text);margin:4px 0 2px}
+.gate .g{font-family:var(--mono);font-size:9px;color:var(--amber)}
+
+.story-flow{counter-reset:step}
+.sf-block{position:relative;border-left:2px solid var(--border);padding:0 0 28px 34px;margin-left:14px}
+.sf-block:last-child{border-left-color:transparent;padding-bottom:0}
+.sf-block::before{counter-increment:step;content:counter(step);position:absolute;left:-15px;top:0;width:30px;height:30px;border-radius:50%;font-family:var(--mono);font-size:12px;font-weight:600;color:#fff;display:flex;align-items:center;justify-content:center}
+.sf-coral::before{background:var(--coral)}.sf-teal::before{background:var(--teal)}.sf-amber::before{background:var(--amber)}.sf-green::before{background:var(--green)}.sf-blue::before{background:var(--blue)}
+.sf-block h3{font-size:16px;margin:0 0 2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sf-block h3 .pill{font-family:var(--mono);font-size:9px;font-weight:600;padding:2px 8px;border-radius:3px}
+.sf-cmd{display:inline-block;font-family:var(--mono);font-size:11px;background:var(--accentLt);border:1px solid rgba(56,139,253,0.4);color:var(--accent);padding:5px 12px;border-radius:6px;margin:8px 0}
+.sf-box{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 18px;font-size:12.5px;color:var(--text2);line-height:1.65;margin:6px 0}
+.sf-box strong{color:var(--text)}
+.sf-box code{background:var(--surface);border:1px solid var(--border)}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.tag{font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:100px;border:1px solid}
+.tag-gate{color:var(--amber);border-color:rgba(210,153,34,0.4);background:var(--amberLt)}
+.tag-sub{color:var(--teal);border-color:rgba(63,185,80,0.4);background:var(--tealLt)}
+.tag-rule{color:var(--coral);border-color:rgba(255,123,114,0.4);background:var(--coralLt)}
+.tag-skill{color:var(--purple);border-color:rgba(188,140,255,0.4);background:var(--purpleLt)}
+.sf-file{display:inline-block;margin-top:8px;font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:4px}
+
+.foot{text-align:center;padding:36px 0;font-family:var(--mono);font-size:11px;color:var(--text3)}
+@media(max-width:768px){.hero h1{font-size:27px}.kpi-row,.gates{grid-template-columns:1fr 1fr}.page{padding:0 18px}nav .inner{padding:10px 18px}}
+</style>
+</head>
+<body>
+
+<nav><div class="inner">
+<span class="brand">Agent Pipeline · How To Use</span>
+<a href="#start">Start</a>
+<a href="#walk">Walkthrough</a>
+<a href="#subs">Subagents</a>
+<a href="#rules">Rules & skills</a>
+<a href="#cmds">Commands</a>
+<a href="#setup">Setup</a>
+<a href="#help">Troubleshoot</a>
+</div></nav>
+
+<div class="page">
+
+<div class="hero">
+<div class="chip">How-to guide · ticket → PR</div>
+<h1>Ship a JIRA ticket <em>in 6 gated steps</em></h1>
+<p class="desc">One command per step, a gate between each. You are the scheduler — typing the next agent IS the approval. This guide walks a real story, <code>JIRSTORY-1234</code>, end to end: what you type, what happens at each gate, and where subagents do the heavy lifting.</p>
+<div class="kpi-row">
+<div class="kpi"><b>6</b><span>Gates ticket→PR</span></div>
+<div class="kpi"><b>5</b><span>Story agents</span></div>
+<div class="kpi"><b>2</b><span>Subagents</span></div>
+<div class="kpi"><b>1</b><span>Command per step</span></div>
+</div>
+</div>
+
+<!-- START -->
+<div class="s" id="start">
+<div class="s-tag">Getting started</div>
+<h2>How you kick it off</h2>
+<p class="lead">Start the orchestrator on your ticket. It plans; you approve; each agent hands off to the next through a file on disk.</p>
+
+<pre><code>@orchestrator.md Work on JIRSTORY-1234
+
+[ Orchestrator → Explorer → Surgeon → (AC-E2E-Check, optional) → Review → Ship ]
+      gate          gate       gate           gate                gate     gate</code></pre>
+
+<div class="note n-green"><strong>Both forms work.</strong> <code>@orchestrator.md Work on JIRSTORY-1234</code> and plain <code>Work on JIRSTORY-1234</code> are equivalent — the plain trigger routes to the orchestrator via the auto-start rule in <code>agent-flow.mdc</code>. The <code>@</code>-prefix is <em>recommended</em> because it forces the agent file to load explicitly (more reliable in Cursor). <strong>Claude Code</strong> handles the plain form reliably too.</div>
+
+<div class="gates">
+<div class="gate"><div class="n">STEP 1</div><div class="t">Orchestrator</div><div class="g">⏸ Phase C · Amend/Go</div></div>
+<div class="gate"><div class="n">STEP 2</div><div class="t">Explorer</div><div class="g">⏸ review map</div></div>
+<div class="gate"><div class="n">STEP 3</div><div class="t">Surgeon</div><div class="g">⏸ after build</div></div>
+<div class="gate"><div class="n">STEP 3.5</div><div class="t">AC-E2E-Check</div><div class="g">◎ optional</div></div>
+<div class="gate"><div class="n">STEP 4</div><div class="t">Review</div><div class="g">⏸ ship-ready?</div></div>
+<div class="gate"><div class="n">STEP 5</div><div class="t">Ship</div><div class="g">⏸ Confirmed</div></div>
+</div>
+
+<div class="note n-amber"><strong>Prerequisite — the pipeline config must be installed first.</strong> <code>Work on JIRSTORY-1234</code> won't start without it. At pre-flight every agent globs <code>contexts/config/pipeline.*.yaml</code> and reads <code>meta.pack</code>; no config → it halts with <code>Pack not installed</code>. The installer creates it and <code>project-analyzer</code> auto-fills most of it — see <a href="#setup" style="color:var(--accent)">One-time setup</a> below.</div>
+</div>
+
+<!-- WALKTHROUGH -->
+<div class="s" id="walk">
+<div class="s-tag">Step by step</div>
+<h2>"Work on JIRSTORY-1234"</h2>
+<p class="lead">A medium UI story under epic JIRSTORY-1200. Each step shows what you type, the <span style="color:var(--amber)">gate</span>, the <span style="color:var(--coral)">rules</span> / <span style="color:var(--purple)">skills</span> in play, and the <span style="color:var(--teal)">subagents</span> that fire.</p>
+
+<div class="story-flow">
+
+<div class="sf-block sf-coral">
+<h3>Orchestrator <span class="pill" style="background:var(--coralLt);color:var(--coral)">3-file LLD + branch</span></h3>
+<div class="sf-cmd">@orchestrator.md Work on JIRSTORY-1234 &nbsp;(attach a design image if you have one)</div>
+<div class="sf-box">Reads the ticket, walks the parent to epic JIRSTORY-1200, inherits <code>epic-context.md</code>, resolves the design, and writes the three companion files. The epic + reference enrichment is fetched inline; when a design is present the <strong>image-analysis</strong> subagent turns the Figma frame into a compact <code>visual_spec</code> so raw image bytes never enter its context. Then it <strong>stops at the Phase C gate</strong>.</div>
+<div class="tags">
+<span class="tag tag-gate">⏸ Phase C · Amend / Go / Cancel</span>
+<span class="tag tag-sub">image-analysis (if image)</span>
+<span class="tag tag-sub">amender (on Amend:)</span>
+<span class="tag tag-skill">skill: lld_generator</span>
+<span class="tag tag-rule">rule: never-silently-skip</span>
+</div>
+<div class="sf-cmd" style="margin-top:10px">You reply: <strong>Go</strong> → branch created &nbsp;(or <strong>Amend: &lt;change&gt;</strong> → spawns amender, ~6× cheaper than re-running)</div><br>
+<span class="sf-file" style="background:var(--coralLt);color:var(--coral)">📄 JIRSTORY-1234.md · -lld.md · -testplan.md · branch</span>
+</div>
+
+<div class="sf-block sf-teal">
+<h3>Explorer <span class="pill" style="background:var(--tealLt);color:var(--teal)">sync + explore</span></h3>
+<div class="sf-cmd">@explorer.md Run the explorer</div>
+<div class="sf-box">Syncs the codebase map with sibling changes (<code>git log</code>), then explores each task — finding the exact insertion point, deciding NEW / MODIFY / REUSE, and writing a compact result the Surgeon reads verbatim. Reuse gets caught here: a "create directive" task is downgraded to MODIFY if a sibling already shipped it.</div>
+<div class="tags">
+<span class="tag tag-gate">⏸ review annotations</span>
+<span class="tag tag-rule">rule: no-hallucinated-paths (ls-verify)</span>
+<span class="tag tag-rule">rule: smart-read by file size</span>
+</div>
+<div class="sf-cmd" style="margin-top:10px">Usually: <strong>@surgeon.md Run the surgeon</strong></div><br>
+<span class="sf-file" style="background:var(--tealLt);color:var(--teal)">📄 JIRSTORY-1234-exploration.md + synced codebase-map.md</span>
+</div>
+
+<div class="sf-block sf-amber">
+<h3>Surgeon <span class="pill" style="background:var(--amberLt);color:var(--amber)">per-task loop</span></h3>
+<div class="sf-cmd">@surgeon.md Run the surgeon</div>
+<div class="sf-box">Implements tasks in dependency order (DB → backend → REST → frontend). Per task = load the layer skill, change code, lint + unit test (auto-retries a lint fail up to 5×). The <strong>full build runs once</strong> at the end and writes a build report. Surgeon writes code but <strong>never commits</strong>.</div>
+<div class="tags">
+<span class="tag tag-gate">⏸ after final build</span>
+<span class="tag tag-skill">skill: layer_map (per task)</span>
+<span class="tag tag-rule">rule: builds.forbidden denylist</span>
+<span class="tag tag-rule">rule: git ownership (no commit)</span>
+</div>
+<div class="sf-cmd" style="margin-top:10px">Optional: <strong>@ac-e2e-check.md Demo JIRSTORY-1234</strong> → then <strong>@review.md Run the review</strong></div><br>
+<span class="sf-file" style="background:var(--amberLt);color:var(--amber)">📄 code changes + JIRSTORY-1234-manifest.md + build report</span>
+</div>
+
+<div class="sf-block sf-green">
+<h3>Review <span class="pill" style="background:var(--greenLt);color:var(--green)">verify everything</span></h3>
+<div class="sf-cmd">@review.md Run the review &nbsp;(add --slim to trust Surgeon's per-task work)</div>
+<div class="sf-box">Reuses the Surgeon build if it's fresh. Reviews each task's diff against the LLD, computes blast radius for downstream impact, checks pattern + visual fidelity, and verifies every AC — all inline. Appends this ticket's file list to <code>epic-context.md</code> for the next story. Emits <strong>ship-ready YES/NO</strong>.</div>
+<div class="tags">
+<span class="tag tag-gate">⏸ ship-ready YES/NO</span>
+<span class="tag tag-rule">rule: build-report reuse (freshness)</span>
+<span class="tag tag-rule">rule: blast-radius on shared code</span>
+</div>
+<div class="sf-cmd" style="margin-top:10px">You reply: <strong>Fix all P1</strong> → then <strong>@ship.md Ship it</strong></div><br>
+<span class="sf-file" style="background:var(--greenLt);color:var(--green)">📄 JIRSTORY-1234-review.md + epic-context.md (appended)</span>
+</div>
+
+<div class="sf-block sf-blue">
+<h3>Ship <span class="pill" style="background:var(--blueLt);color:var(--blue)">commit + PR + JIRA</span></h3>
+<div class="sf-cmd">@ship.md Ship it</div>
+<div class="sf-box">Pre-flight reads every build verdict — any FAIL <strong>halts</strong> (no PR on a broken build). Then it asks commit strategy, shows the pre-push checklist, waits for <strong>"Confirmed"</strong>, pushes, opens the PR (task list + test plan + blast radius + rollback + AC summary), and transitions JIRA. The only agent allowed to touch git.</div>
+<div class="tags">
+<span class="tag tag-gate">⏸ commit strategy</span>
+<span class="tag tag-gate">⏸ "Confirmed" before push</span>
+<span class="tag tag-rule">rule: git ownership</span>
+<span class="tag tag-rule">rule: build-verdict pre-flight halt</span>
+</div>
+<div class="sf-cmd" style="margin-top:10px">You reply: <strong>Single commit</strong> → <strong>Confirmed</strong> → PR created → JIRA transitioned ✅</div>
+</div>
+
+</div>
+
+<div class="note n-blue" style="margin-top:22px"><strong>Stuck at a gate?</strong> Every agent's halt message tells you the exact command to run next. State lives in files, so you can stop after any gate and resume the next day with the same trigger.</div>
+</div>
+
+<!-- SUBAGENTS -->
+<div class="s" id="subs">
+<div class="s-tag">Subagents</div>
+<h2>The 2 subagents — where each fires</h2>
+<p class="lead">Subagents are delegated workers. They take a big input, return a small structured result, and keep heavy data (image bytes, raw JSON) out of the parent agent's context. The kernel ships two.</p>
+<table>
+<tr><th>Subagent</th><th>Fires in</th><th>Does</th></tr>
+<tr><td><strong>image-analysis</strong></td><td>Orchestrator (A0.6)</td><td>Figma frames / screenshots → ~3K <code>visual_spec</code>. Raw image bytes stay out of context.</td></tr>
+<tr><td><strong>amender</strong></td><td>Orchestrator Phase C gate</td><td>Surgical LLD edits on <code>Amend:</code>. Refuses once Explorer has run. ~6× cheaper than re-running Orchestrator.</td></tr>
+</table>
+<div class="note n-amber"><strong>Wiring:</strong> both are kernel defaults — the <code>your-project</code> pack inherits them automatically and ships no custom subagents. Everything else (epic + reference enrichment, per-task exploration, code review, blast radius) runs inline in the agent that needs it. A pack can add its own delegated workers at extension points (<code>surgeon_pre_task</code>, <code>surgeon_post_task</code>, <code>review_post_check</code>) via <code>subagents:</code> in <code>pipeline.&lt;pack&gt;.yaml</code>.</div>
+</div>
+
+<!-- RULES & SKILLS -->
+<div class="s" id="rules">
+<div class="s-tag">Guardrails</div>
+<h2>Rules, skills &amp; subagents</h2>
+<p class="lead">Three different trigger models: <strong>rules</strong> are injected into <em>every</em> run automatically; <strong>skills</strong> load only when a task needs them; <strong>subagents</strong> are called at specific points. The firing map below shows exactly when and where each one kicks in across the pipeline.</p>
+
+<h3>Always-on rules (Tier 1 · <code>agent-flow.mdc</code> + pack rules)</h3>
+<ul>
+<li><strong>Build safety</strong> — <code>builds.forbidden</code> blocks <code>*deploy*</code>, db drop/truncate, <code>git push --force*</code> before every command.</li>
+<li><strong>Git ownership</strong> — only Ship commits, pushes, or opens PRs. Surgeon writes code, never git.</li>
+<li><strong>No hallucinated paths</strong> — every file is <code>ls</code>-verified before it's referenced.</li>
+<li><strong>Never silently skip</strong> — missing content prompts a fallback gate; it never guesses or crashes.</li>
+</ul>
+
+<h3>On-demand skills (Tier 2 · declared in YAML)</h3>
+<table>
+<tr><th>Skill</th><th>Loads when</th></tr>
+<tr><td><code>layer_map[&lt;layer&gt;].skills</code></td><td>Surgeon touches a file matching that layer — <strong>per task</strong></td></tr>
+<tr><td><code>orchestrator.lld_generator</code></td><td>Orchestrator Phase B (LLD synthesis) — <strong>once per run</strong></td></tr>
+<tr><td><code>orchestrator.ticket_schema_story</code></td><td>Orchestrator parses the ticket into the schema</td></tr>
+</table>
+<div class="note n-blue"><strong>Add a skill in 3 steps:</strong> write the <code>.md</code> under <code>packs/&lt;pack&gt;/skills/</code> → reference it in <code>layer_map</code> → <code>npm run install-pipeline -- --pack &lt;pack&gt; --merge-config</code>. Rules are simpler: drop the <code>.mdc</code> in <code>packs/&lt;pack&gt;/rules/</code> (always Tier 1) and re-install — no YAML wiring.</div>
+
+<h3>Firing map — when each fires across the pipeline</h3>
+<p style="font-size:12.5px;color:var(--text2)">Rules are <em>always</em> active on every step (the column lists the ones that actually bite there). Skills load on a trigger. Subagents are called only where shown.</p>
+<table>
+<tr><th>Step</th><th style="color:var(--coral)">Rules that bite here</th><th style="color:var(--purple)">Skills loaded</th><th style="color:var(--teal)">Subagents called</th></tr>
+<tr><td><strong>1 · Orchestrator</strong></td><td>never-silently-skip · no-hallucinated-paths</td><td><code>lld_generator</code> + <code>ticket_schema_story</code> + <code>ac_templates</code> — <strong>once per run</strong> (Phase B)</td><td><strong>image-analysis</strong> at A0.6 (if ≥2 images) · <strong>amender</strong> at Phase C (on <code>Amend:</code>)</td></tr>
+<tr><td><strong>2 · Explorer</strong></td><td>no-hallucinated-paths (<code>ls</code>-verify) · smart-read by size</td><td>none in story mode (bug-router in bug mode)</td><td>none — explores inline</td></tr>
+<tr><td><strong>3 · Surgeon</strong></td><td>build-safety denylist · git-ownership (no commit) · error-escalation / retry ≤5</td><td><code>layer_map</code> skill <strong>per task</strong> + <code>extra_triggers</code> + engineering-principles per task</td><td>optional <code>surgeon_pre/post_task</code> hooks (empty by default)</td></tr>
+<tr><td><strong>3.5 · AC-E2E</strong></td><td>build-safety</td><td>none (loads the <code>demo</code> config block)</td><td>none — routes gaps back to Surgeon</td></tr>
+<tr><td><strong>4 · Review</strong></td><td>build-report reuse (freshness) · blast-radius on shared code</td><td>per-layer standards + <code>*-postverify</code> rules per task (default mode only)</td><td>optional <code>review_post_check</code> hook (empty)</td></tr>
+<tr><td><strong>5 · Ship</strong></td><td>git-ownership · branch-prefix safety · build-verdict pre-flight halt</td><td>none (Tier-1 rules only)</td><td>none</td></tr>
+</table>
+<div class="note n-amber"><strong>Read it as:</strong> the <span style="color:var(--coral)">rules</span> are your always-on guardrails (they're loaded every step; the column just names where they matter), <span style="color:var(--purple)">skills</span> are reference material catted in on a match — per-run for the Orchestrator, per-task for the Surgeon — and the two <span style="color:var(--teal)">subagents</span> only ever fire inside the Orchestrator.</div>
+</div>
+
+<!-- COMMANDS -->
+<div class="s" id="cmds">
+<div class="s-tag">Cheat sheet</div>
+<h2>Commands you'll actually type</h2>
+
+<h3>Pipeline</h3>
+<table>
+<tr><th>I want to…</th><th>Command</th></tr>
+<tr><td>Work on a ticket end-to-end</td><td><code>@orchestrator.md Work on JIRSTORY-1234</code></td></tr>
+<tr><td>Use a prior ticket as a pattern</td><td><code>@orchestrator.md Work on JIRSTORY-1234 — reference: JIRSTORY-100</code></td></tr>
+<tr><td>Amend the LLD (before Explorer)</td><td>At Phase C gate: <code>Amend: &lt;change&gt;</code></td></tr>
+<tr><td>Continue through gates</td><td><code>@explorer.md Run the explorer</code> → <code>@surgeon.md Run the surgeon</code> → <code>@review.md Run the review</code> → <code>@ship.md Ship it</code></td></tr>
+<tr><td>Optional browser AC check</td><td><code>@ac-e2e-check.md Demo JIRSTORY-1234</code></td></tr>
+<tr><td>Faster review (trust Surgeon)</td><td><code>@review.md Run the review --slim</code></td></tr>
+</table>
+
+<h3>Work offline / skip MCP (save tokens, privacy)</h3>
+<table>
+<tr><th>Flag</th><th>Effect</th><th>You provide</th></tr>
+<tr><td><code>--offline</code></td><td>Skip all 3 MCPs</td><td><code>contexts/ticket-input.md</code> + images</td></tr>
+<tr><td><code>--skip atlassian</code></td><td>Skip JIRA/Confluence</td><td><code>ticket-input.md</code> or inline <code>Context:</code></td></tr>
+<tr><td><code>--skip figma</code></td><td>Skip Figma</td><td>Drag design images into chat</td></tr>
+</table>
+<div class="note n-amber"><strong>MCP flaked mid-run?</strong> You don't have to predict it. On the default trigger, the Orchestrator fires a fallback gate — reply <code>retry</code>, <code>inline</code> + <code>Context:</code>, <code>file</code>, <code>skip</code>, or <code>cancel</code> — and it continues in the same conversation.</div>
+</div>
+
+<!-- SETUP -->
+<div class="s" id="setup">
+<div class="s-tag">Setup</div>
+<h2>One-time setup order (tech lead)</h2>
+<p class="lead">Run once per project. The pipeline config must be installed before <code>Work on &lt;story&gt;</code> will start — after this, developers just run tickets with no per-ticket config step.</p>
+
+<pre><code>1. npm run install-pipeline -- --project-root /path   # splits the pack into 5 config files
+2. set the core keys (table below)
+3. node contexts/tools/validate.mjs                   # expects 10 checks
+4. @project-analyzer.md Analyze project               # auto-fills shared_paths, layer_map, i18n…
+5. @orchestrator.md Work on JIRSTORY-1234             # first ticket</code></pre>
+
+<p style="font-size:12.5px;color:var(--text2)">Install writes <strong>5 split files</strong> to <code>contexts/config/</code> — edit them directly and commit them:</p>
+<table>
+<tr><th>File</th><th>Set before first ticket</th></tr>
+<tr><td><code>pipeline.&lt;pack&gt;.yaml</code> (core)</td><td><code>meta.pack</code> (must match filename stem) · <code>runtime.branching.base_branch</code> · <code>jira.project_key</code> · <code>mcp_servers</code> / <code>mcp_roles</code></td></tr>
+<tr><td><code>pipeline.&lt;pack&gt;.skills.yaml</code></td><td><code>skills.layer_map</code> — so Surgeon loads the right layer standards</td></tr>
+<tr><td><code>pipeline.&lt;pack&gt;.builds.yaml</code></td><td><code>builds.commands</code> + <code>builds.forbidden</code> (build + safety denylist)</td></tr>
+<tr><td><code>pipeline.&lt;pack&gt;.analyzer.yaml</code></td><td>mostly auto-written by <code>project-analyzer</code> — leave it</td></tr>
+<tr><td><code>pipeline.&lt;pack&gt;.e2e.test.yaml</code></td><td><code>demo.*</code> — optional, only if you use AC-E2E-Check</td></tr>
+</table>
+<div class="note n-green">Config changes are committed like code: edit a split file, run <code>validate.mjs</code>, commit, teammates <code>git pull</code>. Running <code>--offline</code> lets you skip the MCP keys and feed the ticket via <code>contexts/ticket-input.md</code> instead.</div>
+</div>
+
+<!-- TROUBLESHOOT -->
+<div class="s" id="help">
+<div class="s-tag">Troubleshoot</div>
+<h2>When something surprises you</h2>
+<p class="lead">Debugging order: read the agent prompt → read the skill it loaded (shown in the Active Context block) → read the config section it used. The answer is always in one of those three.</p>
+<table>
+<tr><th>Symptom</th><th>Fix</th></tr>
+<tr><td><code>No context file found for JIRSTORY-1234</code></td><td>A downstream agent ran first. Start with <code>@orchestrator.md Work on JIRSTORY-1234</code>.</td></tr>
+<tr><td><code>Ambiguous context file</code></td><td>Same ticket ID in two folders. Move one to <code>contexts/archive/</code>.</td></tr>
+<tr><td><code>skill_loaded=&lt;none — no config&gt;</code></td><td>A split YAML failed to parse. Run <code>node contexts/tools/validate.mjs</code>.</td></tr>
+<tr><td>Plain trigger didn't run in Cursor</td><td>Use the <code>@&lt;agent&gt;.md &lt;trigger&gt;</code> form, or run it from Claude Code.</td></tr>
+<tr><td>Review says "clean" but code looks broken</td><td>Review checks AC compliance + regressions, not behavioral correctness. The LLD may be wrong — amend from the top.</td></tr>
+<tr><td><code>Ship does not support standalone mode</code></td><td>By design — Ship requires a Review. Use the full pipeline.</td></tr>
+</table>
+</div>
+
+</div>
+<div class="foot">Agent Pipeline · How To Use · kernel + project pack · dual-host (Cursor + Claude Code) · 5 story agents + 2 subagents<br>Source: HOW-TO-USE.md · verified against agent-pipeline/agents/ + agent-flow.mdc + pipeline.your-project.yaml</div>
+</body>
+</html>
