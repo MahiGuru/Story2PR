@@ -141,7 +141,7 @@ Render the active-context line: `Mode: fresh · ignoring prior outputs · all ta
 
 ### Step: bundle_context_guard (0b — RUNS BEFORE check_prerequisites)
 
-This file is the **single-story / bug** surgeon. Bundle mode has its own dedicated entry point at `agents/bundle-surgeon.md`. We refuse to handle bundle context here.
+This file is the **single-story / bug** surgeon. Bundle mode has its own dedicated entry point at `agents/bundle/bundle-surgeon.md`. We refuse to handle bundle context here.
 
 ```
 IF {mode} == "standalone":

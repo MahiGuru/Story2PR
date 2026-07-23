@@ -89,7 +89,7 @@ Render the active-context line: `Mode: fresh · re-deriving exploration from cod
 
 ### Step: bundle_context_guard (0b — RUNS BEFORE check_prerequisites in pipeline mode)
 
-This file is the **single-story / bug** explorer. Bundle mode has its own dedicated entry point at `agents/bundle-explorer.md`. We refuse to handle bundle context here so single-story flow stays uncontaminated and the user always knows which agent ran.
+This file is the **single-story / bug** explorer. Bundle mode has its own dedicated entry point at `agents/bundle/bundle-explorer.md`. We refuse to handle bundle context here so single-story flow stays uncontaminated and the user always knows which agent ran.
 
 ```
 IF {mode} == "standalone":

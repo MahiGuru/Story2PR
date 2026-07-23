@@ -414,9 +414,21 @@ if (isDir(MODES_SRC)) {
   kAm = installAll(MODES_SRC, '.md', installAgent, MODES_DEST, DRY);
 }
 
+// Dedicated bundle agents live at agent-pipeline/agents/bundle/*.md and MUST land at
+// <host>/agents/bundle/<file>.md — rules + agents reference them as `agents/bundle/<name>.md`,
+// and their flow files stay at agents/modes/ (referenced from the bundle agents as `../modes/...`).
+// installAll is non-recursive by design — handle the bundle/ subdir explicitly (same as modes/).
+const BUNDLE_SRC  = join(SCRIPT_DIR, 'agent-pipeline', 'agents', 'bundle');
+const BUNDLE_DEST = join(AGENTS_DIR, 'bundle');
+let kAb = 0;
+if (isDir(BUNDLE_SRC)) {
+  ensureDir(BUNDLE_DEST, DRY);
+  kAb = installAll(BUNDLE_SRC, '.md', installAgent, BUNDLE_DEST, DRY);
+}
+
 const kR = installAll(join(SCRIPT_DIR, 'agent-pipeline', 'rules'),  '.mdc', installRule,  RULES_DIR,  DRY);
 const kS = installAll(join(SCRIPT_DIR, 'agent-pipeline', 'skills'), '.md',  installSkill, SKILLS_DIR, DRY);
-console.log(`  kernel: ${kA} agent(s), ${kAm} mode flow(s), ${kR} rule(s), ${kS} skill(s)`);
+console.log(`  kernel: ${kA} agent(s), ${kAb} bundle agent(s), ${kAm} mode flow(s), ${kR} rule(s), ${kS} skill(s)`);
 
 // ── 2. Pack ──────────────────────────────────────────────────────────────
 if (!NO_PACK) {

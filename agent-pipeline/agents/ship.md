@@ -58,7 +58,7 @@ If trigger is a valid pipeline trigger, continue.
 
 ### Step: bundle_context_guard (0d — RUNS BEFORE check_prerequisites)
 
-This file is the **single-story / bug** ship. Bundle mode has its own dedicated entry point at `agents/bundle-ship.md`. We refuse to handle bundle context here — ship is the most consequential step (commits, PR, JIRA transitions), so accidental routing must never happen.
+This file is the **single-story / bug** ship. Bundle mode has its own dedicated entry point at `agents/bundle/bundle-ship.md`. We refuse to handle bundle context here — ship is the most consequential step (commits, PR, JIRA transitions), so accidental routing must never happen.
 
 ```
 Apply Procedure B from agent-flow.mdc with {TICKET_ID} to resolve $CONTEXTS_FILE.

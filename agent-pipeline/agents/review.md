@@ -200,7 +200,7 @@ IF {mode} == "standalone":
 
 ### Step: bundle_context_guard (0c — RUNS BEFORE check_prerequisites)
 
-This file is the **single-story / bug** review. Bundle mode has its own dedicated entry point at `agents/bundle-review.md`. We refuse to handle bundle context here.
+This file is the **single-story / bug** review. Bundle mode has its own dedicated entry point at `agents/bundle/bundle-review.md`. We refuse to handle bundle context here.
 
 ```
 IF {mode} == "standalone":

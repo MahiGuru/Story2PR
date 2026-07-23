@@ -22,7 +22,7 @@ Work on epic <EPIC_ID> group=<key>
 Resume bundle-orchestrator for <BUNDLE_ID>
 ```
 
-See `agent-flow.mdc § Auto-start (BUNDLE MODE — multi-story consolidation)` for the trigger grammar.
+See `bulk-agent-flow.mdc § Auto-start (BUNDLE MODE — multi-story consolidation)` for the trigger grammar.
 
 ---
 
@@ -288,7 +288,7 @@ Read in priority order (later overrides earlier on conflict):
    - `{task_ordering}`          ← `runtime.bundle.task_ordering` (default `layer_dep`; auto-promoted to `by_story` when `flags.each` is true — see BR.0a interaction rules)
    - `{execution_mode}`         ← `runtime.bundle.execution_mode` (default `per_story`; values: `per_story` | `consolidated`). Trigger flags `--linear` / `--each` override this per-run. BR.0a uses this value when neither flag is set.
    - `{context_pressure}`       ← `runtime.context_pressure` block (default: enabled, window=200000, warn=0.60, urgent=0.80, halt=0.90). See `agent-flow.mdc § Context Pressure Detection`. Initialize `{context_estimated_tokens} = ceil(chars(loaded_inputs)/4)` here.
-   - `{jira_labels_config}`     ← `runtime.bundle.jira_labels` block (default: enabled, prefix `agentic_team_bulk`, mode `all_tickets`, apply_at `both`, include_review_only=true, include_skipped_by_evidence=false). See `agent-flow.mdc § JIRA labels for bundle correlation`. Used by C.3 (preview), C.4.5 (early apply), and ship Phase 6 (re-apply).
+   - `{jira_labels_config}`     ← `runtime.bundle.jira_labels` block (default: enabled, prefix `agentic_team_bulk`, mode `all_tickets`, apply_at `both`, include_review_only=true, include_skipped_by_evidence=false). See `bulk-agent-flow.mdc § JIRA labels for bundle correlation`. Used by C.3 (preview), C.4.5 (early apply), and ship Phase 6 (re-apply).
    - `{partial_ship_policy}`    ← `runtime.bundle.partial_ship_policy` (default `ask`)
    - `{epic_framing}`           ← block: `enabled`, `fetch_prd`, `fetch_hld`, `fetch_spikes`, `prd_search_queries[]`, `hld_search_queries[]`
    - `{state_filename}`         ← `runtime.bundle.state_filename` (default `_bundle-state.yaml`)

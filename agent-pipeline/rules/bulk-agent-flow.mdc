@@ -1,0 +1,231 @@
+---
+description: Bundle / bulk multi-story pipeline flow (bundle-orchestrator → bundle-explorer → bundle-surgeon → bundle-review → bundle-ship for multi-story consolidation into ONE branch + ONE PR). Triggers on "Work on epic stories <IDs>", "Work on epic <ID> with status=...", "Work on epic <ID> status=...", "Work on epic <ID> group=<key>", then "Run the bundle explorer", "Run the bundle surgeon", "Run the bundle review", "Ship the bundle", and "Resume bundle-<agent> for <BUNDLE_ID>". Owns all bundle/bulk trigger grammar, dispatch, disambiguation from single-story, per-story vs consolidated execution, JIRA bulk labels, bundle flags, and bundle resume routing.
+alwaysApply: true
+---
+
+# Bundle / Bulk Agent Pipeline Flow
+
+This rule owns **bundle (bulk multi-story) triggering and routing**. It is a companion to
+`agent-flow.mdc` — both are always-on. Single-story / bug triggers, and all **shared
+infrastructure** used by bundle agents, remain in `agent-flow.mdc` and are inherited here:
+
+- Pack resolution (`{PACK}`) — `agent-flow.mdc § Pack Resolution`
+- Bundle path variables (`$BUNDLE_*`) — `agent-flow.mdc § Procedure C — Bundle mode`
+- Bundle-state file contract (`_bundle-state.yaml`) — `agent-flow.mdc § Bundle-state file contract`
+- Context Pressure Detection, Tool Usage Tracking, Build report contract, MCP role resolution,
+  Trigger directives — all in `agent-flow.mdc` (shared by single-story and bundle agents alike).
+
+**Invocation rule (same as single-story):** on a matching bundle trigger you MUST (1) load the
+matching `bundle-*.md` agent prompt fully, (2) execute it with real tool calls, (3) never reply
+with a prose description. In Cursor prefix with `@<agent-file>.md`; Claude Code accepts the plain
+trigger too.
+
+---
+
+## Bundle-mode triggers (dedicated agents)
+
+Bundle-mode (multi-story) — separate dedicated agents. **Per-story execution is the default** (per-ticket gates between tickets, ONE consolidated PR). Pass `--linear` to opt out:
+- `@bundle-orchestrator.md Work on epic stories {ID}, {ID}, {ID}, ...`
+- `@bundle-orchestrator.md Work on epic stories {ID}, {ID}, {ID}, ... --linear` (consolidated execution — every-N checkpoints, one_per_task commits)
+- `@bundle-explorer.md Run the bundle explorer`
+- `@bundle-surgeon.md Run the bundle surgeon`
+- `@bundle-review.md Run the bundle review`
+- `@bundle-ship.md Ship the bundle`
+
+---
+
+## Auto-start (BUNDLE MODE — multi-story consolidation)
+
+> 🛑 **CRITICAL — DO NOT SPLIT THE BUNDLE.** When the user issues a bundle trigger (explicit list `Work on epic stories A, B, C, D, E` or status-filter form), the **only** valid response is to dispatch ALL listed tickets, **as a single bundle**, to `bundle-orchestrator.md`. Do **NOT**:
+> - Suggest dividing the list into `bundle1 / bundle2 / bundleN` choices
+> - Auto-partition by layer (frontend bundle, backend bundle, ...)
+> - Auto-partition by parent epic when `cross_epic_policy: warn_continue` is set
+> - Drop tickets you judge "too large" or "out of scope" — that's the user's call at the C.3 gate
+> - Group consecutive tickets and ask "process group A first?"
+>
+> If the list size exceeds `runtime.bundle.max_tickets`, the **agent itself** halts during A.1 with a clear "split or override --max=" message. The OUTER LLM (this routing layer) never proposes splits — it dispatches verbatim. The user can shrink the bundle by replying `Drop <ticket>` at the orchestrator's C.3 gate. That is the ONLY split mechanism. A pre-emptive chooser destroys the consolidated requirement summary the orchestrator builds — once the user picks one of the offered sub-bundles, the synthesis context for the unchosen tickets is lost.
+>
+> **Single bundle in → single bundle out.** Always.
+
+When the user issues either of these patterns, route to **bundle-orchestrator** (NOT the regular orchestrator):
+
+| Trigger pattern | Dispatch | Notes |
+|---|---|---|
+| `Work on epic stories <ID>, <ID>, <ID>[, ...]` | `bundle-orchestrator.md` | Explicit ticket list. If `parent` field disagrees across the IDs, behavior controlled by `runtime.bundle.cross_epic_policy` (default: warn + continue). |
+| `Work on epic <EPIC_ID> with status="<S1>","<S2>"[,...]` | `bundle-orchestrator.md` | Status-filtered child discovery. Each status must appear in `jira.status_groups` or `jira.status_map`. |
+| `Work on epic <EPIC_ID> status="<S>"` | `bundle-orchestrator.md` | Terser form, same as above. |
+| `Work on epic <EPIC_ID> group=<key>` | `bundle-orchestrator.md` | Status-group shorthand (`group=active_hydrate` etc., from `jira.status_groups`). Off when `runtime.bundle.status_filter.allow_groups: false`. |
+
+**Disambiguation from single-story trigger:** the bundle router checks for the keyword `epic` AND either (a) two-or-more comma-separated ticket IDs after `epic stories`, or (b) the substring `with status=` / `status=` / `group=` after a single epic ID. Anything else routes to the regular orchestrator. The single-story trigger `Work on PROJ-1234` is unaffected.
+
+**Pre-flight gates fired by `bundle-orchestrator` (in this order, before C.3):**
+
+| Gate | When it fires | What user picks | Effect |
+|---|---|---|---|
+| BR.0 — bundle resume | `_bundle-state.yaml` already exists for the same computed `BUNDLE_ID` | `Resume` / `Resume from T<N>` / `Resume --fresh` / `Inspect state` / `Abandon bundle` | Resume / re-synth / halt |
+| BR.0c — pre-existing context | ANY per-ticket file (`mode: story`/`bundle-card`) for any candidate ticket OR overlapping bundle state | `Resume <BUNDLE_ID>` / `Re-run --fresh` / `Skip implemented` / `Show <id>` / `Cancel` | Branch back to BR.0 OR set fresh flags OR proceed |
+| A.1.5 — implementation evidence | After A.1 fetches tickets, BEFORE A.2 path computation | `Go` (accept SKIP/REVIEW_ONLY recommendations) / `Include all` / `Skip <ids>` / `Force <ids>` / `Show evidence <id>` / `Cancel` | Trim `{tickets}`; populate `{review_only_roster}` |
+| C.3 — final gate | After Phase B writes all artifacts | `Go` / `Amend: <text>` / `Drop <ticket>` / `Show details` / `Cancel` | Branch creation (C.4) only on `Go` |
+
+All four are `⛔ MANDATORY HALT` gates. The orchestrator must render the gate and wait for the user's reply before any subsequent step. Auto-progressing past any of these gates is a bug.
+
+**Default execution mode: per-story.** Bundle mode runs in **per-story** execution by default (per-ticket gates, `one_per_ticket` commits, ONE PR). Set `runtime.bundle.execution_mode: consolidated` in `pipeline.yaml` to flip the project-wide default; trigger flags below override per-run.
+
+**JIRA labels for bundle correlation (auto-applied):** Every ticket in a bundle is automatically labeled in JIRA so any single ticket clearly shows it was processed in bulk mode and which siblings it traveled with. Configurable via `runtime.bundle.jira_labels` in `pipeline.yaml`:
+
+```yaml
+runtime:
+  bundle:
+    jira_labels:
+      enabled: true                                 # set false to disable
+      prefix: "agentic_team_bulk"               # all labels start with this string
+      mode: "all_tickets"                           # all_tickets | siblings | bundle_id | both
+        # all_tickets (DEFAULT — matches user request format):
+        #   Every ticket gets len(bundle) labels — one per bundled ticket (including itself).
+        #   Example for bundle [PROJ-1234, PROJ-2345, PROJ-3432]:
+        #     PROJ-1234 gets: agentic_team_bulkPROJ-1234,
+        #                     agentic_team_bulkPROJ-2345,
+        #                     agentic_team_bulkPROJ-3432
+        #     PROJ-2345 gets the same 3 labels
+        #     PROJ-3432 gets the same 3 labels
+        #   JIRA query "labels = agentic_team_bulkPROJ-1234" returns ALL 3 tickets.
+        # siblings:
+        #   Every ticket gets len(bundle)-1 labels — one per OTHER ticket. Smaller label
+        #   footprint; opening a ticket shows its siblings but not itself.
+        # bundle_id:
+        #   Every ticket gets ONE label of form: {prefix}{BUNDLE_ID}
+        #   (e.g. agentic_team_bulkPROJ-100-BUNDLE-A3F2). Cleanest single-correlation;
+        #   loses per-sibling visibility.
+        # both:
+        #   Combination of bundle_id + all_tickets. Most labels but maximum queryability.
+
+      apply_at: "both"                              # orchestrator_c4 | ship_phase6 | both (default)
+        # orchestrator_c4: applied right after branch creation (early visibility)
+        # ship_phase6:     applied alongside JIRA transitions at end-of-bundle
+        # both:            applied at C.4 AND re-applied at ship Phase 6 (idempotent;
+        #                  catches cases where C.4 failed, was skipped, or labels were
+        #                  manually removed mid-bundle)
+
+      include_review_only: true                     # apply labels to {review_only_roster} tickets too
+      include_skipped_by_evidence: false            # by default, do NOT label tickets that A.1.5
+                                                    # marked SKIP (already-shipped tickets stay clean)
+
+      # Idempotency: applying a label that's already present is a no-op (JIRA API). Safe to
+      # re-run. Existing labels on the ticket (added by humans, other automation) are
+      # preserved — labels are unioned, never overwritten.
+```
+
+**JIRA-side semantics:**
+- Apply via `story_source` MCP (or `gh` / `glab` CLI fallback if vcs MCP) using the host's label-update endpoint. JIRA: `PUT /rest/api/3/issue/{key}` with `{"update":{"labels":[{"add":"<name>"}, ...]}}`.
+- Labels are case-insensitive in JIRA; normalize to lowercase prefix + verbatim ticket ID.
+- Failure to apply a label → record in `_bundle-state.yaml` `stages.<stage>.label_apply_failures[]` and proceed; ship Phase 6 retries non-blocking.
+- Auto-applied labels are NOT removed if the bundle is cancelled or `Drop <ticket>` is used — they remain as audit trail. To remove manually: `Amend: remove jira labels` at C.3 (orchestrator-side cleanup) or via JIRA UI.
+
+**Surfacing at gates:**
+- Bundle-orchestrator C.3 gate: shows the intended label set so user sees what will be applied on `Go`.
+- Bundle-ship Phase 6: shows labels alongside transitions in the per-ticket section.
+- `_bundle-state.yaml` records final applied label set per ticket under `stages.ship.labels_applied[ticket][]`.
+
+**Why this matters:** without these labels, a bundle is invisible from JIRA. Users browsing JIRA see "PROJ-1234 in In Progress" with no signal that it's part of a 5-ticket bundle being implemented together. Querying "what was bundled with PROJ-1234?" requires reading commit messages or pipeline state files. With auto-labels, a single JIRA query (`labels = agentic_team_bulkPROJ-1234`) returns the whole bundle.
+
+**Optional flags on the bundle trigger:**
+
+| Flag | Alias | Effect |
+|---|---|---|
+| `--deep` | — | Phase A runs grep-based file-overlap analysis across the working tree per story (~10–20K extra tokens, amortized). Default off (set by `runtime.bundle.deep_overlap_default`). |
+| `--max=<N>` | — | Override `runtime.bundle.max_tickets` for this run. Cannot exceed pipeline-config max. |
+| `--fresh` | — | Same semantic as single-story `--fresh`: ignore prior `_bundle-state.yaml` and re-synthesize from JIRA. The branch is NOT deleted. |
+| **`--linear`** | **`--no-each`, `--consolidated`** | **Opt out of per-story execution** (per-story is the default — see above). Reverts to legacy consolidated execution: `task_ordering: layer_dep`, every-N-tasks checkpoints in surgeon/review, `one_per_task` commit grouping in ship. Use for small bundles (≤3 tickets), dense shared code, or autonomous one-shot runs where per-ticket gates feel ceremonial. Sticky across resumes — once `flags.each: false` is in state, downstream agents respect it. |
+| `--each` | `--per-story` | **No-op (default behavior).** Per-story execution is the default. Kept as a backward-compat alias; emits a non-blocking "redundant flag" notice. Mutually exclusive with `--linear` (passing both halts). |
+| `--offline` / `--skip <names>` / `--only <names>` | — | Same flag family as single-story; pass through to MCP role resolution. |
+
+> **Trigger directives** (`context:`, `reference:`, `out_of_scope:`, `constraints:`) work identically on bundle and single-story triggers — full grammar in `agent-flow.mdc § Trigger directives`.
+
+**Quick reference:**
+
+```
+# Default — per-story execution (no flag needed):
+Work on epic stories PROJ-1234, PROJ-2345, PROJ-3432
+Work on epic <EPIC_ID> with status="In Progress","To Do"
+
+# Opt out — consolidated/legacy execution:
+Work on epic stories PROJ-1234, PROJ-2345, PROJ-3432 --linear
+
+# Combined with --fresh to re-synthesize:
+Work on epic stories PROJ-1234, PROJ-2345 --fresh           # default per-story, fresh
+Work on epic stories PROJ-1234, PROJ-2345 --linear --fresh  # consolidated, fresh
+```
+
+Execution shape (default — per-story):
+
+```
+bundle-orchestrator   (Go at C.3)
+  └─ bundle-explorer  (Go at Phase 0; runs entire bundle's exploration in one pass)
+      └─ bundle-surgeon (Go at Phase 0)
+          ├─ Implement SHARED prelude tasks (multi-source) → per-ticket gate (Go)
+          ├─ Implement PROJ-1234's tasks               → per-ticket gate (Go)
+          ├─ Implement PROJ-2345's tasks               → per-ticket gate (Go)
+          ├─ Implement PROJ-3432's tasks               → end-of-stage gate
+          └─ ...
+              └─ bundle-review (Go at Phase 0)
+                  ├─ Review SHARED tasks       → per-ticket sub-verdict gate (Go)
+                  ├─ Review PROJ-1234's tasks  → per-ticket sub-verdict gate (Go)
+                  ├─ Review PROJ-2345's tasks  → per-ticket sub-verdict gate (Go)
+                  ├─ Review PROJ-3432's tasks  → end-of-stage gate
+                  └─ bundle-ship (Go at Phase 0)
+                      → commit-per-ticket (one_per_ticket, forced)
+                      → ONE PR listing all tickets
+                      → JIRA transitions per ticket
+```
+
+The total number of `Go` gates under `--each` with N implementing tickets is roughly:
+`5 (one start-of-stage per agent) + 2N (per-ticket gates in surgeon and review) + ~3 (orchestrator pre-flight, ship verdict, ship final)`.
+That's a feature, not a bug — `--each` is for users who want explicit pause-points. Use the consolidated default if you want fewer interruptions.
+
+---
+
+## Bundle dispatch — dedicated agents & routing
+
+**Bundle agents are DEDICATED — separate from single-story agents.** Bundle mode and single-story mode have entirely different agent files. There is no shared dispatch:
+
+| Stage | Single-story / bug agent | Bundle agent | Trigger (bundle) |
+|---|---|---|---|
+| Step 1 — synthesis | `agents/orchestrator.md` | `agents/bundle/bundle-orchestrator.md` | `Work on epic stories <IDs>` / `Work on epic <ID> with status=...` |
+| Step 2 — exploration | `agents/explorer.md` | `agents/bundle/bundle-explorer.md` | `Run the bundle explorer` |
+| Step 3 — implementation | `agents/surgeon.md` | `agents/bundle/bundle-surgeon.md` | `Run the bundle surgeon` |
+| Step 4 — review | `agents/review.md` | `agents/bundle/bundle-review.md` | `Run the bundle review` |
+| Step 5 — ship | `agents/ship.md` | `agents/bundle/bundle-ship.md` | `Ship the bundle` |
+
+**Crucial routing rule — single-story triggers NEVER route to bundle mode:**
+
+- `Run the explorer` / `@explorer.md ...` → ALWAYS goes to `agents/explorer.md`. If that file resolves a contexts file with `mode: bundle`, it HALTS with a redirect to `@bundle-explorer.md`. It does NOT auto-route.
+- `Run the surgeon` / `Run the review` / `Ship it` → same rule. Each regular agent refuses bundle context and prints a redirect.
+- This guarantees single-story / bug behavior cannot be polluted by bundle logic and vice-versa. The user's trigger choice picks the agent — frontmatter only validates that the choice was correct.
+
+**Resume triggers (bundle mode) — all route to the dedicated bundle-* agents:**
+
+| Trigger | Dispatches to |
+|---|---|
+| (Re-issuing the original `Work on epic stories ...` / `Work on epic <ID> ...`) | `bundle-orchestrator` — pre-flight `detect_bundle_resume` step routes to the right resume point. |
+| `Resume bundle-orchestrator for <BUNDLE_ID>` | `bundle-orchestrator` — explicit re-entry into Phase A/B if interrupted. |
+| `Resume bundle-explorer for <BUNDLE_ID> from task T<N>` | `bundle-explorer.md` — reads `_bundle-state.yaml`, skips done tasks. |
+| `Resume bundle-surgeon for <BUNDLE_ID> from task T<N>` | `bundle-surgeon.md`. |
+| `Resume bundle-review for <BUNDLE_ID> from task T<N>` | `bundle-review.md`. |
+| `Resume bundle-ship for <BUNDLE_ID>` | `bundle-ship.md` — idempotent re-run. |
+
+If the trigger names a `<BUNDLE_ID>` that has no `_bundle-state.yaml`, the bundle agent halts with: "No bundle state file found. Verify the bundle ID or re-issue the original `Work on epic stories ...` trigger."
+
+**Why dedicated bundle agents (architectural rationale):**
+
+Earlier versions used mode-detection inside the regular agents — `explorer.md` checked frontmatter and lazy-loaded `modes/bundle-explorer-flow.md` when it saw `mode: bundle`. That coupling caused two regressions: (1) bundle gates leaked into single-story decision paths, and (2) "Run the explorer" was ambiguous about which mode would actually run, depending on which contexts file resolved first. Splitting into dedicated `bundle-*.md` files makes the trigger the explicit mode selector. Single-story agents stay byte-identical for non-bundle work.
+
+**Bundle-mode flow files (loaded by the dedicated bundle agents only):**
+
+| Bundle agent | Loads flow file |
+|---|---|
+| `agents/bundle/bundle-explorer.md` | `agents/modes/bundle-explorer-flow.md` |
+| `agents/bundle/bundle-surgeon.md` | `agents/modes/bundle-surgeon-flow.md` |
+| `agents/bundle/bundle-review.md` | `agents/modes/bundle-review-flow.md` |
+| `agents/bundle/bundle-ship.md` | `agents/modes/bundle-ship-flow.md` |
+
+`bundle-orchestrator.md` is self-contained — no separate flow file.

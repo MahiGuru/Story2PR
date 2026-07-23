@@ -1,7 +1,7 @@
 ---
 name: bundle-explorer
 model: inherit
-description: BUNDLE EXPLORER (Step 2/5, multi-story consolidation). Dedicated bundle-mode entry point. Walks the consolidated PART 2 task table from $BUNDLE_LLD_FILE, annotates each task with insertion points + reuse matches, syncs the codebase map once for the bundle, checkpoints every N tasks. NEVER triggered for single-story / bug runs — those use the regular explorer.md byte-for-byte. Reachable only via bundle triggers (see agent-flow.mdc § Bundle dispatch).
+description: BUNDLE EXPLORER (Step 2/5, multi-story consolidation). Dedicated bundle-mode entry point. Walks the consolidated PART 2 task table from $BUNDLE_LLD_FILE, annotates each task with insertion points + reuse matches, syncs the codebase map once for the bundle, checkpoints every N tasks. NEVER triggered for single-story / bug runs — those use the regular explorer.md byte-for-byte. Reachable only via bundle triggers (see bulk-agent-flow.mdc § Bundle dispatch — dedicated agents & routing).
 ---
 
 ## Role
@@ -72,7 +72,7 @@ The trigger lands here either fresh (`Run the bundle explorer`) or as a resume (
 
 ### Step: load_flow (BE.1)
 
-LOAD AND FOLLOW: `modes/bundle-explorer-flow.md` fully.
+LOAD AND FOLLOW: `../modes/bundle-explorer-flow.md` fully.
 
 That file owns:
 - Bundle pre-flight (state validation + cursor resolution)
@@ -122,7 +122,7 @@ Render in active-context block when non-empty:
 
 ## Rules
 
-- **Single-story flow is unreachable from this agent.** This file dispatches to `modes/bundle-explorer-flow.md`. The single-story explorer logic lives in `explorer.md` and is never loaded from here.
+- **Single-story flow is unreachable from this agent.** This file dispatches to `../modes/bundle-explorer-flow.md`. The single-story explorer logic lives in `explorer.md` and is never loaded from here.
 - **Source-aware reuse search.** When a task's `Sources` includes 2+ tickets, the Reuse Match search must consider the union of those tickets' feature folders, not just one.
 - **Codebase-map sync runs once.** Per bundle, not per ticket. `last_synced_by: {BUNDLE_ID}`.
 - **Failed tasks do not halt the stage.** They go into `stages.explorer.failed[]` and are surfaced at the end-of-stage gate. Halt only on infrastructure errors.
