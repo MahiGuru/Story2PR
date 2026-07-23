@@ -466,6 +466,23 @@ subagents:
 
 
 # ═══════════════════════════════════════════════════════════════════════
+# REVIEW — knobs for Review's PART 2 fan-out behavior
+# ═══════════════════════════════════════════════════════════════════════
+# Reviewed in review.md § Part: code_review (PART 2).
+review:
+  # Minimum task count to fire task-review subagents in parallel.
+  # Below this threshold, Review falls back to inline per-task iteration
+  # (Path B) because subagent invocation overhead (~$0.20–$0.50 per call)
+  # doesn't pay back on small stories.
+  #
+  # Recommended values:
+  #   - 4 (default) — break-even point on most stories
+  #   - 6           — conservative; only fan out on bundles + large stories
+  #   - 999         — effectively disables fan-out (use --no-fan-out flag for ad-hoc)
+  task_fan_out_threshold: 4
+
+
+# ═══════════════════════════════════════════════════════════════════════
 # RESCAN HINTS — project-analyzer Phase 8.5 thresholds
 # ═══════════════════════════════════════════════════════════════════════
 rescan_hints:

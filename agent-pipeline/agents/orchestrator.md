@@ -377,6 +377,17 @@ This step does NOT re-walk the flag/probe/fallback ladder — that already happe
 | Check reference ticket's PR status | `vcs` | `{role_resolution}.vcs.mcp` |
 | Fetch reference ticket's merged PR diff (optional) | `vcs` | `{role_resolution}.vcs.mcp` |
 
+**Subagent delegation (Phase A — optional, recommended when MCPs are healthy):**
+
+Two of the fetches above are heavy enough to spill thousands of tokens of intermediate data into this agent's transcript. Delegate them to subagents that return compact YAML summaries instead:
+
+| Phase-A subagent | Replaces inline work | When to invoke |
+|---|---|---|
+| `pattern-extractor` | "Fetch reference ticket's merged PR diff" + JIRA fetch for the reference ticket | When the user supplied a `reference:` directive AND `vcs.mcp` (and ideally `story_source.mcp`) are resolved. Caches result for Review § 3.5a to reuse. See `subagent-pattern-extractor.md`. |
+| `epic-context` | "Fetch parent epic + Confluence HLD pages" (sibling-ticket discovery + epic body + linked Confluence pages) | When the active ticket has a resolved parent epic AND `story_source.mcp` is available. Optional `docs_source.mcp` enriches with Confluence summaries. Caches per epic — story 2+ of the epic hits cache. See `subagent-epic-context.md`. |
+
+Invoke via the Task tool, passing inputs as a single YAML block per the contract in `agent-flow.mdc § Subagent invocation contract`. Both subagents return `status: ok | partial | error`; on `error` or `partial`, surface the supplied `reason` at the next gate and proceed with the degraded (no-enrichment) path. When subagents are NOT invoked (e.g., MCP unavailable, user opted out via `--no-epic-context`), the inline fallback logic below still works unchanged.
+
 **Routing is role-driven; skip is flag-driven or config-opt-out.** Runtime skip mechanisms (in precedence order):
 
 1. `--offline` / `--skip <name>` / `--only <name>` CLI flags — applied in resolve_mcp_roles (A0.5)
@@ -668,11 +679,85 @@ IF reference_ticket found:
   ELSE:
     Read ref's $CONTEXTS_FILE + $LLD_FILE + $TESTPLAN_FILE + $REVIEW_FILE.
     Check pack compatibility (ref_pack == cur_pack?) — WARN if mismatch.
-    Extract {reference_pattern} = {
-      task_count, reuse_ratio, layer_distribution,
-      file_set, ship_ready_first_review, amendment_log_summary,
-      review_p1_count
-    }
+
+    # ─── Pattern extraction ─────────────────────────────────────────────
+    # Preferred path: invoke pattern-extractor subagent. It additionally
+    # fetches the reference's merged PR diff via {role_resolution.vcs.mcp}
+    # (when available) and writes a cache at
+    # contexts/<epic>/_cache/pattern-<REF>-<sha>.yaml that Review § 3.5a
+    # will reuse without re-fetching.
+    #
+    # Fallback: if the subagent returns status=error (e.g., JIRA MCP
+    # unreachable), extract the same fields from the local ref files we
+    # already read above. The legacy {reference_pattern} field contract
+    # is preserved either way so downstream B.3 + LLD § Pattern Reference
+    # render identically.
+
+    {subagent_result} = Task tool invocation:
+      subagent_type: "pattern-extractor"
+      description:   "Extract reference patterns for {TICKET_ID} ← {REF}"
+      prompt:        |
+        ```yaml
+        reference_ticket_id: {REF}
+        focus: lld_synthesis
+        epic_id: {EPIC_ID}
+        role_resolution:
+          story_source: {{ mcp: {role_resolution.story_source.mcp}, reason: "{role_resolution.story_source.reason}" }}
+          vcs:          {{ mcp: {role_resolution.vcs.mcp},          reason: "{role_resolution.vcs.reason}" }}
+        include_pr_diff: true
+        ```
+
+    Parse {subagent_result} as YAML (validate schema_version == 1, status ∈ {ok, partial, error}).
+
+    IF {subagent_result}.status in [ok, partial]:
+      ps = {subagent_result}.pattern_spec
+      {reference_pattern} = {
+        # Legacy fields (preserved for B.3 + LLD § Pattern Reference template)
+        task_count:              ps.task_decomposition.task_count,
+        reuse_ratio:             ps.task_decomposition.reuse_ratio,
+        layer_distribution:      ps.task_decomposition.layers,
+        file_set:                union(ps.verifiable_signals[*].evidence_files),
+        ship_ready_first_review: (ps.first_pass_review.verdict == "PASS") if ps.first_pass_review else null,
+        review_p1_count:         ps.first_pass_review.p1_count if ps.first_pass_review else 0,
+        amendment_log_summary:   <extract from ref's $LLD_FILE Amendment Log section
+                                  — subagent doesn't emit this; orch fills locally>,
+        # Subagent-supplied richer fields (consumed by B.3 task synthesis bias)
+        structural_patterns:     ps.structural_patterns,
+        verifiable_signals:      ps.verifiable_signals,
+        test_patterns:           ps.test_patterns,
+        ac_mapping:              ps.ac_mapping,
+        pr_diff_available:       ps.pr_diff_available,
+        pr_url:                  ps.pr_url,
+      }
+      {pattern_cache_path} = {subagent_result}.cache_written_to
+
+      IF {subagent_result}.status == "partial":
+        Append to Cross-Reference Findings:
+          "Pattern extraction partial: {subagent_result.reason}.
+           Proceeding without PR-level verifiable_signals; local-LLD signals intact."
+
+    ELSE:  # status == "error"
+      Append to Cross-Reference Findings:
+        "Pattern-extractor subagent failed: {subagent_result.reason}.
+         Falling back to local-only extraction from ref's LLD + Review files."
+      # Inline fallback — derive the legacy contract directly from local files.
+      {reference_pattern} = {
+        task_count:              count of T1..Tn in ref's $LLD_FILE PART 2,
+        reuse_ratio:             tasks_marked_reuse_in_part2 / task_count,
+        layer_distribution:      group ref's PART 2 tasks by Layer keyword,
+        file_set:                union of file paths referenced in ref's PART 2 tasks,
+        ship_ready_first_review: (ref's $REVIEW_FILE "Ship-ready" line == "YES"),
+        review_p1_count:         count of "P1" / "P1:" lines in ref's $REVIEW_FILE,
+        amendment_log_summary:   summarize ref's $LLD_FILE § Amendment Log,
+        # Subagent-only fields null in fallback mode:
+        structural_patterns:     null,
+        verifiable_signals:      null,
+        test_patterns:           null,
+        ac_mapping:              null,
+        pr_diff_available:       false,
+        pr_url:                  null,
+      }
+      {pattern_cache_path} = null
 ```
 
 **Image source identification** (combined across sources, cap 3):
@@ -1355,20 +1440,102 @@ ELSE:
 **Why it's only in subsequent-story flow:** First-story flow already runs A.4b (JIRA query for children) inline — adding this would duplicate that work. First-story flow has no epic-context to compare against anyway.
 
 **If NOT exists (first story — create it):**
-```
-A.4b: JIRA → get parent epic ID, child stories filtered by status
-A.4c: Confluence → fetch HLD (1 search by epic ID) → extract key decisions
-A.4d: Confluence → check for Spike docs under this epic → extract findings
-A.4e: DO NOT fetch sibling LLDs from Confluence (there are none yet, or they'll
-      be captured by Ship as stories complete)
 
-Create $EPIC_CONTEXT with:
-  - Epic metadata (ID, title, created_by, date)
-  - HLD summary (2-3 sentences, not the full HLD)
-  - Spike findings (if any)
-  - Architecture decisions (from HLD)
-  - Empty story log (Ship will populate after this story completes)
+Preferred path: delegate the epic + sibling + Confluence fetch to the `epic-context`
+subagent. It returns a compact `epic_context` YAML block (epic summary, siblings,
+Confluence page summaries, decisions, constraints) and caches at
+`contexts/<EPIC_ID>/_cache/epic-context.yaml` for the next story in the same epic.
+Falls back to the inline A.4b–A.4e block below if the subagent returns `error`.
+
 ```
+# ─── Preferred: subagent invocation ───────────────────────────────────────
+{subagent_result} = Task tool invocation:
+  subagent_type: "epic-context"
+  description:   "Fetch epic + siblings + Confluence for {EPIC_ID}"
+  prompt:        |
+    ```yaml
+    ticket_id: {TICKET_ID}
+    epic_id: {EPIC_ID}
+    depth: siblings+confluence
+    role_resolution:
+      story_source: {{ mcp: {role_resolution.story_source.mcp}, reason: "..." }}
+      docs_source:  {{ mcp: {role_resolution.docs_source.mcp},  reason: "..." }}
+    cache_ttl_hours: 24
+    sibling_max: 8
+    confluence_max: 4
+    ```
+
+Parse {subagent_result} as YAML (validate schema_version == 1).
+
+IF {subagent_result}.status in [ok, partial]:
+  ec = {subagent_result}.epic_context
+
+  # Map subagent fields onto the $EPIC_CONTEXT structure that subsequent-story
+  # flow (A.4a STRUCTURE 1) expects. The field names below match the markdown
+  # sections produced when $EPIC_CONTEXT is rendered to disk.
+  Create $EPIC_CONTEXT with:
+    - Epic metadata:
+        id:           ec.epic_id
+        title:        ec.epic_title
+        url:          ec.epic_url
+        status:       ec.epic_status
+        fix_version:  ec.epic_fix_version
+        created_by:   <orchestrator name + date> (subagent doesn't track this)
+    - HLD summary:           ec.epic_summary
+                              + (if any confluence_pages: concat their summaries
+                                 under a "Confluence HLD" subsection — each page
+                                 keeps its own title + URL for traceability)
+    - Architecture decisions: ec.cross_cutting_signals.decisions
+                              + per-page explicit_decisions from ec.confluence_pages[*]
+    - Spike findings:         <derive from ec.related_tickets[] where issue_type == "Spike"
+                                — subagent surfaces the spike summary line; if more
+                                detail is needed, A.5a self-heal pass fetches the full
+                                spike ticket later>
+    - Constraints:            ec.cross_cutting_signals.constraints
+    - Out of scope:           ec.cross_cutting_signals.out_of_scope
+    - Story log:              <empty — Ship will populate after this story completes;
+                                ec.related_tickets[] is captured separately under a
+                                "Related (open at fetch time)" header for context only,
+                                NOT as the story log — Ship is the authoritative writer>
+
+  IF {subagent_result}.status == "partial":
+    Append to Cross-Reference Findings:
+      "Epic context partial: {subagent_result.reason}.
+       Proceeding with available signals; Confluence/sibling coverage may be incomplete."
+
+  Note: A.4f (git history) + A.4g (codebase map) below still run — they're
+        independent of the JIRA/Confluence fetch.
+
+ELSE:  # status == "error"
+  Append to Cross-Reference Findings:
+    "Epic-context subagent failed: {subagent_result.reason}.
+     Falling back to inline epic/Confluence fetch."
+
+  # ─── Inline fallback (original A.4b–A.4e flow) ────────────────────────
+  A.4b: JIRA → get parent epic ID, child stories filtered by status
+  A.4c: Confluence → fetch HLD (1 search by epic ID) → extract key decisions
+  A.4d: Confluence → check for Spike docs under this epic → extract findings
+  A.4e: DO NOT fetch sibling LLDs from Confluence (there are none yet, or they'll
+        be captured by Ship as stories complete)
+
+  Create $EPIC_CONTEXT with:
+    - Epic metadata (ID, title, created_by, date)
+    - HLD summary (2-3 sentences, not the full HLD)
+    - Spike findings (if any)
+    - Architecture decisions (from HLD)
+    - Empty story log (Ship will populate after this story completes)
+```
+
+**Why the subagent path is preferred:**
+
+| Source | Raw token cost (inline) | Compact-out token cost (subagent) |
+|---|---|---|
+| Epic JIRA body | 3–8K | included in ec.epic_summary (≤200 words) |
+| 8 sibling tickets | 8–24K | ec.related_tickets[] (≤8 × ≤30 words) |
+| 4 Confluence pages | 20–80K | ec.confluence_pages[] (≤4 × ≤200-word summary) |
+| **Total** | **31–112K in orchestrator's transcript** | **≤3K + cached** |
+
+Plus: cached at `contexts/<EPIC_ID>/_cache/epic-context.yaml` — story 2 of the same epic hits the cache for ~$0 (the subagent returns the cached YAML directly).
 
 **A.4f: Git history analysis** (always, regardless of epic-context existence):
 ```bash
@@ -1437,6 +1604,9 @@ user_context: |                                     # NEW — verbatim from trig
 user_context_path_hints: [{path}, ...]              # NEW — A0.6 path extraction (existence-verified)
 user_context_layer_hints: [{layer}, ...]            # NEW — A0.6 layer-keyword inference
 reference: {TICKET-ID or null}                      # NEW — from `reference:` directive
+reference_pattern_cache: {path or null}             # NEW — pattern-extractor subagent cache path
+                                                    # (Review § 3.5a reads this to skip re-fetch).
+                                                    # null when subagent fell back to inline mode.
 out_of_scope: |                                     # NEW — verbatim from trigger
   {out_of_scope_block or "" }
 constraints: |                                      # NEW — verbatim from trigger

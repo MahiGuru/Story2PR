@@ -1247,6 +1247,98 @@ flags:                                      # echoes the trigger flags for resum
 | bundle-review | Consolidated review with AC compliance grouped by source ticket; per-ticket sub-verdict + overall `Ship-ready: YES/NO/PARTIAL`. Appends per-ticket entries to `$EPIC_CONTEXT` story log. Checkpoints every 5 tasks. | `$BUNDLE_REVIEW_FILE` + `$EPIC_CONTEXT` (append per ticket) + `$BUNDLE_STATE_FILE` |
 | bundle-ship | One PR closing all bundled tickets (PR body lists each ticket + AC coverage); JIRA `ship_done` transition fired once per ticket against the same PR URL; `$BUNDLE_SUMMARY_FILE` generated post-push; codebase map metadata updated once per bundled ticket. | GitHub (one PR) + `$BUNDLE_SUMMARY_FILE` + `$CODEBASE_MAP` + `$BUNDLE_STATE_FILE` |
 
+## Subagent invocation contract
+
+Subagents are Task-tool-launched helpers that run in their own context window and return a single structured result to the parent. Examples: `amender`, `image-analysis`, `pattern-extractor` (Phase A), `blast-radius` (Phase A), `epic-context` (Phase A).
+
+Every subagent in this kernel MUST follow the same five conventions so parents can compose them uniformly.
+
+### Convention 1 — single structured YAML output
+
+Every subagent returns exactly one fenced YAML block, no prose preamble. The parent parses with a strict schema and refuses to proceed on mismatch.
+
+```yaml
+status: ok                 # ok | error | partial
+schema_version: 1          # the subagent's own output schema version
+# ... rest of fields are subagent-specific
+```
+
+`status: error` payloads carry `reason: "..."` and nothing else. Parents surface the error at the next gate; they never silently swallow subagent failures.
+
+### Convention 2 — input passed as YAML in the invocation prompt
+
+Parents invoke a subagent with a prompt that contains a single fenced YAML block of inputs. No free-form instructions — the subagent reads its inputs from the block, full stop. Example parent invocation:
+
+```
+Task tool → subagent="pattern-extractor", prompt=
+
+  ```yaml
+  reference_ticket_id: PROJ-100
+  focus: lld_synthesis
+  ```
+```
+
+### Convention 3 — deterministic cache location
+
+Subagents that fetch external data (MCP, GitHub, Confluence) MUST cache their result on disk so subsequent runs (and other parents) can reuse without re-fetching. Cache convention:
+
+```
+contexts/<epic>/_cache/<subagent>-<key>.yaml
+```
+
+Where `<key>` is a stable string built from the inputs that affect the output. The subagent documents its own cache-key recipe in its own file. Cache-key recipe MUST include any external version identifier (e.g., PR head SHA) so stale caches invalidate naturally.
+
+### Convention 4 — error protocol
+
+Subagent failure modes:
+
+| Mode | Returned `status` | Parent behavior |
+|---|---|---|
+| External tool unreachable (MCP probe failed, network) | `error` | Surface at next gate with the subagent-supplied `reason`. Pipeline continues; the parent uses its degraded fallback path (e.g., reference-pattern: use local LLD only). |
+| Invalid input (schema mismatch) | `error` | Bug in parent invocation — log the bad input, halt the parent. |
+| Partial success (some inputs processed, some failed) | `partial` | Surface a summary; parent decides whether to proceed (most do). |
+| Successful completion | `ok` | Proceed. |
+
+Subagents NEVER halt with a user-facing gate themselves. Only the parent owns user interaction.
+
+### Convention 5 — tool-usage emission
+
+Each subagent run emits a tool-usage log to:
+
+```
+contexts/<epic>/_subagents/<subagent>-<task-or-key>-tool-usage.md
+```
+
+Schema is identical to the per-agent tool-usage convention (see `## Tool Usage Tracking` below). `aggregate-tool-usage.mjs` rolls subagent logs up alongside agent logs in cross-pipeline cost summaries.
+
+### When to author a subagent (decision checklist)
+
+Author a new subagent when a phase in a main agent answers YES to ≥3 of these:
+
+- Does it run N times for N independent items? (parallel fan-out)
+- Does it produce >5K tokens of intermediate data the parent doesn't need?
+- Is the output ≤500 tokens of structured summary?
+- Does it call the same MCP/tool repeatedly with different params?
+- Is the same work duplicated across multiple agents? (reuse via shared cache)
+
+Avoid subagents for: small inline steps that fit in the parent's context cleanly; user-gated work (subagents don't gate); steps with strong sequential dependency on parent state.
+
+### Two invocation shapes
+
+**Shape A — single-shot subagent (Phase A pattern):** parent fires ONE subagent, receives ONE result, proceeds. Examples: `pattern-extractor`, `blast-radius`, `epic-context`, `amender`, `image-analysis`.
+
+**Shape B — parallel fan-out (Phase B pattern):** parent fires N subagents in parallel (one per item in a list — tasks, ACs, etc.), receives N results, aggregates. Examples: `task-review` (one per task in manifest), `task-explorer` (one per task in LLD PART 2).
+
+Shape B additional rules (in addition to the five conventions above):
+
+1. **Parent pre-slices inputs.** Each subagent gets only the inputs relevant to its item — its task's diff hunks, its task's codebase-map slice, its task's pack-skill subset. Passing the whole story's manifest/diff/map defeats context isolation.
+2. **Strict output schema for aggregation.** Each subagent's output MUST conform to the same schema so the parent can merge results deterministically. The parent's aggregation step is mechanical (build a table, sum verdicts, union finding lists) — it does NOT re-interpret subagent results.
+3. **Failure isolation.** One subagent returning `status: error` MUST NOT block the others. The parent collects all N results (including errors), surfaces failed items in its gate output, and lets the user decide whether to retry just the failed ones.
+4. **Cost floor:** parallel fan-out has a per-subagent cold-cache cost (~$0.20–$0.50 baseline). The win shows when N ≥ 4 AND each item's work is substantial (≥2K tokens of analysis). For N < 4, inline iteration is usually cheaper — the parent should fall back to the inline path automatically.
+5. **Aggregation determinism:** parent's aggregation MUST be order-independent. Subagents may return in any order (parallel timing varies). Use the item ID (`task_id`, etc.) as the merge key.
+
+When in doubt, prefer Shape A. Shape B is a parallelism optimization, not the default.
+
 ### Invocation modes (pipeline vs standalone)
 
 Each agent supports two invocation modes:

@@ -563,6 +563,271 @@ If ANY of these fields are missing from the manifest, Surgeon's work isn't verif
 
 **Default mode (no --slim flag) continues below — full per-task code review:**
 
+Two execution paths. Both produce IDENTICAL output in `$REVIEW_FILE § Part 2` so downstream Ship logic is path-agnostic.
+
+| Path | When it fires | Why |
+|------|--------------|-----|
+| **A — `task-review` subagent fan-out (preferred)** | N tasks ≥ `review.task_fan_out_threshold` (default 4) AND Task-tool available | Parallel wall-clock + per-task context isolation. See `agent-flow.mdc § Subagent invocation contract § Shape B`. |
+| **B — inline per-task iteration (fallback)** | N < 4 tasks, OR Task-tool unavailable, OR `--no-fan-out` flag, OR Path A returned errors and user opted to retry inline | Original behavior — context-efficient one-task-at-a-time loop |
+
+### Path A — task-review subagent fan-out
+
+#### Step 2.1a: count_tasks_and_decide_path
+
+```
+N = count of T* entries in $MANIFEST_FILE (impl T1..Tn + test T-TC1..T-TCm)
+threshold = yaml_get review.task_fan_out_threshold (default: 4)
+
+IF N >= threshold AND Task tool is available AND --no-fan-out flag not set:
+  → Path A (fan-out)
+ELSE:
+  → Path B (inline) — skip to Path B section below
+```
+
+#### Step 2.2a: pre_slice_inputs_per_task
+
+For each task T{N} in `$MANIFEST_FILE`, build one input block from artifacts already loaded in pre-flight:
+
+```yaml
+task_inputs[T{N}]:
+  epic_id: {EPIC_ID}
+  ticket_id: {TICKET_ID}
+  task_id: T{N}
+
+  task_spec:
+    # From $LLD_FILE PART 2 (impl) or $TESTPLAN_FILE PART 4 (T-TC*)
+    layer:           <task's Layer keyword, canonicalized via pipeline.yaml layer_map>
+    one_liner:       <task's one-line summary>
+    files:           <list from "Files:" line in task block>
+    acs_owned:       <list of AC IDs from task's AC-Matrix row>
+    insertion_point: <from $LLD_FILE § Section 23b for this task — filled by Explorer>
+    reuse_match:     <from Explorer; null if no reuse>
+    explorer_notes:  <from $LLD_FILE § Section 23b>
+    acceptance:      <task's acceptance criteria summary>
+    verify_by:       <task's verify-by command, if any>
+
+  task_diff_hunks: |
+    <git diff base..HEAD -- {task_spec.files joined with space}>
+    # Filter the diff to ONLY this task's files. Pass full unified-diff format.
+
+  manifest_task_entry:
+    # From $MANIFEST_FILE per-task section
+    build_result:        <PASS | FAIL | SKIPPED>
+    verify_by_result:    <PASS | FAIL | NOT_RUN>
+    layer_skills_applied: <list>
+    edge_cases_handled:  <{Q1_null, Q2_empty, Q3_loading, Q4_error, Q5_permission} — null for non-frontend>
+    files_touched:       <list of {path, op, lines_added, lines_removed}>
+    notes:               <Surgeon's per-task notes>
+
+  acs_owned_text:
+    # Filter $CONTEXTS_FILE AC Registry to task_spec.acs_owned
+    {ac_id: <verbatim AC text>, ...}
+
+  pack_skill_excerpts:
+    # Read .cursor/skills/ for skills mapped to task.layer in pipeline.yaml skills.layer_map
+    - skill: <skill_name>
+      content_summary: |
+        <first ~500 chars of the skill body — enough for the subagent to apply rules>
+
+  component_structure_rules:
+    # Filter pipeline.yaml component_structure to just task.layer (null if not declared)
+    {task.layer}: <{required_files, optional_files} block or null>
+
+  demo_report_excerpt:
+    # If $DEMO_REPORT exists, filter per_ac[ac_id] to task_spec.acs_owned; else null
+    {ac_id: {verdict, evidence_path, screenshot_path}, ...}
+
+  pr_diff_pattern_signals:
+    # If $CONTEXTS_FILE.frontmatter.reference_pattern_cache exists, read it and filter
+    # pattern_spec.verifiable_signals[] to entries whose applies_to_layers includes task.layer
+    - pattern: <one signal>
+      applies_to_layers: [<layer>]
+      evidence_diff_excerpt: <≤100 chars>
+```
+
+#### Step 2.3a: fire_subagents_in_parallel
+
+Invoke N parallel Task tool calls (one per task) in a SINGLE message:
+
+```
+FOR each T{N} in $MANIFEST_FILE:
+  Task tool invocation:
+    subagent_type: "task-review"
+    description:   "Review task T{N} for {TICKET_ID}"
+    prompt:        |
+      ```yaml
+      <task_inputs[T{N}] from Step 2.2a>
+      ```
+```
+
+Per the parallel-fan-out contract (`agent-flow.mdc § Two invocation shapes`):
+- All N calls go in **one** message (no sequential invocation).
+- Each subagent runs in its own context — diff hunks, skill excerpts, AC text are isolated per task.
+- Returns may arrive in any order — aggregate keyed by `task_id`, not by arrival order.
+
+#### Step 2.4a: aggregate_verdicts
+
+Collect the N returns:
+
+```
+results  = {}        # task_id → task_verdict block
+errors   = []        # tasks whose subagent returned status: error or didn't return
+
+FOR each subagent_return:
+  Parse YAML, validate schema_version == 1.
+
+  IF subagent_return.status == "ok":
+    results[subagent_return.task_verdict.task_id] = subagent_return.task_verdict
+
+  ELIF subagent_return.status == "error":
+    errors.append({
+      task_id: subagent_return.task_id,
+      reason:  subagent_return.reason,
+    })
+
+# Detect tasks whose subagent didn't return at all (timeout / crash).
+FOR each T{N} expected in $MANIFEST_FILE:
+  IF T{N} not in results AND T{N} not in errors:
+    errors.append({ task_id: T{N}, reason: "subagent did not return (timeout or crash)" })
+```
+
+**Failure isolation:** one subagent error does NOT block aggregation of the others. Surface failed tasks in Step 2.8a; user decides whether to retry just those (typically by re-running Review with `--retry T5,T7`).
+
+#### Step 2.5a: roll_up_overall_verdict
+
+```
+p0_count = sum( count(f for f in r.findings if f.severity == "P0") for r in results.values() )
+p1_count = sum( count(f for f in r.findings if f.severity == "P1") for r in results.values() )
+p2_count = sum( count(f for f in r.findings if f.severity == "P2") for r in results.values() )
+p3_count = sum( count(f for f in r.findings if f.severity == "P3") for r in results.values() )
+
+per_task_verdicts = [r.verdict for r in results.values()]
+
+IF errors is non-empty:
+  overall_verdict = "NEEDS_FIX"
+  blocking_reason = "subagent failures — investigate before proceeding"
+ELIF "NEEDS_FIX" in per_task_verdicts OR p0_count > 0 OR p1_count > 0:
+  overall_verdict = "NEEDS_FIX"
+ELIF "PASS_WITH_NOTES" in per_task_verdicts OR p2_count > 0:
+  overall_verdict = "PASS_WITH_NOTES"
+ELSE:
+  overall_verdict = "PASS"
+```
+
+#### Step 2.6a: aggregate_ac_compliance_matrix
+
+```
+ac_coverage = {}    # ac_id → list of task_ids that satisfy it
+
+FOR each task_verdict in results.values():
+  FOR each ac_id in task_verdict.per_check_results.correctness.acs_satisfied:
+    ac_coverage.setdefault(ac_id, []).append(task_verdict.task_id)
+
+ac_matrix = []
+FOR each ac_id in $CONTEXTS_FILE AC Registry:
+  IF ac_id in ac_coverage AND len(ac_coverage[ac_id]) > 0:
+    status = "COVERED"
+    covered_by = ac_coverage[ac_id]
+  ELIF demo_report_excerpt for ac_id has verdict == PASS:
+    status = "COVERED (via demo)"
+    covered_by = ["demo"]
+  ELSE:
+    status = "NOT_COVERED"
+    covered_by = []
+    # Add a P1 finding at Review level (not subagent level)
+    findings_review_level.append({
+      severity: "P1",
+      category: "ac_compliance",
+      issue:    "AC {ac_id} not satisfied by any task and not verified by demo",
+    })
+
+  ac_matrix.append({ ac_id, text: <ac text>, status, covered_by })
+```
+
+#### Step 2.7a: aggregate_pattern_compliance (if reference: was set)
+
+Only if `pr_diff_pattern_signals` was supplied (i.e., `reference:` directive resolved):
+
+```
+pattern_summary = {
+  followed:  union across results of per_check_results.pattern_compliance.followed,
+  drift:     union across results of per_check_results.pattern_compliance.drift,
+  conflict:  union across results of per_check_results.pattern_compliance.conflict,
+}
+```
+
+This feeds into Review's `§ enrichment_fidelity (PART 3.5 § fidelity_pattern 3.5a)` rolled-up scoring.
+
+#### Step 2.8a: write_review_part2_section
+
+Write to `$REVIEW_FILE` under `## Part 2: Code Review (per task)`:
+
+```markdown
+## Part 2: Code Review (per task)
+
+_Source: Path A — `task-review` subagent fan-out (N={count_tasks})_
+
+### Per-task verdicts
+
+| Task | Layer | Verdict | Findings | Notes |
+|------|-------|---------|----------|-------|
+| T1   | BackendREST | PASS | - | - |
+| T2   | BackendService | PASS_WITH_NOTES | 2 P2 | LLD insertion-point drift, harmless |
+| T3   | AngularComponent | NEEDS_FIX | 1 P1, 1 P2 | Edge case Q1_null not actually guarded |
+| ...
+
+### Findings (rolled up)
+
+**P0 (blocker):** {p0_count}
+{list of P0 findings — each: T{N} · {file}:{lines} · {issue} → {suggestion}}
+
+**P1 (major):** {p1_count}
+{list of P1 findings}
+
+**P2 (minor):** {p2_count}
+{list of P2 findings}
+
+**P3 (nits):** {p3_count}
+{list of P3 findings}
+
+### AC Compliance Matrix
+
+| AC  | Status | Covered by | Notes |
+|-----|--------|------------|-------|
+| AC1 | COVERED | T2, T3 | - |
+| AC2 | COVERED (via demo) | demo | code path not directly traced; browser verified |
+| AC3 | NOT_COVERED | - | **P1** — no task implements this; user must amend LLD or accept gap |
+
+### Subagent execution summary
+
+| Metric | Value |
+|--------|-------|
+| Tasks fanned out | {count_tasks} |
+| Successful returns | {len(results)} |
+| Errored returns | {len(errors)} |
+| Total subagent tokens | ~{sum of cost_estimate_tokens} |
+
+{IF errors:}
+### Subagent errors (block ship)
+
+| Task | Reason |
+|------|--------|
+| T5   | frontend task missing edge_cases_handled — Surgeon manifest incomplete |
+| T7   | subagent did not return (timeout or crash) |
+
+> **Action:** re-run Review with `--retry T5,T7` after fixing manifest gaps, OR re-run Review with `--no-fan-out` to use inline iteration as a fallback.
+
+### Overall verdict
+
+**{overall_verdict}** ({blocking_reason if any})
+```
+
+### Path B — inline per-task iteration (fallback)
+
+Triggered when Path A's gate fails (small story, Task-tool unavailable, `--no-fan-out`, or user retry after Path A errors).
+
+Output format is IDENTICAL to Path A (Step 2.8a) — only the `_Source:_` line changes to `_Source: Path B — inline iteration (N={count_tasks})_`.
+
 **Context-efficient:** Do NOT load all diffs at once. One task at a time:
 
 ```
@@ -574,7 +839,7 @@ For each task T{N}:
   5. Release diff from memory → next task
 ```
 
-**Checklist per task:**
+**Per-task checklist (same as subagent-task-review.md §§ Steps 2–9):**
 1. **Correctness** — does it do what `$LLD_FILE` says? ACs from `$CONTEXTS_FILE` actually satisfied?
    - If Demo Report exists: cross-ref with AC browser results
      Demo ✅ PASS → strong confidence
@@ -630,26 +895,94 @@ For each task T{N}:
 
 Per-task verdict: PASS / PASS WITH NOTES / NEEDS FIX.
 
+After the loop, aggregate exactly like Path A Steps 2.5a–2.7a (roll-up overall verdict, AC matrix, pattern compliance if reference set), then write the report block using the **same template** as Step 2.8a — with `_Source: Path B — inline iteration (N={count_tasks})_` substituted in the source line.
+
 ---
 
 ## Part: blast_radius (PART 3)
 
 **⚡ `--slim` mode: SKIP this part.** Slim is a dev-iteration tool — blast radius is a Ship-gate concern. Record in report: `Part 3: SKIPPED — --slim mode.` Proceed to Part 4.
 
+For each changed symbol, find downstream consumers, classify risk, and write the rolled-up summary into `$REVIEW_FILE`.
 
-For each changed file, find all files that import/reference it. The search scope comes from pipeline.yaml's `shared_paths` — the directories that contain reusable code.
+```
+# ─── Preferred path: blast-radius subagent ─────────────────────────────────
+# Keeps raw grep output (50–500 lines per run) out of Review's transcript.
+# Subagent returns one compact blast_report YAML block; only the rolled-up
+# risk classification survives into the Review report.
 
-```bash
-# Build search scope from pipeline.yaml shared_paths
-# (resolves to project-appropriate directories — whatever shared_paths declares)
+# 1. Gather inputs (these reads happen anyway — Review already has the diff
+#    and manifest loaded; shared_paths comes from pipeline.yaml).
 
-SEARCH_DIRS=$(yaml_get shared_paths | jq -r '[.frontend.ui_elements[].path, .backend.services[].path] | join(" ")')
-FILE_EXTS=$(yaml_get shared_paths | jq -r '[.frontend.ui_elements[].extensions[], .backend.services[].extensions[]] | unique | map("--include=*." + .) | join(" ")')
+SEARCH_DIRS = yaml_get shared_paths | extract paths from frontend.ui_elements[] + backend.services[]
+FILE_EXTS   = yaml_get shared_paths | extract extensions from same blocks, unique
+EXCLUDE_FLAGS = standard kernel exclusions (node_modules, target, .git, dist, build, etc.)
 
-grep -rl $EXCLUDES "{changed-file}" $SEARCH_DIRS $FILE_EXTS
+CHANGED_FILES   = list of files in the git diff (from $MANIFEST_FILE Files-touched section
+                  or `git diff --name-only base..HEAD`)
+CHANGED_SYMBOLS = extract from $MANIFEST_FILE per-task sections:
+                  - classes / functions / components / constants / routes / templates
+                    that were created or modified
+                  - each carries { symbol, kind, defined_in }
+
+SHARED_PATHS_REGISTRY = full shared_paths block from pipeline.yaml (pass-through —
+                        subagent uses it to tag changed_files SHARED vs FEATURE_LOCAL)
+
+# 2. Invoke the subagent.
+
+{subagent_result} = Task tool invocation:
+  subagent_type: "blast-radius"
+  description:   "Compute blast radius for {TICKET_ID}"
+  prompt:        |
+    ```yaml
+    epic_id: {EPIC_ID}
+    ticket_id: {TICKET_ID}
+    search_dirs: {SEARCH_DIRS}
+    file_extensions: {FILE_EXTS}
+    exclude_flags: "{EXCLUDE_FLAGS}"
+    changed_symbols: {CHANGED_SYMBOLS}
+    changed_files: {CHANGED_FILES}
+    shared_paths_registry: {SHARED_PATHS_REGISTRY}
+    ```
+
+Parse {subagent_result} as YAML (validate schema_version == 1).
+
+IF {subagent_result}.status == "ok":
+  br = {subagent_result}.blast_report
+
+  # Render the Blast Radius section of the Review report directly from br.
+  Write to $REVIEW_FILE under "## Blast Radius":
+    - Overall risk:           br.overall_risk
+    - Changed files:          br.changed_files_classified (SHARED vs FEATURE_LOCAL)
+    - Affected files:         br.affected_files[]
+                              (each row: file path, aggregate_risk, per-symbol breakdown)
+    - Counts:                 br.summary_counts
+                              ({affected_file_count}, {high/medium/low risk})
+    - Recommendations:        br.recommendations (≤5 short bullets)
+
+  IF br.summary_counts.truncated_symbols is non-empty:
+    Note: "Some symbols hit the consumer cap — narrower scope or per-symbol
+           rerun recommended for: {truncated_symbols}"
+
+ELSE:  # status == "error"
+  Append to Review report:
+    "Blast radius computation failed: {subagent_result.reason}.
+     Falling back to inline grep — see notes below."
+
+  # ─── Fallback: inline grep (original behavior) ───────────────────────
+  For each changed file, find all files that import/reference it. The search
+  scope comes from pipeline.yaml's shared_paths — the directories that contain
+  reusable code.
+
+  SEARCH_DIRS=$(yaml_get shared_paths | jq -r '[.frontend.ui_elements[].path, .backend.services[].path] | join(" ")')
+  FILE_EXTS=$(yaml_get shared_paths | jq -r '[.frontend.ui_elements[].extensions[], .backend.services[].extensions[]] | unique | map("--include=*." + .) | join(" ")')
+  grep -rl $EXCLUDES "{changed-file}" $SEARCH_DIRS $FILE_EXTS
+
+  Categorize: risk level (none/low/medium/high), reason, affected feature.
+  For shared component modifications: verify no dependents are broken.
 ```
 
-Categorize: risk level (none/low/medium/high), reason, affected feature. For shared component modifications: verify no dependents are broken.
+**Why the subagent path is preferred:** per-file grep output stacks up fast — for a story touching 5 shared symbols, that's typically 50–500 lines of `path:occurrences` noise in Review's transcript. The compact `blast_report` is ≤2K tokens. Net savings: ~3–8K tokens per Review run, plus a cleaner separation between "computed evidence" and "judgment" sections of the report.
 
 ---
 
@@ -663,19 +996,76 @@ This Part uses the same comparison logic as standalone Review's Shared AC-Aware 
 
 ```
 IF Requirement Summary has "Pattern Reference":
-  Resolve reference ticket's artifacts via Procedure B.
-  Read ref's $LLD_FILE + $REVIEW_FILE.
-  Compare:
-    - ref.task_count       vs. current LLD PART 2 task count
-    - ref.reuse_ratio      vs. current PART 2 reuse ratio
-    - ref.layer_distribution vs. current
-    - ref.first-pass verdict (clean? P1s?) — use as baseline expectation
-  Emit findings as per-task rows:
-    - Task T{N} follows ref T{M} pattern: ✓ / ⚠ deviates / ❌ violates
+
+  # ─── Pattern source resolution (subagent cache > re-invoke > local fallback) ───
+  # Orchestrator's resolve_enrichments (A0.6) persisted reference_pattern_cache
+  # in $CONTEXTS_FILE frontmatter. Three paths in priority order:
+
+  IF $CONTEXTS_FILE.frontmatter.reference_pattern_cache exists AND file is readable:
+    # Cache hit — Orchestrator already paid the fetch cost. Read directly.
+    pattern_spec = read_yaml($CONTEXTS_FILE.frontmatter.reference_pattern_cache).pattern_spec
+    pattern_source = "cache (Orchestrator A0.6)"
+
+  ELIF $CONTEXTS_FILE.frontmatter.reference_pattern_cache is null OR file missing:
+    # Cache absent. Could mean: Orchestrator's subagent fell back to inline mode,
+    # OR cache was purged, OR Review is running standalone after a fresh checkout.
+    # Re-invoke the subagent with focus="compliance_scoring" (richer verifiable_signals).
+
+    {subagent_result} = Task tool invocation:
+      subagent_type: "pattern-extractor"
+      description:   "Extract reference patterns for Review fidelity_pattern"
+      prompt:        |
+        ```yaml
+        reference_ticket_id: {REF}
+        focus: compliance_scoring
+        epic_id: {EPIC_ID}
+        role_resolution:
+          story_source: {{ mcp: {role_resolution.story_source.mcp}, reason: "..." }}
+          vcs:          {{ mcp: {role_resolution.vcs.mcp},          reason: "..." }}
+        include_pr_diff: true
+        ```
+
+    IF {subagent_result}.status in [ok, partial]:
+      pattern_spec = {subagent_result}.pattern_spec
+      pattern_source = "subagent (re-invoke, status={subagent_result.status})"
+    ELSE:
+      # Final fallback — derive from local ref files directly.
+      pattern_spec = null
+      pattern_source = "local-only fallback (subagent unavailable: {subagent_result.reason})"
+      Resolve reference ticket's artifacts via Procedure B.
+      Read ref's $LLD_FILE + $REVIEW_FILE.
+
+  # ─── Compliance scoring ───────────────────────────────────────────────────────
+
+  IF pattern_spec is not null:
+    # Subagent gave us structured signals — grade against them.
+    Compare:
+      - pattern_spec.task_decomposition.task_count   vs. current LLD PART 2 task count
+      - pattern_spec.task_decomposition.reuse_ratio  vs. current PART 2 reuse ratio
+      - pattern_spec.task_decomposition.layers       vs. current layer distribution
+      - pattern_spec.first_pass_review.verdict       — baseline expectation
+    FOR each entry in pattern_spec.verifiable_signals:
+      Check current diff for the pattern. Emit row:
+        - Pattern: "{entry.pattern}"
+          Applies to: {entry.applies_to_layers}
+          Current diff status: ✓ followed | ⚠ partial | ❌ deviates
+          Evidence in ref: {entry.evidence_files} {entry.evidence_diff_excerpt}
+    Emit findings as per-task rows:
+      - Task T{N} follows ref pattern: ✓ / ⚠ deviates / ❌ violates
+  ELSE:
+    # Local-only fallback — only task-count / reuse / layer signals available.
+    Compare:
+      - ref.task_count        vs. current LLD PART 2 task count
+      - ref.reuse_ratio       vs. current PART 2 reuse ratio
+      - ref.layer_distribution vs. current
+      - ref's $REVIEW_FILE "Ship-ready" line — baseline
+    Emit findings as per-task rows; verifiable_signals grading skipped.
+
   Aggregate deviations into Pattern Reference section of the report.
+  Record pattern_source at the top of the section for traceability.
 ```
 
-**MCP routing note:** If the reference ticket includes a merged-PR diff in Cross-Reference Findings (produced by Orchestrator's `resolve_enrichments (A0.6)` via `{role_resolution.vcs.mcp}`), include PR-level deltas in the comparison. If the VCS role was skipped (`--skip vcs-name` or `--offline`) OR the MCP was unreachable, fall back to ref-LLD + ref-REVIEW only and note in the report: `pattern comparison: local artifacts only (VCS MCP unavailable)`.
+**MCP routing note:** The subagent paths above honor `{role_resolution.vcs.mcp}` — if VCS role was flag-skipped or probe-failed, the subagent returns `status: partial` with `pr_diff_available: false` and `verifiable_signals: []`. The compliance-scoring block above degrades gracefully: ref-LLD signals (task_count / reuse_ratio / layer_distribution) still flow; per-pattern signal grading is skipped with a note `"pattern comparison: PR-diff unavailable (VCS MCP {reason})"`.
 
 ### Step: fidelity_visual (3.5b)
 

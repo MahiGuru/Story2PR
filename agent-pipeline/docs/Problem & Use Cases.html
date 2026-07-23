@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Pipeline — Business Problem &amp; Use Cases</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#1c2333;
+  --surface:#1c2333;--border:#30363d;--border2:#484f58;
+  --text:#e6edf3;--text2:#8b949e;--text3:#6e7681;
+  --accent:#58a6ff;--accent2:#79c0ff;--accentLt:rgba(56,139,253,0.15);
+  --coral:#ff7b72;--coralLt:rgba(255,123,114,0.15);
+  --teal:#3fb950;--tealLt:rgba(63,185,80,0.15);
+  --amber:#d29922;--amberLt:rgba(210,153,34,0.15);
+  --green:#3fb950;--greenLt:rgba(63,185,80,0.15);
+  --blue:#58a6ff;--blueLt:rgba(56,139,253,0.15);
+  --purple:#bc8cff;--purpleLt:rgba(188,140,255,0.15);
+  --mono:'IBM Plex Mono',monospace;--sans:'DM Sans',system-ui,sans-serif
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.72}
+.page{max-width:840px;margin:0 auto;padding:0 36px}
+
+nav{position:sticky;top:0;z-index:99;background:rgba(13,17,23,0.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
+nav .inner{max-width:840px;margin:0 auto;padding:10px 36px;display:flex;align-items:center;gap:18px;overflow-x:auto}
+nav .brand{font-family:var(--mono);font-weight:600;font-size:12px;color:var(--accent);white-space:nowrap;flex-shrink:0}
+nav a{font-size:12px;color:var(--text2);text-decoration:none;white-space:nowrap;transition:color .15s}
+nav a:hover{color:var(--accent2)}
+
+.hero{padding:64px 0 40px;border-bottom:2px solid var(--border)}
+.chip{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);background:var(--accentLt);padding:4px 12px;border-radius:100px;margin-bottom:16px}
+.hero h1{font-size:40px;font-weight:800;letter-spacing:-1.6px;line-height:1.08;margin-bottom:14px}
+.hero h1 em{font-style:normal;color:var(--accent2)}
+.hero .desc{font-size:16px;color:var(--text2);max-width:640px;line-height:1.7}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:32px 0 0}
+.kpi{text-align:center;padding:16px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:10px}
+.kpi b{font-family:var(--mono);font-size:20px;font-weight:600;color:var(--accent);display:block}
+.kpi span{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1.2px}
+
+.s{padding:52px 0;border-bottom:1px solid var(--border)}.s:last-child{border-bottom:none}
+.s-tag{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:1.8px;text-transform:uppercase;margin-bottom:6px}
+.s h2{font-size:26px;font-weight:700;letter-spacing:-.5px;margin-bottom:4px}
+.s .lead{color:var(--text2);font-size:14px;margin-bottom:24px;max-width:680px}
+h3{font-size:15px;font-weight:700;margin:24px 0 10px}
+
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:16px 0}
+.c{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+.c:hover{border-color:var(--border2)}
+.c .ct{font-size:12.5px;font-weight:700;margin-bottom:5px;color:var(--text)}
+.c p{font-size:12px;color:var(--text2);line-height:1.6;margin:0}
+.c .ic{font-size:18px;margin-bottom:8px;display:block}
+
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:12px}
+th{background:var(--bg2);border:1px solid var(--border);padding:8px 12px;text-align:left;font-weight:600;color:var(--accent);font-size:10px;text-transform:uppercase;letter-spacing:.8px;font-family:var(--mono)}
+td{border:1px solid var(--border);padding:8px 12px;color:var(--text2);vertical-align:top}
+td strong{color:var(--text)}
+code{font-family:var(--mono);font-size:11px;background:var(--bg2);border:1px solid var(--border);padding:0 4px;border-radius:3px;color:var(--accent)}
+
+.note{padding:13px 18px;border-radius:8px;margin:14px 0;font-size:12.5px;line-height:1.6;border:1px solid}
+.n-blue{background:var(--accentLt);border-color:rgba(56,139,253,0.4);color:var(--accent2)}
+.n-green{background:var(--greenLt);border-color:rgba(63,185,80,0.4);color:var(--green)}
+.n-amber{background:var(--amberLt);border-color:rgba(210,153,34,0.4);color:var(--amber)}
+.n-coral{background:var(--coralLt);border-color:rgba(255,123,114,0.4);color:var(--coral)}
+.note strong{color:inherit}
+ul{padding-left:16px;margin:8px 0}li{margin-bottom:5px;font-size:12.5px;color:var(--text2)}li strong{color:var(--text)}
+
+/* problem→solution mapping */
+.map{display:grid;grid-template-columns:1fr auto 1fr;gap:8px 14px;align-items:center;margin:16px 0}
+.map .pain{background:var(--coralLt);border:1px solid rgba(255,123,114,0.35);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--text2)}
+.map .pain b{color:var(--coral);display:block;font-size:11px;margin-bottom:2px}
+.map .arr{color:var(--text3);font-family:var(--mono);font-size:14px;text-align:center}
+.map .fix{background:var(--tealLt);border:1px solid rgba(63,185,80,0.35);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--text2)}
+.map .fix b{color:var(--teal);display:block;font-size:11px;margin-bottom:2px}
+
+/* use case block */
+.uc{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin:12px 0}
+.uc .uh{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.uc .num{font-family:var(--mono);font-size:12px;font-weight:600;color:#fff;background:var(--accent);width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.uc .ut{font-size:16px;font-weight:700;color:var(--text)}
+.uc .tag{font-family:var(--mono);font-size:9px;color:var(--accent);background:var(--accentLt);border:1px solid rgba(56,139,253,0.35);padding:2px 8px;border-radius:100px;margin-left:auto}
+.uc p{font-size:12.5px;color:var(--text2);line-height:1.65;margin:0 0 8px}
+.uc h5{font-family:var(--mono);font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3);margin:14px 0 5px;font-weight:600}
+.uc .eg{font-size:12px;color:var(--text2);background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:6px;padding:9px 13px;line-height:1.6}
+.uc .eg b{color:var(--accent2)}
+.uc pre{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 15px;font-family:var(--mono);font-size:10.5px;line-height:1.75;overflow-x:auto;margin:5px 0;color:var(--text2)}
+.uc pre code{background:none;border:none;padding:0;color:inherit}
+.uc pre .gt{color:var(--amber)}
+.uc pre .cm{color:var(--text3)}
+.uc .val{font-size:12px;color:var(--green);background:var(--greenLt);border:1px solid rgba(63,185,80,0.3);border-radius:6px;padding:8px 12px;margin-top:14px}
+.uc .val b{color:var(--green)}
+
+.foot{text-align:center;padding:34px 0;font-family:var(--mono);font-size:11px;color:var(--text3)}
+@media(max-width:768px){.hero h1{font-size:26px}.kpi-row,.g2,.g3{grid-template-columns:1fr}.map{grid-template-columns:1fr}.map .arr{display:none}.page{padding:0 16px}nav .inner{padding:10px 16px}}
+</style>
+</head>
+<body>
+
+<nav><div class="inner">
+<span class="brand">Agent Pipeline · Problem &amp; Use Cases</span>
+<a href="#problem">Business problem</a>
+<a href="#solution">How we solved it</a>
+<a href="#usecases">Use cases</a>
+</div></nav>
+
+<div class="page">
+
+<div class="hero">
+<div class="chip">Business problem · solution · use cases</div>
+<h1>Ticket-to-PR is slow, inconsistent, and costly <em>— we fixed it with a pipeline of agents</em></h1>
+<p class="desc">The work between "here's a JIRA ticket" and "here's a reviewed PR" is repetitive and error-prone, and a single AI prompt can't do it reliably. We solved it with a team of specialized AI agents on an engineered harness — human-gated, file-driven, stack-agnostic. The payoff: <strong style="color:var(--green)">an 8-point story that used to take days now ships in about an hour.</strong> Here's the business problem, how it's solved, and the three use cases that matter most.</p>
+<div class="kpi-row">
+<div class="kpi"><b>6</b><span>Gated steps</span></div>
+<div class="kpi"><b>5</b><span>Specialized agents</span></div>
+<div class="kpi"><b>1</b><span>PR per ticket</span></div>
+<div class="kpi"><b>100%</b><span>Human-approved</span></div>
+</div>
+</div>
+
+<!-- BUSINESS PROBLEM -->
+<div class="s" id="problem">
+<div class="s-tag">Business problem</div>
+<h2>Why a single AI prompt can't ship a story</h2>
+<p class="lead">AI can write code fast — but it can't reliably ship a story on its own. Point one big prompt at a repo and it loses context, hallucinates file paths, duplicates code, and makes risky commits with no audit trail or cost control. Speed without governance isn't shippable.</p>
+
+<div class="g2">
+<div class="c"><span class="ic">🧵</span><div class="ct">Loses the thread</div><p>One prompt holding the ticket, codebase search, implementation, tests, and git in a single context drifts off track and overflows its window mid-task — then can't resume.</p></div>
+<div class="c"><span class="ic">🔁</span><div class="ct">Hallucinates &amp; duplicates</div><p>It invents file paths that don't exist and rebuilds components a sibling story already shipped, because it has no reliable, current view of the codebase.</p></div>
+<div class="c"><span class="ic">🎚️</span><div class="ct">Unverified quality</div><p>Standards, edge cases, and test coverage vary run to run — with no AC-by-AC compliance check and no blast-radius awareness on shared code.</p></div>
+<div class="c"><span class="ic">⚠️</span><div class="ct">Risky &amp; opaque</div><p>Destructive commands, half-finished commits, no record of why it did what it did, and a token bill you can't forecast.</p></div>
+</div>
+
+<div class="note n-coral"><strong>The core tension:</strong> the business needs the <em>speed</em> of AI with the <em>governance</em> of a real engineering process. A single mega-prompt holds the whole ticket — parsing, search, implementation, tests, review, git — in one context. It loses track, duplicates work, and gives you no control points.</div>
+</div>
+
+<!-- HOW SOLVED -->
+<div class="s" id="solution">
+<div class="s-tag">How we solved it</div>
+<h2>A team of agents, not one big prompt</h2>
+<p class="lead">Story2PR splits the work into narrow agents on an engineered harness — file-based state, approval gates, safety rules, and subagents for isolation — giving AI speed with the governance of a real engineering process. Each agent runs in its own short-lived conversation with defined inputs and outputs; you're the scheduler, and typing the next agent is the approval gate. Each one closes a specific failure mode above.</p>
+
+<div style="display:flex;align-items:center;gap:22px;flex-wrap:wrap;background:var(--greenLt);border:1px solid rgba(63,185,80,0.4);border-radius:12px;padding:20px 24px;margin:6px 0 20px">
+<div style="text-align:center;flex-shrink:0">
+<div style="font-family:var(--mono);font-size:36px;font-weight:600;color:var(--green);line-height:1">~1 hr</div>
+<div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1.2px;margin-top:4px">an 8-point story</div>
+</div>
+<div style="flex:1;min-width:240px;font-size:13.5px;color:var(--text2);line-height:1.65"><strong style="color:var(--text)">The headline: an 8-story-point ticket ships in about an hour.</strong> Work that traditionally spans days — reading the ticket, hunting the codebase, coding, testing, reviewing, raising the PR — compresses into one gated session. The agents do the repetitive middle; you just approve each turn. Across a sprint that's the difference between clearing a few stories and clearing the backlog.</div>
+</div>
+
+<p style="font-size:12.5px;color:var(--text2);margin-bottom:4px">Each failure mode from the problem section maps to a specific agent (and, where it helps, a subagent) that closes it:</p>
+<div class="map">
+<div class="pain"><b>Loses the thread</b>One context drifts and overflows mid-task</div>
+<div class="arr">→</div>
+<div class="fix"><b>Narrow agents, state in files</b>: each of the five agents runs in its own short context and hands off through files — there's no single thread to lose, and context-pressure zones force a clean handoff before overflow. The <b>image-analysis subagent</b> keeps heavy design bytes out of the Orchestrator.</div>
+
+<div class="pain"><b>Hallucinates &amp; duplicates</b>Invents paths, rebuilds existing code</div>
+<div class="arr">→</div>
+<div class="fix"><b>Explorer</b> greps the <code>shared_paths</code> registry in the codebase map and downgrades a "create" task to "reuse / modify" <em>before</em> code is written; the no-hallucinated-paths rule <code>ls</code>-verifies every path.</div>
+
+<div class="pain"><b>Unverified quality</b>Standards + edge cases vary run to run</div>
+<div class="arr">→</div>
+<div class="fix"><b>Surgeon → Review</b>: Surgeon loads the right layer standards per task + runs per-task lint/tests + an edge-case checklist; Review runs the full build, AC-by-AC compliance, and blast-radius on shared code → a ship-ready YES/NO verdict.</div>
+
+<div class="pain"><b>Risky &amp; opaque</b>Unsafe commits, no trail, no cost control</div>
+<div class="arr">→</div>
+<div class="fix"><b>Ship + the harness</b>: only Ship touches git (double-gated); a forbidden-command denylist blocks destructive ops; every decision, build verdict, and cost is written to a per-story ledger. The <b>amender subagent</b> edits the plan ~6× cheaper than a re-run.</div>
+</div>
+
+<div class="note n-blue"><strong>The two subagents keep runs cheap and reliable</strong> by isolating heavy work: <strong>image-analysis</strong> compresses a 15–25K-token design image into a ~3K spec that never bloats the Orchestrator; <strong>amender</strong> makes targeted plan edits instead of re-fetching JIRA + Confluence + Figma. Full agent / subagent / harness detail is in <code>How It Works.html</code>; the step-by-step run in <code>How To Use.html</code>.</div>
+
+<h3>What makes it reliable — the harness</h3>
+<p class="lead" style="margin-bottom:14px">Specialized agents are the idea; the harness is the engineering that makes them dependable and affordable.</p>
+<div class="g3">
+<div class="c"><div class="ct">🗂️ State in files</div><p>Each agent reads only the slice it needs and writes results to disk. The next agent reads the file, not the chat — so runs are auditable, resumable, and cheap.</p></div>
+<div class="c"><div class="ct">📉 Context-pressure limits</div><p>Each agent tracks its own token use and hands off to a fresh chat before it overflows — no silent degradation mid-task.</p></div>
+<div class="c"><div class="ct">🛡️ Always-on guardrails</div><p>Forbidden-command denylist, git-ownership, branch safety, and "never silently skip" are injected into every run — safety doesn't depend on memory.</p></div>
+</div>
+<div class="note n-amber"><strong>Why it's affordable:</strong> the file-state + caching design keeps real cost around <strong>$3–6 per agent</strong> (≈$15–30 for a full cold story) with a per-story ledger — instead of the multiples an always-re-reading mega-prompt would burn.</div>
+</div>
+
+<!-- USE CASES -->
+<div class="s" id="usecases">
+<div class="s-tag">Use cases</div>
+<h2>The three that matter most</h2>
+<p class="lead">The same machinery covers many scenarios; these three carry the business value — everyday delivery, defect resolution, and delivering related work at scale.</p>
+
+<div class="uc">
+<div class="uh"><span class="num">1</span><span class="ut">New feature story, end-to-end</span><span class="tag">everyday delivery</span></div>
+<p><strong>How we addressed it:</strong> the six-agent pipeline takes a well-defined story from ticket to reviewed PR. The Orchestrator writes a 3-file plan, the Explorer finds reuse and insertion points, the Surgeon implements task-by-task with per-task tests, the Review agent runs the full build + AC compliance + blast radius, and Ship opens the PR — a human gate between each.</p>
+<h5>Example</h5>
+<div class="eg"><b>JIRSTORY-1234</b> — "Add an entitlement filter to the certification list page." A UI story under an existing epic, with a Figma design attached. Explorer finds the existing <code>sp-dropdown</code> to reuse; Surgeon wires it + session-storage persistence; Review confirms all 3 ACs pass.</div>
+<h5>How to run</h5>
+<pre><code><span class="gt">@orchestrator.md</span> Work on JIRSTORY-1234   <span class="cm"># + attach design → Phase C gate: reply "Go"</span>
+<span class="gt">@explorer.md</span> Run the explorer          <span class="cm"># review annotations</span>
+<span class="gt">@surgeon.md</span> Run the surgeon            <span class="cm"># per-task loop + final build</span>
+<span class="gt">@review.md</span> Run the review             <span class="cm"># reply "Fix all P1" if needed</span>
+<span class="gt">@ship.md</span> Ship it                       <span class="cm"># "Single commit" → "Confirmed"</span></code></pre>
+<h5>Run it offline / privately</h5>
+<div class="eg" style="border-left-color:var(--amber)">Same six steps, no external calls — add <code>--offline</code> and provide the ticket via <code>contexts/ticket-input.md</code> + attached images: <code>@orchestrator.md Work on JIRSTORY-1234 --offline</code>. Use <code>--skip atlassian</code> to skip only JIRA. Saves ~15–40K tokens and keeps ticket content off external services.</div>
+<div class="val"><b>Value:</b> consistent quality with no duplicated code, and a PR that already carries its test plan, blast radius, and AC compliance — so review is fast.</div>
+</div>
+
+<div class="uc">
+<div class="uh"><span class="num">2</span><span class="ut">Bug fix — root cause, not guesswork</span><span class="tag">defect resolution</span></div>
+<p><strong>How we addressed it:</strong> the Orchestrator detects a Bug issue-type and switches the plan shape — the test-plan section becomes "Root Cause Hypotheses," and the Explorer routes to bug-localization instead of feature exploration. The fix is scoped to the actual cause, then verified like any story. Same triggers as a feature — the mode is auto-detected.</p>
+<h5>Example</h5>
+<div class="eg"><b>JIRSTORY-2101</b> — "Date-picker selection doesn't persist after reload." Orchestrator lists root-cause hypotheses (session-storage key mismatch vs init order); Explorer localizes to the controller's init; Surgeon fixes the load order; Review confirms the regression is gone.</div>
+<h5>How to run</h5>
+<pre><code><span class="gt">@orchestrator.md</span> Work on JIRSTORY-2101   <span class="cm"># Bug type auto-detected → Go</span>
+<span class="gt">@explorer.md</span> Run the explorer          <span class="cm"># bug-localization pass</span>
+<span class="gt">@surgeon.md</span> Run the surgeon
+<span class="gt">@review.md</span> Run the review
+<span class="gt">@ship.md</span> Ship it</code></pre>
+<div class="val"><b>Value:</b> structured root-cause reasoning and a targeted, tested fix — fewer "patched the symptom, missed the cause" regressions.</div>
+</div>
+
+<div class="uc">
+<div class="uh"><span class="num">3</span><span class="ut">Multi-story epic — bundle mode</span><span class="tag">scale &amp; cost</span></div>
+<p><strong>How we addressed it:</strong> dedicated <code>bundle-*</code> agents consolidate 2–10 related stories into ONE plan, ONE branch, ONE PR. Overlapping code is de-duplicated at design time, tasks are ordered by layer and dependency so shared work is built once, and the Surgeon + Review checkpoint every few tasks to keep context healthy. One PR closes every shipped ticket, each with its own JIRA transition.</p>
+<h5>Example</h5>
+<div class="eg"><b>JIRSTORY-1234, -1235, -1236</b> — three stories in the same epic that all touch the notifications panel. Bundled, the shared panel component is built once and reused across all three, instead of three separate PRs each re-touching it.</div>
+<h5>How to run</h5>
+<pre><code><span class="gt">@bundle-orchestrator.md</span> Work on epic stories JIRSTORY-1234, JIRSTORY-1235, JIRSTORY-1236
+<span class="cm"># or by status:  @bundle-orchestrator.md Work on epic JIRSTORY-EPIC-42 with status="Ready for Dev"</span>
+<span class="gt">@bundle-explorer.md</span> Run the bundle explorer
+<span class="gt">@bundle-surgeon.md</span> Run the bundle surgeon
+<span class="gt">@bundle-review.md</span> Run the bundle review
+<span class="gt">@bundle-ship.md</span> Ship the bundle</code></pre>
+<div class="val"><b>Value:</b> ~30–40% faster wall-clock and one PR to review instead of N — roughly 50% cheaper than shipping the same stories cold and separately.</div>
+</div>
+
+<h3 style="margin-top:26px">Also runnable — two modes on top of the above</h3>
+<p class="lead" style="margin-bottom:14px">These aren't separate work types — they're ways to run the same agents, so they layer onto any of the three use cases above.</p>
+<div class="g2">
+<div class="c"><span class="ic">🔌</span><div class="ct">Offline / sensitive</div><p>Any pipeline run with <code>--offline</code> or <code>--skip &lt;mcp&gt;</code> — feed the ticket via <code>contexts/ticket-input.md</code> + local images. No network calls, keeps content off external services (regulated or air-gapped work), and saves ~15–40K tokens.<br><code>@orchestrator.md Work on JIRSTORY-1234 --offline</code></p></div>
+<div class="c"><span class="ic">🧩</span><div class="ct">Standalone — no ticket</div><p>Single-agent, ad-hoc runs for quick research or a small targeted fix; output lands in <code>contexts/standalone/</code>. Size caps apply (Surgeon ≤5 files / ≤150 lines). No standalone for Ship — it requires a Review.<br><code>@explorer.md Research: &lt;question&gt;</code><br><code>@surgeon.md Apply: &lt;fix&gt; in &lt;files&gt;</code><br><code>@review.md Review changes</code></p></div>
+</div>
+
+<div class="note n-blue" style="margin-top:22px"><strong>In one sentence:</strong> we took the riskiest, most repetitive part of software delivery — ticket to PR — and turned it into a governed, resumable, stack-agnostic assembly line of AI specialists, where speed comes from the agents and trust comes from the harness.</div>
+<div class="note n-green"><strong>Go deeper:</strong> <code>How To Use.html</code> (run your first ticket) · <code>How It Works.html</code> (agents, rules, skills, config, harness in depth).</div>
+</div>
+
+</div>
+<div class="foot">Agent Pipeline · Business Problem &amp; Use Cases · 5 story agents + 2 subagents on an engineered harness · human-gated · stack-agnostic<br>Verified against agent-pipeline/agents/ · agent-flow.mdc · HOW-TO-USE.md</div>
+</body>
+</html>
