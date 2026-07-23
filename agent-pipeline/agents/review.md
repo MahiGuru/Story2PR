@@ -1773,6 +1773,6 @@ Slim is not ship-ready — the user must run full Review (default mode) before S
 - **MANDATORY: Every response ends with `> **👉**` block. No exceptions.**
 - After every fix: update review report, show updated issue count
 - Support `Fix all` and `Fix all P{severity}` — process in priority order
-- Bundle mode is handled by the dedicated `bundle-review.md` agent (which loads `modes/bundle-review-flow.md`). This file refuses to handle bundle context — see `bundle_context_guard (0c)`. Single-story / bug is the only scope of this file.
+- Bundle mode is handled by the dedicated `bundle-review.md` agent (self-contained). This file refuses to handle bundle context — see `bundle_context_guard (0c)`. Single-story / bug is the only scope of this file.
 - **Context pressure** (per `agent-flow.mdc § Context Pressure Detection`): read `{context_pressure}` config at pre-flight; maintain running counter; at every gate (per-task checkpoint, end-of-stage), check pressure zone and render YELLOW/ORANGE/RED variant. ORANGE/RED resume: `Run the review`. Review halts cleanly on RED (no destructive ops) — partial review file flushed atomically before halt.
 - **Tool Usage Ledger (MANDATORY):** Before rendering the final `[Step N/5] {agent} — DONE` gate, append your run's block to `$TOOL_USAGE_FILE` per `agent-flow.mdc § Tool Usage Tracking`. Block schema, counting rules, and aggregation are defined there — do NOT duplicate the schema in this file. Applies to all run modes (story / bug / bundle / standalone). Skipped block triggers a post-execution-verification warning.

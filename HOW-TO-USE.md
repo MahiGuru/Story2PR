@@ -20,7 +20,19 @@ One command per step. A gate between each. Ticket-to-PR in 6 gates.
 
 ## Command Cheat Sheet
 
-### Pipeline — ticket end-to-end
+Three ways to run — pick by the shape of the work:
+
+| Mode | Use when | Start with |
+|------|----------|-----------|
+| **1 · Direct** | One JIRA story, full pipeline → PR | `@orchestrator.md Work on PROJ-1234` |
+| **2 · Standalone & offline** | Ad-hoc single-agent work, or no-network / private runs | `@explorer.md Research: …` · add `--offline` to any trigger |
+| **3 · Bundle** | 2–10 related stories → ONE branch + ONE PR | `@bundle-orchestrator.md Work on epic stories …` |
+
+_Setup & admin commands are further down._
+
+---
+
+### 1 · Direct — ticket end-to-end
 
 The main flow. Most of your work happens here.
 
@@ -35,7 +47,33 @@ The main flow. Most of your work happens here.
 | Slim Review (integration + AC + blast only; trusts Surgeon's per-task work) | `@review.md Run the review --slim` (~$0.30; skip per-task checklist) |
 | Full Review (mandatory before Ship) | `@review.md Run the review` (~$0.50; full per-task + AC + blast + visual + pattern) |
 
-### Bundle mode — multi-story consolidation (Step 1/5)
+---
+
+### 2 · Standalone & offline
+
+**Standalone (no ticket)** — single-agent, ad-hoc runs. Output lands in `contexts/standalone/`. Size caps apply (see "Standalone Mode" section below).
+
+| I want to… | Command |
+|------------|---------|
+| Research a codebase question | `@explorer.md Research: <question>` |
+| Apply a small targeted fix | `@surgeon.md Apply: <spec> in <files>` |
+| Implement from ACs (no ticket) | `@surgeon.md Implement:` + bullet list of ACs |
+| Spot-check git diff before commit | `@review.md Review changes` |
+| AC-coverage review of an existing ticket | `@review.md Review PROJ-1234` |
+| AC-coverage review with inline ACs | `@review.md Review against:` + bullets |
+| Ad-hoc browser walk of a URL | `@ac-e2e-check.md Demo <URL>` |
+
+**Offline / selective MCP** — per-run flags; combine with any pipeline trigger (direct **or** bundle). See "Running without MCP" below for full details + examples.
+
+| I want to… | Command |
+|------------|---------|
+| Work on a ticket with no MCP at all | `@orchestrator.md Work on PROJ-1234 --offline` (provide ticket via `contexts/ticket-input.md` or inline `Context:`) |
+| Skip specific MCPs only | `@orchestrator.md Work on PROJ-1234 --skip atlassian,figma` |
+| Use only specific MCPs (skip the rest) | `@orchestrator.md Work on PROJ-1234 --only github` |
+
+---
+
+### 3 · Bundle — multi-story consolidation
 
 Bundle 2–10 related stories into ONE LLD, ONE branch, ONE PR. Use when stories share code (overlapping ACs, shared components). Does NOT change single-story flow above.
 
@@ -84,29 +122,7 @@ Bundle wins are **wall-clock (~30–40% faster), code dedup at design time, 1 PR
 - `Ship passing tickets only` — JIRA transitions fire only for YES tickets; failing tickets stay in pre-bundle state
 - `Ship anyway with gaps` — closes all tickets in the PR; transitions only YES; PR body labels gaps as fix-forward
 
-### Offline / selective MCP (save tokens, work without network, privacy)
-
-Per-run flags. Combine with any pipeline trigger. See "Running without MCP" below for full details + examples.
-
-| I want to… | Command |
-|------------|---------|
-| Work on a ticket with no MCP at all | `@orchestrator.md Work on PROJ-1234 --offline` (provide ticket via `contexts/ticket-input.md` or inline `Context:`) |
-| Skip specific MCPs only | `@orchestrator.md Work on PROJ-1234 --skip atlassian,figma` |
-| Use only specific MCPs (skip the rest) | `@orchestrator.md Work on PROJ-1234 --only github` |
-
-### Standalone — no ticket, ad-hoc work
-
-Single-agent runs. Output lands in `contexts/standalone/`. Size caps apply (see "Standalone Mode" section below).
-
-| I want to… | Command |
-|------------|---------|
-| Research a codebase question | `@explorer.md Research: <question>` |
-| Apply a small targeted fix | `@surgeon.md Apply: <spec> in <files>` |
-| Implement from ACs (no ticket) | `@surgeon.md Implement:` + bullet list of ACs |
-| Spot-check git diff before commit | `@review.md Review changes` |
-| AC-coverage review of an existing ticket | `@review.md Review PROJ-1234` |
-| AC-coverage review with inline ACs | `@review.md Review against:` + bullets |
-| Ad-hoc browser walk of a URL | `@ac-e2e-check.md Demo <URL>` |
+---
 
 ### Project setup & maintenance
 

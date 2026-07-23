@@ -1,6 +1,6 @@
 # Agent Pipeline
 
-**Project-neutral agent pipeline** · 1 setup agent + 5 story agents + 1 subagent · Dual-host: Cursor + Claude Code · Kernel + project packs · Pipeline + standalone modes · MCP-driven auto-enrichment
+**Project-neutral agent pipeline** · 1 setup agent + 5 story agents + 5 bundle agents + 2 subagents · Dual-host: Cursor + Claude Code · Kernel + project packs · Single-story + bundle + standalone modes · MCP-driven auto-enrichment
 
 A system for running software engineering work through a chain of specialized agents (plan → explore → implement → verify → review → ship), with a gate at every step and full config-driven behavior. Works on any project — pack-specific details (YourApplication, whatever) come from `pipeline.yaml`.
 
@@ -13,6 +13,12 @@ A system for running software engineering work through a chain of specialized ag
 ```
 
 That's the full pipeline in one command. After each agent, the gate tells you what to type next.
+
+**Several related stories at once?** Bundle them into ONE branch + ONE PR:
+```
+@bundle-orchestrator.md Work on epic stories PROJ-1234, PROJ-2345, PROJ-3432
+```
+The keyword **`epic`** is required, and use full JIRA keys (`PROJ-1234`, not `1234`). See [Bundle mode](#invocation-modes) below.
 
 **Not a JIRA ticket?** Run one agent directly:
 - `@explorer.md Research: <question>` — codebase research
@@ -91,8 +97,10 @@ Full setup walkthrough → `HOW-TO-USE.md` § Tech Lead.
 
 ```
 agent-pipeline/                 ← KERNEL (project-neutral)
-├── agents/                     ← agent prompts (7 agents + amender subagent)
-├── rules/                      ← always-on rules (agent-flow.mdc)
+├── agents/                     ← agent prompts (7 single-story agents + 2 subagents)
+│   ├── bundle/                 ← 5 dedicated bundle agents (self-contained, multi-story)
+│   └── modes/                  ← lazy-loaded flow files (bug + standalone modes)
+├── rules/                      ← always-on rules (agent-flow.mdc + bulk-agent-flow.mdc for bundle)
 ├── skills/                     ← kernel skills (fallback templates, strategy docs)
 ├── docs/agents/                ← per-agent walkthroughs
 └── bin/                        ← shell helpers
@@ -142,12 +150,27 @@ Downstream agents read only the file they need. Full details in `agent-pipeline/
 | 06 | Review | 4/5 | Full build + tests + code review + blast radius + AC compliance |
 | 07 | Ship | 5/5 | Commit + push + PR + JIRA transitions |
 | 08 | Subagent-Amender | Subagent | Targeted LLD amendments at Orchestrator's Phase C gate |
+| 09 | Subagent-Image-Analysis | Subagent | Turns design images into a compact visual spec (Orchestrator enrichment) |
+
+**Bundle (multi-story):** 5 dedicated agents mirror the single-story chain — `bundle-orchestrator` → `bundle-explorer` → `bundle-surgeon` → `bundle-review` → `bundle-ship` (in `agent-pipeline/agents/bundle/`, each self-contained). Reached only via bundle triggers; see [Bundle mode](#invocation-modes).
 
 ---
 
 ## Invocation modes
 
-### Pipeline mode (default — ticket-driven)
+Three ways to run — pick by the shape of the work:
+
+| Mode | Use when | Start with |
+|------|----------|-----------|
+| **1 · Direct** | One JIRA story, full pipeline → PR | `@orchestrator.md Work on PROJ-1234` |
+| **2 · Standalone & offline** | Ad-hoc single-agent work, or no-network / private runs | `@explorer.md Research: …` · add `--offline` to any trigger |
+| **3 · Bundle** | 2–10 related stories → ONE branch + ONE PR | `@bundle-orchestrator.md Work on epic stories …` |
+
+---
+
+### 1 · Direct — single story (default)
+
+The full pipeline, one command per step, a gate between each:
 
 ```
 @orchestrator.md Work on PROJ-1234
@@ -161,9 +184,13 @@ Downstream agents read only the file they need. Full details in `agent-pipeline/
 @ship.md Ship it
 ```
 
-Full LLD, full audit trail, PR.
+Full LLD, full audit trail, PR. Bug tickets use the same triggers — the Orchestrator auto-detects `issuetype: Bug` and switches the plan shape.
 
-### Standalone mode (ad-hoc — single agent)
+---
+
+### 2 · Standalone & offline
+
+**Standalone (no ticket)** — run a single agent ad-hoc. Outputs land in `contexts/standalone/` as `standalone-*-{timestamp}.md`.
 
 ```
 @explorer.md Research: <question>              — codebase research
@@ -176,9 +203,52 @@ Full LLD, full audit trail, PR.
 @ac-e2e-check.md Demo <URL>                    — ad-hoc browser walkthrough
 ```
 
-Outputs land in `contexts/standalone/` with `standalone-*-{timestamp}.md` filenames.
+*No standalone:* Orchestrator (it IS the pipeline start), Explorer-bug (needs structured Bug Context), Ship (safety rail — requires Review).
 
-**No standalone:** Orchestrator (it IS the pipeline start), Explorer-bug (needs structured Bug Context), Ship (safety rail — requires Review).
+**Offline (no / partial MCP)** — add a flag to **any** pipeline trigger (direct or bundle). Skips MCP calls for privacy / air-gapped / token-saving (~15–40K per story); provide the ticket via `contexts/ticket-input.md` + attached images.
+
+```
+@orchestrator.md Work on PROJ-1234 --offline            — skip ALL MCPs (ticket from ticket-input.md)
+@orchestrator.md Work on PROJ-1234 --skip atlassian     — skip JIRA/Confluence only
+@orchestrator.md Work on PROJ-1234 --skip atlassian,figma
+@orchestrator.md Work on PROJ-1234 --only github        — use ONLY GitHub, skip the rest
+```
+
+If an MCP flakes mid-run on a default trigger, the Orchestrator prompts a fallback gate (`retry` / `inline` / `file` / `skip` / `cancel`) — no re-trigger needed.
+
+---
+
+### 3 · Bundle — multiple related stories
+
+Consolidate **2–10 related stories** into ONE LLD, ONE branch, ONE PR. Use it when stories share code (overlapping ACs, shared components). Bundle mode has its own **dedicated agents** (`agents/bundle/bundle-*.md`, each self-contained) and its own always-on rule (`bulk-agent-flow.mdc`) — direct single-story triggers are never affected.
+
+```
+@bundle-orchestrator.md Work on epic stories PROJ-1234, PROJ-2345, PROJ-3432
+  ↓ gate
+@bundle-explorer.md Run the bundle explorer
+  ↓ gate
+@bundle-surgeon.md Run the bundle surgeon
+  ↓ gate
+@bundle-review.md Run the bundle review
+  ↓ gate
+@bundle-ship.md Ship the bundle       — ONE PR closing all tickets + per-ticket JIRA transitions
+```
+
+**Start-trigger forms** (the router fires only when the text has the keyword `epic` **and** either 2+ comma-separated IDs, or a `status=`/`group=` filter — use full JIRA keys, not bare numbers):
+
+| Trigger | What it does |
+|---|---|
+| `Work on epic stories PROJ-1234, PROJ-2345, PROJ-3432` | Explicit ticket list |
+| `Work on epic PROJ-EPIC-42 with status="Ready for Dev"` | Discover the epic's children by status |
+| `Work on epic PROJ-EPIC-42 group=ready_for_dev` | Discover by status-group shorthand |
+
+**Flags** (append to the start trigger): `--linear` (consolidated execution instead of per-story gates) · `--deep` (upfront overlap analysis) · `--max=<N>` (raise the ticket cap) · `--fresh` (ignore prior state, re-synthesize) · `--offline` / `--skip <mcp>` (same offline family as direct mode).
+
+**Resume after a stop:** `Resume bundle-<agent> for <BUNDLE_ID> from T<N>`, or just re-issue the original `Work on epic stories …` trigger — `bundle-orchestrator` detects the existing `_bundle-state.yaml` and offers resume options. Surgeon + Review checkpoint every N tasks, each emitting a fresh-chat resume deeplink.
+
+**When NOT to bundle:** a single ticket (use direct mode) · unrelated code areas · Bug tickets (bundle accepts Story / Task / Spike only) · when you need per-ticket rollback granularity.
+
+---
 
 ### Enrichment (reference + images + MCP)
 
@@ -313,9 +383,24 @@ Amender subagent makes section-level edits to the 3-file LLD without regeneratin
 
 **Cannot amend after:** Explorer has run (produces `$EXPLORATION_FILE`). Fix pre-Explorer, or restart the pipeline.
 
-### Multi-story epic
+### Upcoming stories in the same epic (sequential)
 
-Orchestrator reads `epic-context.md` (decisions + reuse catalog from prior stories) to inform the new story's LLD. Review appends a compact story entry to `epic-context.md` after every shipped ticket. The first story in an epic creates the file from HLD + spike findings.
+For the **next** story in an epic you already worked, just run the normal trigger:
+```
+@orchestrator.md Work on PROJ-1235
+```
+Orchestrator automatically reads `contexts/<epic>/epic-context.md` (decisions + reuse catalog from prior stories) to inform the new story's LLD — no MCP round-trip needed for the architecture. Review appends a compact story entry to `epic-context.md` after every shipped ticket, so **each upcoming story starts warmer than the last**. The first story in an epic creates the file from HLD + spike findings.
+
+### Bundle — multiple related stories in one PR
+
+When several upcoming stories are related and share code, do them **together** instead of one-by-one:
+```
+@bundle-orchestrator.md Work on epic stories PROJ-1234, PROJ-2345, PROJ-3432
+  → ONE consolidated LLD (cross-ticket AC registry, layer + dependency task order)
+  → shared code built once (de-duplicated at design time)
+  → ONE branch, ONE PR closing all tickets, per-ticket JIRA transitions
+```
+See [Bundle mode](#invocation-modes) for triggers, flags, and resume. Wall-clock ~30–40% faster than shipping them separately.
 
 ---
 
@@ -334,7 +419,18 @@ contexts/
 │   ├── PROJ-1234-testplan.md      ← PART 3 Test Plan + PART 4 Test Tasks
 │   ├── PROJ-1234-exploration.md   ← Explorer's task annotation summary
 │   ├── PROJ-1234-manifest.md      ← Surgeon's per-task change rows
-│   └── PROJ-1234-review.md        ← Review's full report
+│   ├── PROJ-1234-review.md        ← Review's full report
+│   │
+│   │   # ── bundle run (multi-story) — same epic folder, keyed by BUNDLE_ID ──
+│   ├── <BUNDLE_ID>.md             ← main bundle doc (mode: bundle) · BUNDLE_ID = <epic>-bundle-<hash4>
+│   ├── <BUNDLE_ID>-lld.md         ← consolidated PART 1 + PART 2 (all tickets)
+│   ├── <BUNDLE_ID>-testplan.md    ← consolidated PART 3 + PART 4
+│   ├── <BUNDLE_ID>-exploration.md ← consolidated exploration (tagged by source ticket)
+│   ├── <BUNDLE_ID>-manifest.md    ← Surgeon manifest (each row tagged Sources: <tickets>)
+│   ├── <BUNDLE_ID>-review.md      ← review grouped by ticket + per-ticket sub-verdicts
+│   ├── <BUNDLE_ID>-summary.md     ← post-ship: per-ticket AC coverage + PR/commit links
+│   ├── <id>.md, <id>-lld.md       ← per-ticket cards (mode: bundle-card) — a view per bundled ticket
+│   └── _bundle-state.yaml         ← resume oracle (stage cursors, atomic writes)
 └── standalone/                    ← ad-hoc outputs (no ticket)
     ├── standalone-exploration-{ts}.md
     ├── standalone-manifest-{ts}.md
@@ -380,6 +476,11 @@ Nothing is thrown away between stories; epic context grows as the epic evolves. 
 |-----------|---------|
 | New project, first setup | `node contexts/tools/install.mjs --pack <pack> --target <path>` → `@project-analyzer.md Analyze project` |
 | Start work on a JIRA ticket | `@orchestrator.md Work on PROJ-1234` |
+| Next story in an epic you already worked | `@orchestrator.md Work on PROJ-1235` (reads `epic-context.md` automatically) |
+| Several related stories at once (1 PR) | `@bundle-orchestrator.md Work on epic stories PROJ-1234, PROJ-2345, PROJ-3432` |
+| Bundle an epic's children by status | `@bundle-orchestrator.md Work on epic PROJ-EPIC-42 with status="Ready for Dev"` |
+| Continue a bundle after a gate | `@bundle-explorer.md Run the bundle explorer` → `…surgeon` → `…review` → `@bundle-ship.md Ship the bundle` |
+| Resume a stopped bundle | `Resume bundle-surgeon for <BUNDLE_ID> from T<N>` (or re-issue the original trigger) |
 | Ticket is similar to a prior one | `@orchestrator.md Work on PROJ-1234 — reference: PROJ-100` |
 | Attach design to the trigger | Paste image into the trigger message |
 | LLD is wrong at Phase C gate | `Amend: <what to change>` |
@@ -398,7 +499,8 @@ Nothing is thrown away between stories; epic context grows as the epic evolves. 
 
 - [`HOW-TO-USE.md`](./HOW-TO-USE.md) — command cheat sheet, setup walkthrough, developer flow, troubleshooting
 - [`agent-pipeline/agents/`](./agent-pipeline/agents/) — agent prompts (one file per agent, source of truth)
-- [`agent-pipeline/rules/agent-flow.mdc`](./agent-pipeline/rules/agent-flow.mdc) — path resolution, companion file contracts, invocation mode detection
+- [`agent-pipeline/rules/agent-flow.mdc`](./agent-pipeline/rules/agent-flow.mdc) — single-story routing, path resolution, companion file contracts, invocation mode detection, shared infrastructure (also used by bundle agents)
+- [`agent-pipeline/rules/bulk-agent-flow.mdc`](./agent-pipeline/rules/bulk-agent-flow.mdc) — bundle / bulk multi-story triggers, dispatch, disambiguation, JIRA bulk labels, resume
 - [`agent-pipeline/skills/SKILL.md`](./agent-pipeline/skills/SKILL.md) — kernel skill index
 - `packs/<pack>/` — pack-specific skills + rules; open one to see what a pack looks like
 - [`CHANGELOG.md`](./CHANGELOG.md) — release history

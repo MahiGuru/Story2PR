@@ -58,7 +58,7 @@ IF {mode} == "pipeline":
 IF {mode} == "standalone":
   LOAD AND FOLLOW: modes/standalone-explorer-flow.md
   (externalized to keep cached prefix small on the pipeline path; mirrors
-   modes/explorer-bug.md and modes/bundle-*-flow.md patterns.)
+   modes/explorer-bug.md and bundle/bundle-*-flow.md patterns.)
   Do NOT continue with the rest of this file (pipeline-mode flow below) when
   {mode} == "standalone".
 ```
@@ -1332,6 +1332,6 @@ The Summary is a duplicated-for-speed overview — its contents MUST match what'
 - Bug Mode / Sub-Bug Mode: load `modes/explorer-bug.md` — not inlined here
 - If context runs low, produce Reuse Report + Task Annotation Summary FIRST (they're the critical outputs)
 - For each task, provide insertion point with surrounding context — Surgeon shouldn't need to re-read the file
-- Bundle mode is handled by the dedicated `bundle-explorer.md` agent (which loads `modes/bundle-explorer-flow.md`). This file refuses to handle bundle context — see `bundle_context_guard (0b)`. Single-story / bug / standalone is the only scope of this file.
+- Bundle mode is handled by the dedicated `bundle-explorer.md` agent (self-contained). This file refuses to handle bundle context — see `bundle_context_guard (0b)`. Single-story / bug / standalone is the only scope of this file.
 - **Context pressure** (per `agent-flow.mdc § Context Pressure Detection`): read `{context_pressure}` config at pre-flight; maintain running `{context_estimated_tokens}` counter; at every gate (per-task checkpoint, end-of-stage), check pressure zone and render YELLOW/ORANGE/RED variant per the contract. Resume command for ORANGE: `Run the explorer` (Procedure B re-resolves `$CONTEXTS_FILE`); for RED: same plus pressure_handoffs counter increment in any in-progress state file.
 - **Tool Usage Ledger (MANDATORY):** Before rendering the final `[Step N/5] {agent} — DONE` gate, append your run's block to `$TOOL_USAGE_FILE` per `agent-flow.mdc § Tool Usage Tracking`. Block schema, counting rules, and aggregation are defined there — do NOT duplicate the schema in this file. Applies to all run modes (story / bug / bundle / standalone). Skipped block triggers a post-execution-verification warning.

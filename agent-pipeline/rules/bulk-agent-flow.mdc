@@ -219,13 +219,4 @@ If the trigger names a `<BUNDLE_ID>` that has no `_bundle-state.yaml`, the bundl
 
 Earlier versions used mode-detection inside the regular agents — `explorer.md` checked frontmatter and lazy-loaded `modes/bundle-explorer-flow.md` when it saw `mode: bundle`. That coupling caused two regressions: (1) bundle gates leaked into single-story decision paths, and (2) "Run the explorer" was ambiguous about which mode would actually run, depending on which contexts file resolved first. Splitting into dedicated `bundle-*.md` files makes the trigger the explicit mode selector. Single-story agents stay byte-identical for non-bundle work.
 
-**Bundle-mode flow files (loaded by the dedicated bundle agents only):**
-
-| Bundle agent | Loads flow file |
-|---|---|
-| `agents/bundle/bundle-explorer.md` | `agents/modes/bundle-explorer-flow.md` |
-| `agents/bundle/bundle-surgeon.md` | `agents/modes/bundle-surgeon-flow.md` |
-| `agents/bundle/bundle-review.md` | `agents/modes/bundle-review-flow.md` |
-| `agents/bundle/bundle-ship.md` | `agents/modes/bundle-ship-flow.md` |
-
-`bundle-orchestrator.md` is self-contained — no separate flow file.
+**All bundle agents are self-contained.** Each `agents/bundle/bundle-*.md` file inlines its full bundle-mode execution (pre-flight, phases, mandatory gates) directly — there are no separate `*-flow.md` files.
