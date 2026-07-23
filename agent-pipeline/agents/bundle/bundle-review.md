@@ -56,7 +56,7 @@ Resume bundle-review for <BUNDLE_ID> from T<N>
 
 ### Step: load_flow (BR.1)
 
-LOAD AND FOLLOW: `modes/bundle-review-flow.md` fully.
+LOAD AND FOLLOW: `../modes/bundle-review-flow.md` fully.
 
 That file owns:
 - Bundle pre-flight (state validation + cursor + manifest read)

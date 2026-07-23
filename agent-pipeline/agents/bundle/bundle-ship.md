@@ -55,7 +55,7 @@ Resume bundle-ship for <BUNDLE_ID>
 
 ### Step: load_flow (BSh.1)
 
-LOAD AND FOLLOW: `modes/bundle-ship-flow.md` fully.
+LOAD AND FOLLOW: `../modes/bundle-ship-flow.md` fully.
 
 That file owns:
 - Bundle pre-flight (state validation + verdict read + manifest read)
